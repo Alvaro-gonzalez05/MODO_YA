@@ -1,0 +1,12 @@
+name: modo_ya_workspace
+description: MODO YA - Plataforma local de delivery y cadeteria (Malargue, Mendoza).
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+workspace:
+  - apps/gestion
+  - apps/repartidor
+  - packages/my_core
+  - packages/my_ui

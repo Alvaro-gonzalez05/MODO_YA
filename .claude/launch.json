@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gestion-web",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "5051", "--directory", "apps/gestion/build/web"],
+      "port": 5051
+    },
+    {
+      "name": "repartidor-web",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "5052", "--directory", "apps/repartidor/build/web"],
+      "port": 5052
+    }
+  ]
+}

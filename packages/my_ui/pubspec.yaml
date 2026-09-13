@@ -1,0 +1,22 @@
+name: my_ui
+description: Sistema de diseno de MODO YA (tokens, tema y componentes compartidos).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.3
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  google_fonts: ^8.2.1
+  material_symbols_icons: ^4.2960.0
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:

@@ -1,0 +1,23 @@
+name: my_core
+description: Dominio de MODO YA - modelos, estados del envio, repositorios y acceso a Supabase.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.3
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.4.3
+  intl: ^0.20.3
+  supabase_flutter: ^2.17.2
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:

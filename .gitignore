@@ -1,0 +1,43 @@
+# Dart / Flutter
+.dart_tool/
+.packages
+build/
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec_overrides.yaml
+
+# Los lockfiles de los miembros del workspace no van: manda el de la raiz.
+apps/*/pubspec.lock
+packages/*/pubspec.lock
+
+# Secretos y configuracion por entorno. NUNCA commitear.
+env/
+*.env
+.env*
+!env/example.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# SO
+.DS_Store
+Thumbs.db
+
+# Android
+apps/*/android/.gradle/
+apps/*/android/local.properties
+apps/*/android/key.properties
+*.jks
+*.keystore
+
+# iOS / macOS
+apps/*/ios/Pods/
+apps/*/ios/.symlinks/
+apps/*/ios/Flutter/Flutter.framework
+apps/*/ios/Flutter/Flutter.podspec
+
+# Windows
+apps/*/windows/flutter/ephemeral/
