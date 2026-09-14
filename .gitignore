@@ -44,3 +44,6 @@ apps/*/ios/Flutter/Flutter.podspec
 
 # Windows
 apps/*/windows/flutter/ephemeral/
+
+# Caches de Kotlin/Gradle
+apps/*/android/.kotlin/
