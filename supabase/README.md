@@ -24,6 +24,8 @@ van en una migración nueva.
 | `0013_pedidos.sql` | pedidos, renglones, máquina de estados, sincronía con el envío |
 | `0014_rls_marketplace.sql` | RLS del catálogo y de los pedidos |
 | `0015_politicas_catalogo.sql` | mismo arreglo que 0011, sobre el catálogo |
+| `0016_permisos_por_columna.sql` | **crítico**: nadie puede cambiarse el rol ni autoaprobarse |
+| `0017_cuentas_storage_realtime.sql` | alta automática de clientes, sesión, vistas, fotos, tiempo real |
 
 ## Decisiones de diseño
 
@@ -50,6 +52,55 @@ seguimiento en vivo va por Realtime Broadcast.
 
 **El origen del envío se copia, no se referencia.** Si un comercio se muda, los
 envíos viejos tienen que seguir diciendo desde dónde salieron.
+
+## Cuentas
+
+| Tipo | Cómo se crea |
+|---|---|
+| Cliente | Se registra solo desde la app |
+| Local | Lo da de alta la administración (Edge Function `admin-crear-usuario`) |
+| Rider | Lo da de alta la administración (misma función) |
+| Administración | Una cuenta creada a mano |
+
+Al crearse cualquier usuario, el trigger `alta_usuario` le arma el perfil. **El
+rol sale únicamente de `raw_app_meta_data`**, que solo puede escribir el
+servidor. `raw_user_meta_data` lo manda el propio usuario al registrarse: si el
+rol saliera de ahí, cualquiera haría `signUp(data: {rol: 'admin'})` y se quedaría
+con el panel. Un registro común no trae rol en app_metadata y cae en `cliente`.
+
+La app pide todo lo que necesita saber de la sesión en una sola llamada:
+`rpc('mi_sesion')` devuelve rol, ids de comercio/rider/cliente y estado de
+aprobación.
+
+### Permisos por columna
+
+RLS decide **qué filas** puede tocar cada uno, no **qué columnas**. Con solo RLS,
+la política "cada uno edita su perfil" dejaba hacer
+`update perfiles set rol = 'admin'`, y un local pendiente podía aprobarse solo.
+Estaba explotable y se verificó con una sonda antes de corregirlo (0016).
+
+Ahora `authenticated` solo tiene `UPDATE` sobre las columnas que de verdad son
+suyas (nombre, teléfono, foto, datos de la vidriera). Todo lo que cambia estado,
+aprobación o privilegios va por funciones `admin_*` que verifican el rol por
+dentro. `tests/permisos.sql` prueba los dos lados: lo que no se tiene que poder
+y lo que sí (cerrar de más también es un bug).
+
+## Fotos
+
+| Bucket | Acceso | Ruta |
+|---|---|---|
+| `catalogo` | público (CDN) | `<comercio_id>/logo.jpg`, `<comercio_id>/productos/<producto_id>.jpg` |
+| `documentos` | privado: el rider dueño y la administración | `<repartidor_id>/<tipo>.jpg` |
+
+Cada local solo puede escribir dentro de la carpeta con su propio id.
+
+## Vistas para la app
+
+PostgREST devuelve las columnas `geography` como EWKB en hexadecimal, que desde
+Flutter no sirve. `v_comercios`, `v_envios`, `v_pedidos`, `v_repartidores`,
+`v_direcciones` y `ofertas_abiertas` exponen `lat`/`lng` como números y traen
+resueltos los nombres que cada pantalla necesita. Todas son `security_invoker`,
+así que respetan el RLS de quien consulta.
 
 ## Pedido y envío son cosas distintas
 
@@ -116,8 +167,16 @@ el texto del mensaje.
 
 ## Pruebas de regresión
 
-Las dos dejan la base como la encontraron y se corren contra el proyecto con el
-mismo endpoint que las migraciones.
+Las tres dejan la base como la encontraron. Se corren con:
+
+```powershell
+.\supabase\scripts\sql.ps1 supabase\tests\permisos.sql
+```
+
+**`tests/permisos.sql`** — escalada de privilegios. Cliente que intenta hacerse
+admin, local que intenta aprobarse, rider que se infla los viajes o valida su
+propio documento, registro con `rol: admin` en user_metadata. Y del otro lado,
+que cada uno sí pueda editar lo suyo.
 
 **`tests/flujo_completo.sql`** — cadetería. Crear → cotizar → buscar → ofertar →
 aceptar → retirar → entregar. Verifica que el precio lo ponga el servidor, que
@@ -144,7 +203,5 @@ pedido y envío, comprueba las tres reglas de privacidad de arriba.
 - **Custom Access Token Hook** para llevar el rol en el JWT. Hoy las políticas
   lo leen de `perfiles` con funciones `security definer`, que funciona bien; el
   hook ahorraría una consulta por request.
-- **Realtime** en `envios` y `ofertas`.
-- **Storage** para logos, fotos de producto y documentación de cadetes.
 - **Zonas de cobertura**: la tabla existe, falta cargar el polígono de Malargüe
   y rechazar destinos fuera del área.

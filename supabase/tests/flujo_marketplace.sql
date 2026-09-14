@@ -25,19 +25,17 @@ declare
 begin
   select id into ciudad from public.ciudades where nombre = 'Malargue';
 
+  -- El cliente se registra "solo": sin rol en app_metadata cae en cliente y el
+  -- trigger le crea perfil y fila en `clientes`. El resto trae rol, como lo
+  -- pondria la Edge Function de alta.
   insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
+                          raw_app_meta_data, raw_user_meta_data,
                           email_confirmed_at, created_at, updated_at)
   values
-    (u_cli,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','mk-cli@test.local','x',now(),now(),now()),
-    (u_com,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','mk-com@test.local','x',now(),now(),now()),
-    (u_rep,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','mk-rep@test.local','x',now(),now(),now()),
-    (u_adm,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','mk-adm@test.local','x',now(),now(),now());
-
-  insert into public.perfiles (id, rol, nombre) values
-    (u_cli,'cliente','MK Cliente'),
-    (u_com,'comercio','MK Comercio'),
-    (u_rep,'repartidor','MK Cadete'),
-    (u_adm,'admin','MK Admin');
+    (u_cli,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','mk-cli@test.local','x','{"provider":"email"}','{"nombre":"Marcela Diaz","telefono":"+54 260 456-1122"}',now(),now(),now()),
+    (u_com,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','mk-com@test.local','x','{"rol":"comercio"}','{"nombre":"MK Comercio"}',now(),now(),now()),
+    (u_rep,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','mk-rep@test.local','x','{"rol":"repartidor"}','{"nombre":"MK Cadete"}',now(),now(),now()),
+    (u_adm,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','mk-adm@test.local','x','{"rol":"admin"}','{"nombre":"MK Admin"}',now(),now(),now());
 
   insert into public.comercios (perfil_id, ciudad_id, nombre, rubro, telefono,
                                 calle, ubicacion, estado_aprobacion)
@@ -56,9 +54,8 @@ begin
           extensions.ST_SetSRID(extensions.ST_MakePoint(-69.5800,-35.4755),4326)::extensions.geography, now())
   returning id into rep;
 
-  insert into public.clientes (perfil_id, ciudad_id, nombre, telefono)
-  values (u_cli, ciudad, 'Marcela Diaz', '+54 260 456-1122')
-  returning id into cli;
+  -- La fila de cliente ya la creo el trigger de alta.
+  select id into cli from public.clientes where perfil_id = u_cli;
 
   insert into public.direcciones_cliente (cliente_id, alias, calle, referencia, ubicacion, predeterminada)
   values (cli,'Casa','Av. San Martin 450','Porton verde',

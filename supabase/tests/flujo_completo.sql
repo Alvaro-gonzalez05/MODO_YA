@@ -20,17 +20,15 @@ begin
   select id into ciudad from public.ciudades where nombre = 'Malargue';
 
   -- Usuarios de auth minimos (los crea normalmente el signup).
+  -- El rol va en raw_app_meta_data, como lo pone la Edge Function de alta.
+  -- El trigger alta_usuario (0017) crea el perfil a partir de ahi.
   insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
+                          raw_app_meta_data, raw_user_meta_data,
                           email_confirmed_at, created_at, updated_at)
   values
-    (u_com,  '00000000-0000-0000-0000-000000000000','authenticated','authenticated','smoke-com@test.local','x',now(),now(),now()),
-    (u_rep,  '00000000-0000-0000-0000-000000000000','authenticated','authenticated','smoke-rep@test.local','x',now(),now(),now()),
-    (u_rep2, '00000000-0000-0000-0000-000000000000','authenticated','authenticated','smoke-rep2@test.local','x',now(),now(),now());
-
-  insert into public.perfiles (id, rol, nombre) values
-    (u_com,'comercio','Smoke Comercio'),
-    (u_rep,'repartidor','Smoke Cadete Cerca'),
-    (u_rep2,'repartidor','Smoke Cadete Lejos');
+    (u_com,  '00000000-0000-0000-0000-000000000000','authenticated','authenticated','smoke-com@test.local','x','{"rol":"comercio"}','{"nombre":"Smoke Comercio"}',now(),now(),now()),
+    (u_rep,  '00000000-0000-0000-0000-000000000000','authenticated','authenticated','smoke-rep@test.local','x','{"rol":"repartidor"}','{"nombre":"Smoke Cadete Cerca"}',now(),now(),now()),
+    (u_rep2, '00000000-0000-0000-0000-000000000000','authenticated','authenticated','smoke-rep2@test.local','x','{"rol":"repartidor"}','{"nombre":"Smoke Cadete Lejos"}',now(),now(),now());
 
   -- Comercio en Av. Roca 420.
   insert into public.comercios (perfil_id, ciudad_id, nombre, rubro, telefono,
