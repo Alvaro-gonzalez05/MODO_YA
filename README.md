@@ -18,6 +18,19 @@ MODO_YA/
 └─ env/              Configuracion local (ignorada por git; ver env/example.json)
 ```
 
+## Descargas
+
+Ultima version (siempre estos mismos links):
+
+| App | Plataforma | Link |
+|---|---|---|
+| MODO YA | Android | [MODO_YA-Android.apk](https://github.com/Alvaro-gonzalez05/MODO_YA/releases/latest/download/MODO_YA-Android.apk) |
+| MODO YA | Windows | [MODO_YA-Windows-Setup.exe](https://github.com/Alvaro-gonzalez05/MODO_YA/releases/latest/download/MODO_YA-Windows-Setup.exe) |
+| MODO YA | Windows sin instalar | [MODO_YA-Windows-portable.zip](https://github.com/Alvaro-gonzalez05/MODO_YA/releases/latest/download/MODO_YA-Windows-portable.zip) |
+| MODO YA Rider | Android | [MODO_YA-Rider-Android.apk](https://github.com/Alvaro-gonzalez05/MODO_YA/releases/latest/download/MODO_YA-Rider-Android.apk) |
+
+Todas las versiones: [Releases](https://github.com/Alvaro-gonzalez05/MODO_YA/releases).
+
 ## Dos apps, no una
 
 | App | Quien la usa | Por que |
@@ -67,11 +80,20 @@ flutter build apk --release --target-platform android-arm64 --dart-define-from-f
 casi todos; firmados con la clave de debug, sirven para probar pero no para
 publicar en Play Store.
 
-Windows: `.\installer\armar_windows.ps1` compila y arma
+Windows: `.\installer\armar_windows.ps1 -Version 1.0.0` compila y arma
 `build\instaladores\MODO_YA_Setup_<version>.exe` con Inno Setup 6 (instala por
 usuario, sin pedir administrador).
 
-Los binarios se publican en los *Releases* de GitHub, no en el repo.
+**Publicar una version:** no hace falta compilar local. Empujar un tag y GitHub
+Actions compila las dos apps y crea el Release
+(`.github/workflows/release.yml`):
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+Se compila con `env/publico.json` (URL y publishable key, publicas por diseno).
 
 ### Requisitos en Windows
 

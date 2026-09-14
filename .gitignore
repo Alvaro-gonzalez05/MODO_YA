@@ -12,10 +12,13 @@ apps/*/pubspec.lock
 packages/*/pubspec.lock
 
 # Secretos y configuracion por entorno. NUNCA commitear.
-env/
+env/*
 *.env
 .env*
 !env/example.json
+# Con esta se compilan los instalables. Solo URL y publishable key, que es
+# publica por diseno (va dentro de cada APK); lo que protege los datos es RLS.
+!env/publico.json
 
 # IDE
 .idea/

@@ -1,0 +1,164 @@
+name: Publicar instaladores
+
+# Compila las dos apps y publica los instaladores en Releases.
+#
+# Se dispara:
+#   - al empujar un tag v*   (git tag v1.0.0 && git push origin v1.0.0)
+#   - a mano desde la pestana Actions (deja los archivos como artefactos,
+#     sin crear el release)
+#
+# Los nombres de los archivos no llevan version a proposito: asi los links
+# .../releases/latest/download/<archivo> siempre bajan la ultima.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.47.4'
+  # URL + publishable key (publica por diseno). Ver .gitignore.
+  CONFIG: env/publico.json
+
+jobs:
+  android:
+    name: Android (APK)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Dependencias
+        run: flutter pub get
+
+      - name: Analisis
+        run: flutter analyze
+
+      - name: Version desde el tag
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF_NAME#v}"; else v="0.0.0"; fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      # --split-per-abi: un APK de ~20 MB por arquitectura en vez de uno de 50.
+      - name: Compilar MODO YA
+        working-directory: apps/modo_ya
+        run: >
+          flutter build apk --release --split-per-abi
+          --build-name=${{ env.VERSION }}
+          --dart-define-from-file=../../${{ env.CONFIG }}
+
+      - name: Compilar MODO YA Rider
+        working-directory: apps/repartidor
+        run: >
+          flutter build apk --release --split-per-abi
+          --build-name=${{ env.VERSION }}
+          --dart-define-from-file=../../${{ env.CONFIG }}
+
+      - name: Renombrar para que se entienda cual bajar
+        run: |
+          mkdir -p salida
+          a=apps/modo_ya/build/app/outputs/flutter-apk
+          r=apps/repartidor/build/app/outputs/flutter-apk
+          mv $a/app-arm64-v8a-release.apk   salida/MODO_YA-Android.apk
+          mv $a/app-armeabi-v7a-release.apk salida/MODO_YA-Android-32bits.apk
+          mv $r/app-arm64-v8a-release.apk   salida/MODO_YA-Rider-Android.apk
+          mv $r/app-armeabi-v7a-release.apk salida/MODO_YA-Rider-Android-32bits.apk
+          ls -la salida
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: salida/*.apk
+
+  windows:
+    name: Windows (instalador)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Dependencias
+        run: flutter pub get
+
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+
+      - name: Compilar y armar el instalador
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF -like 'refs/tags/v*') { $env:GITHUB_REF_NAME.Substring(1) } else { '0.0.0' }
+          .\installer\armar_windows.ps1 -Version $version -Entorno $env:CONFIG
+          New-Item -ItemType Directory -Force salida | Out-Null
+          Move-Item "build\instaladores\MODO_YA_Setup_$version.exe" salida\MODO_YA-Windows-Setup.exe
+          # Para quien no puede instalar nada: se descomprime y se ejecuta.
+          Compress-Archive -Path apps\modo_ya\build\windows\x64\runner\Release\* -DestinationPath salida\MODO_YA-Windows-portable.zip
+          Get-ChildItem salida
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: salida/*
+
+  publicar:
+    name: Publicar en Releases
+    needs: [android, windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: entrega
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: MODO YA ${{ github.ref_name }}
+          files: entrega/*
+          make_latest: true
+          body: |
+            ## Descargas
+
+            | App | Para | Archivo |
+            |---|---|---|
+            | **MODO YA** | Android (casi todos los celulares) | [MODO_YA-Android.apk](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/MODO_YA-Android.apk) |
+            | **MODO YA** | Windows (instalador) | [MODO_YA-Windows-Setup.exe](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/MODO_YA-Windows-Setup.exe) |
+            | **MODO YA** | Windows sin instalar | [MODO_YA-Windows-portable.zip](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/MODO_YA-Windows-portable.zip) |
+            | **MODO YA Rider** | Android | [MODO_YA-Rider-Android.apk](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/MODO_YA-Rider-Android.apk) |
+
+            MODO YA es la app de clientes, locales y administracion; cada uno ve
+            lo suyo segun su cuenta. Los riders usan MODO YA Rider.
+
+            Celulares Android viejos (32 bits): `MODO_YA-Android-32bits.apk` y
+            `MODO_YA-Rider-Android-32bits.apk`, abajo en *Assets*.
+
+            > **Android:** el APK no viene de Play Store, asi que hay que permitir
+            > "instalar apps de origen desconocido".
+            > **Windows:** no esta firmado; si aparece "Windows protegio su PC":
+            > *Mas informacion* -> *Ejecutar de todas formas*.
+
+            ### Provisorio en esta version
+            - La confirmacion de email esta desactivada.
+            - Los pagos se confirman a mano desde la administracion.
+            - Mapas del servidor publico de OpenStreetMap (no apto para produccion).
+            - La ubicacion del rider se envia solo con la app abierta.

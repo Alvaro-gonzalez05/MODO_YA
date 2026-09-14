@@ -1,12 +1,17 @@
 ; Instalador de Windows de la app MODO YA (clientes, locales y administracion).
 ;
-; Antes: compilar la version release y copiar el runtime de Visual C++ al lado
-; del .exe (lo hace installer\armar_windows.ps1, que despues llama a este script).
+; Lo arma installer\armar_windows.ps1 (en esta PC o en el workflow de GitHub
+; .github/workflows/release.yml), que antes compila la app y copia el runtime
+; de Visual C++ al lado del .exe. A mano:
+;   ISCC.exe /DVersion=1.0.0 installer\modo_ya.iss
 ;
 ; Instala por usuario (sin pedir administrador) en %LOCALAPPDATA%\Programs.
 
+#ifndef Version
+  #define Version "0.0.0"
+#endif
+
 #define Nombre "MODO YA"
-#define Version "1.0.0"
 #define Exe "modo_ya.exe"
 #define Origen "..\apps\modo_ya\build\windows\x64\runner\Release"
 
