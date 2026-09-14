@@ -20,7 +20,7 @@ MODO_YA/
 
 ## Descargas
 
-Ultima version (siempre estos mismos links):
+Última versión (siempre estos mismos links):
 
 | App | Plataforma | Link |
 |---|---|---|
@@ -69,31 +69,59 @@ cd apps/repartidor
 flutter run -d android --dart-define-from-file=../../env/dev.json
 ```
 
-### Instalables
+### Publicar una versión
+
+No hace falta compilar en esta PC. Se empuja un tag y GitHub Actions compila
+las dos apps y crea el Release (`.github/workflows/release.yml`):
+
+```bash
+git tag -a v1.2.0 -m "Qué cambió (se muestra en el aviso de actualización)"
+git push origin v1.2.0
+```
+
+Con `[obligatoria]` en el mensaje del tag, las apps instaladas no dejan seguir
+hasta actualizar (para cambios en la base que las versiones viejas no
+entienden).
+
+### Actualizaciones automáticas
+
+Cada Release publica también `ultima.json`. Las apps (desde la 1.1.0) lo leen de
+`releases/latest/download/ultima.json` al abrir y cada 6 horas; si hay una
+versión más nueva muestran un aviso con "Actualizar":
+
+- **Windows:** baja el instalador, cierra la app, instala en silencio y la
+  vuelve a abrir.
+- **Android:** baja el APK y abre el instalador del sistema (Android siempre
+  pide confirmar; la primera vez pide permiso para instalar desde MODO YA).
+
+Código: `packages/my_ui/lib/src/actualizaciones/` y el canal
+`modoya/actualizaciones` en `MainActivity.kt` de cada app.
+
+### Clave de firma de Android
+
+Los APK de release se firman **siempre con la misma clave**: Android no instala
+una actualización firmada con otra. La clave no está en el repo:
+
+- En GitHub, secretos `ANDROID_KEYSTORE_BASE64` y `ANDROID_KEYSTORE_PASSWORD`
+  (alias `modoya`). Sin ellos el workflow no publica.
+- En la PC de desarrollo, `D:\dev\claves\modoya\` (con un LEEME). Para compilar
+  local firmado: variable `MY_KEY_PROPERTIES` apuntando a su `key.properties`.
+  Sin esa variable, `flutter build apk` firma con la clave de debug.
+
+**Si la clave se pierde, las apps instaladas no pueden actualizarse nunca más.**
+Guardar una copia fuera de la PC.
+
+### Compilar a mano
 
 ```bash
 cd apps/modo_ya
-flutter build apk --release --target-platform android-arm64 --dart-define-from-file=../../env/dev.json
+flutter build apk --release --target-platform android-arm64 --dart-define-from-file=../../env/publico.json
 ```
 
-(Igual en `apps/repartidor`.) Salen solo para celulares de 64 bits, que son
-casi todos; firmados con la clave de debug, sirven para probar pero no para
-publicar en Play Store.
-
-Windows: `.\installer\armar_windows.ps1 -Version 1.0.0` compila y arma
+Windows: `.\installer\armar_windows.ps1 -Version 1.2.0` compila y arma
 `build\instaladores\MODO_YA_Setup_<version>.exe` con Inno Setup 6 (instala por
-usuario, sin pedir administrador).
-
-**Publicar una version:** no hace falta compilar local. Empujar un tag y GitHub
-Actions compila las dos apps y crea el Release
-(`.github/workflows/release.yml`):
-
-```bash
-git tag v1.0.1
-git push origin v1.0.1
-```
-
-Se compila con `env/publico.json` (URL y publishable key, publicas por diseno).
+usuario, sin pedir administrador). Se compila con `env/publico.json` (URL y
+publishable key, públicas por diseño).
 
 ### Requisitos en Windows
 

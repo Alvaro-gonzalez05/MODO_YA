@@ -1,3 +1,17 @@
+import java.io.FileInputStream
+import java.util.Properties
+
+// Firma de release. La clave NO esta en el repo: se lee de key.properties
+// (ruta en la variable MY_KEY_PROPERTIES, o android/key.properties). En GitHub
+// Actions la arma el workflow con los secretos ANDROID_KEYSTORE_*.
+//
+// Siempre la misma clave: Android no deja instalar una actualizacion firmada
+// con otra, y la app se actualiza sola desde los Releases.
+val firma = Properties().apply {
+    val archivo = file(System.getenv("MY_KEY_PROPERTIES") ?: rootProject.file("key.properties").path)
+    if (archivo.exists()) FileInputStream(archivo).use { load(it) }
+}
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -29,11 +43,21 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (firma.getProperty("storeFile") != null) {
+            create("release") {
+                storeFile = file(firma.getProperty("storeFile"))
+                storePassword = firma.getProperty("storePassword")
+                keyAlias = firma.getProperty("keyAlias")
+                keyPassword = firma.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Sin key.properties (desarrollo) firma con la clave de debug.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 }
@@ -46,4 +70,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // FileProvider, para pasarle el APK descargado al instalador.
+    implementation("androidx.core:core-ktx:1.13.1")
 }

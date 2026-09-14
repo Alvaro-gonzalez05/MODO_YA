@@ -18,6 +18,12 @@ abstract final class Entorno {
   /// 1.2.0); en desarrollo queda vacia y no se buscan actualizaciones.
   static const version = String.fromEnvironment('MY_VERSION');
 
+  /// Ultima version publicada (lo escribe el workflow de release).
+  static const urlActualizaciones = String.fromEnvironment(
+    'MY_URL_ACTUALIZACIONES',
+    defaultValue: 'https://github.com/Alvaro-gonzalez05/MODO_YA/releases/latest/download/ultima.json',
+  );
+
   static const supabaseUrl = String.fromEnvironment('MY_SUPABASE_URL');
   static const supabaseKey = String.fromEnvironment('MY_SUPABASE_KEY');
 

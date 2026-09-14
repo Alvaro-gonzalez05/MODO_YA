@@ -4,6 +4,7 @@
 /// app del Repartidor vive aca: tokens, tipografia, tema y componentes.
 library;
 
+export 'src/actualizaciones/aviso_actualizacion.dart';
 export 'src/theme.dart';
 export 'src/tokens.dart';
 export 'src/typography.dart';

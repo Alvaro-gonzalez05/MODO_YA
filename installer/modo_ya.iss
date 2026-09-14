@@ -33,6 +33,11 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+; La app se actualiza sola: baja este instalador y lo corre con /SILENT
+; mientras sigue abierta. Inno la cierra, reemplaza los archivos y la vuelve
+; a abrir (ver [Run]).
+CloseApplications=force
+RestartApplications=no
 
 [Languages]
 Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -49,3 +54,5 @@ Name: "{userdesktop}\{#Nombre}"; Filename: "{app}\{#Exe}"; Tasks: escritorio
 
 [Run]
 Filename: "{app}\{#Exe}"; Description: "Abrir {#Nombre}"; Flags: nowait postinstall skipifsilent
+; Actualizacion automatica (silenciosa): volver a abrir la app al terminar.
+Filename: "{app}\{#Exe}"; Flags: nowait; Check: WizardSilent

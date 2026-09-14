@@ -58,6 +58,13 @@ class AppModoYa extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: MyTheme.light,
       routerConfig: ref.watch(routerProvider),
+      // Aviso de version nueva, encima de todas las pantallas.
+      builder: (context, child) => MyAvisoActualizacion(
+        app: 'modo_ya',
+        versionActual: Entorno.version,
+        urlManifiesto: Entorno.urlActualizaciones,
+        child: child ?? const SizedBox.shrink(),
+      ),
       locale: const Locale('es', 'AR'),
       supportedLocales: const [Locale('es', 'AR')],
       localizationsDelegates: const [

@@ -25,7 +25,10 @@ Push-Location $app
 # stderr corta el script. El resultado real lo dice $LASTEXITCODE.
 $ErrorActionPreference = 'Continue'
 try {
-  flutter build windows --release "--dart-define-from-file=$config"
+  $definiciones = @("--dart-define-from-file=$config")
+  # Con version real la app sabe cual es y busca actualizaciones.
+  if ($Version -ne '0.0.0') { $definiciones += @("--dart-define=MY_VERSION=$Version", "--build-name=$Version") }
+  flutter build windows --release @definiciones
   if ($LASTEXITCODE -ne 0) { throw 'Fallo flutter build windows' }
 } finally { Pop-Location; $ErrorActionPreference = 'Stop' }
 
