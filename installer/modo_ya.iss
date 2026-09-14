@@ -11,12 +11,18 @@
   #define Version "0.0.0"
 #endif
 
-#define Nombre "MODO YA"
+#ifndef Nombre
+  #define Nombre "MODO YA"
+#endif
+; Solo para pruebas: otro AppId no pisa la instalacion real.
+#ifndef IdApp
+  #define IdApp "{{6B0C2F4E-3E0B-4B7A-9C2D-4D6F0A1B8E21}"
+#endif
 #define Exe "modo_ya.exe"
 #define Origen "..\apps\modo_ya\build\windows\x64\runner\Release"
 
 [Setup]
-AppId={{6B0C2F4E-3E0B-4B7A-9C2D-4D6F0A1B8E21}
+AppId={#IdApp}
 AppName={#Nombre}
 AppVersion={#Version}
 AppPublisher={#Nombre}

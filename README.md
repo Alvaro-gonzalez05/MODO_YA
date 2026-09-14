@@ -33,7 +33,7 @@ Todas las versiones: [Releases](https://github.com/Alvaro-gonzalez05/MODO_YA/rel
 
 ## Dos apps, no una
 
-| App | Quien la usa | Por que |
+| App | Quién la usa | Por qué |
 |---|---|---|
 | **MODO YA** | Clientes, locales y administracion | El rol de la cuenta decide que pantallas ve cada uno |
 | **MODO YA Rider** | Riders | Necesita ubicacion (y en produccion, en segundo plano). Es el permiso que mas revisan Apple y Google; dentro de una app de clientes lo mas probable es que rechacen la publicacion |
@@ -43,9 +43,12 @@ Todas las versiones: [Releases](https://github.com/Alvaro-gonzalez05/MODO_YA/rel
 | Tipo | Como se crea |
 |---|---|
 | Cliente | Se registra solo desde la app |
-| Local | Lo da de alta la administracion desde la app (queda con contrasena temporal) |
-| Rider | Lo da de alta la administracion desde la app |
-| Administracion | Se crea a mano (ver abajo) |
+| Local | Lo da de alta la administración desde la app: usuario `nombre.del.local@modoya.com` y contraseña generados |
+| Rider | Igual: `rider.nombre.apellido@modoya.com` |
+| Administración | Se crea a mano |
+
+Los usuarios generados no reciben correo: si alguien se olvida la contraseña,
+la administración le genera una nueva desde su ficha.
 
 El rol **no lo puede elegir el usuario**: la base lo lee solo de metadatos que
 escribe el servidor. Detalles en `supabase/README.md`.
@@ -129,7 +132,20 @@ publishable key, públicas por diseño).
 - **Visual Studio** con la carga *Desarrollo para el escritorio con C++*.
   `flutter doctor` tiene que mostrar Visual Studio sin cruces.
 
-## Que hay en cada app
+## Diseño
+
+Cada pantalla tiene dos diseños, no uno estirado (`packages/my_ui/lib/src/widgets/responsive.dart`):
+
+- **PC (desde 1100 px):** barra lateral navy, barra superior con el estado y el
+  menú del usuario, tablas y fichas al costado (diseños C de Stitch).
+- **Tableta (720 a 1100):** barra lateral compacta, solo iconos.
+- **Celular:** el dock flotante de la app del rider; si no entran los botones,
+  el último es "Más".
+
+Para revisar pantallas sin abrir la app a mano: `tools/capturas/capturar.mjs`
+(Chrome headless sobre la versión web).
+
+## Qué hay en cada app
 
 **Cliente:** locales por rubro, menu con fotos y personalizacion (tamanos,
 agregados), carrito, direcciones con pin en el mapa, pedido, seguimiento con el

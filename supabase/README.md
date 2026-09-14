@@ -30,6 +30,8 @@ van en una migración nueva.
 | `0019_huecos_de_flujo.sql` | código de entrega para el cliente, horarios nocturnos, pg_cron |
 | `0020_horario_testeable.sql` | la lógica de horarios recibe el momento a evaluar |
 | `0021_validar_opciones_del_pedido.sql` | opciones obligatorias, únicas y máximos, validados en el servidor |
+| `0022_usuario_de_la_cuenta.sql` | `admin_usuario_de`: la administración ve con qué usuario entra cada local o rider |
+| `0023_rubros_con_acentos.sql` | nombres de rubros con acentos (y la copia en `comercios.rubro`) |
 
 ## Decisiones de diseño
 
@@ -65,6 +67,21 @@ envíos viejos tienen que seguir diciendo desde dónde salieron.
 | Local | Lo da de alta la administración (Edge Function `admin-crear-usuario`) |
 | Rider | Lo da de alta la administración (misma función) |
 | Administración | Una cuenta creada a mano |
+
+### Usuarios de locales y riders
+
+La administración no carga emails: `admin-crear-usuario` genera el usuario con
+el nombre y una contraseña al azar que se muestra una sola vez:
+
+- Local "Pizzería Don Luis" → `pizzeria.don.luis@modoya.com`
+- Rider "Juan Pérez" → `rider.juan.perez@modoya.com`
+- Si ya existe, se agrega un número: `pizzeria.don.luis.2@modoya.com`
+
+Así el dueño o el rider conserva su email personal para registrarse como cliente
+si quiere. El dominio (`MODOYA_DOMINIO_CUENTAS`, por defecto `modoya.com`) es
+solo un identificador: **a esos usuarios no se les manda correo**, por eso la
+misma función tiene la acción `restablecer_password` (el panel la muestra como
+"Nueva contraseña" en la ficha del local o del rider).
 
 Al crearse cualquier usuario, el trigger `alta_usuario` le arma el perfil. **El
 rol sale únicamente de `raw_app_meta_data`**, que solo puede escribir el

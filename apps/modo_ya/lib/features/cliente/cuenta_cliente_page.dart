@@ -20,25 +20,50 @@ class CuentaClientePage extends ConsumerWidget {
     final direcciones = ref.watch(direccionesProvider).value ?? const <DireccionCliente>[];
     final elegida = ref.watch(direccionActualProvider);
 
-    final perfil = MyCard(
-      child: Row(
-        children: [
-          const MyIconoCaja(Symbols.person, tamano: 64, circular: true),
-          const SizedBox(width: MySpacing.md),
-          Expanded(
+    final datosPerfil = Row(
+      children: [
+        const MyIconoCaja(Symbols.person, tamano: 64, circular: true),
+        const SizedBox(width: MySpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(s.nombre, style: MyType.headlineMd),
+              if (s.email != null) Text(s.email!, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+              if (s.telefono != null) Text(s.telefono!, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+            ],
+          ),
+        ),
+        if (!context.esMovil)
+          MyBoton(
+            label: 'Editar',
+            icon: Symbols.edit,
+            tipo: MyBotonTipo.secundario,
+            onPressed: () => _editar(context, ref, s),
+          ),
+      ],
+    );
+    final perfil = MyCard(child: datosPerfil);
+    final perfilConAccion = context.esMovil
+        ? MyCard(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(s.nombre, style: MyType.headlineMd),
-                if (s.email != null) Text(s.email!, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
-                if (s.telefono != null) Text(s.telefono!, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+                datosPerfil,
+                const SizedBox(height: MySpacing.md),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: MyBoton(
+                    label: 'Editar mis datos',
+                    icon: Symbols.edit,
+                    tipo: MyBotonTipo.secundario,
+                    onPressed: () => _editar(context, ref, s),
+                  ),
+                ),
               ],
             ),
-          ),
-          MyBoton(label: 'Editar', icon: Symbols.edit, tipo: MyBotonTipo.secundario, onPressed: () => _editar(context, ref, s)),
-        ],
-      ),
-    );
+          )
+        : perfil;
 
     final misDirecciones = MyCard(
       child: Column(
@@ -70,7 +95,9 @@ class CuentaClientePage extends ConsumerWidget {
                       color: MyColors.primary,
                     ),
                     const SizedBox(width: MySpacing.xs),
-                    Expanded(child: Text('${d.alias} · ${d.calle}', style: MyType.bodyMd, overflow: TextOverflow.ellipsis)),
+                    Expanded(
+                      child: Text('${d.alias} · ${d.calle}', style: MyType.bodyMd, overflow: TextOverflow.ellipsis),
+                    ),
                     if (d.predeterminada) const MyBadge('Principal', tone: MyBadgeTone.info),
                   ],
                 ),
@@ -113,7 +140,7 @@ class CuentaClientePage extends ConsumerWidget {
       titulo: 'Mi cuenta',
       anchoMaximo: 1080,
       children: context.esMovil
-          ? [perfil, espacio, misDirecciones, espacio, seguridad]
+          ? [perfilConAccion, espacio, misDirecciones, espacio, seguridad]
           : [
               perfil,
               espacio,
@@ -153,8 +180,14 @@ class CuentaClientePage extends ConsumerWidget {
                   final db = Backend.db;
                   // Perfil y ficha de cliente: los locales ven el nombre del
                   // cliente copiado en cada pedido nuevo desde `clientes`.
-                  await db.from('perfiles').update({'nombre': nombre.text.trim(), 'telefono': telefono.text.trim()}).eq('id', s.usuarioId);
-                  await db.from('clientes').update({'nombre': nombre.text.trim(), 'telefono': telefono.text.trim()}).eq('perfil_id', s.usuarioId);
+                  await db
+                      .from('perfiles')
+                      .update({'nombre': nombre.text.trim(), 'telefono': telefono.text.trim()})
+                      .eq('id', s.usuarioId);
+                  await db
+                      .from('clientes')
+                      .update({'nombre': nombre.text.trim(), 'telefono': telefono.text.trim()})
+                      .eq('perfil_id', s.usuarioId);
                   ref.invalidate(sesionActualProvider);
                   if (h.mounted) Navigator.pop(h);
                 } catch (e) {

@@ -44,6 +44,7 @@ class MyAvisoActualizacion extends StatefulWidget {
 enum _Paso { oculto, disponible, descargando, instalando, error }
 
 class _MyAvisoActualizacionState extends State<MyAvisoActualizacion> {
+  Timer? _inicial;
   Timer? _temporizador;
   VersionPublicada? _nueva;
   String? _url;
@@ -56,12 +57,13 @@ class _MyAvisoActualizacionState extends State<MyAvisoActualizacion> {
     super.initState();
     if (kIsWeb || widget.versionActual.isEmpty) return;
     // Unos segundos de gracia: primero que cargue la app.
-    Future.delayed(const Duration(seconds: 4), _buscar);
+    _inicial = Timer(const Duration(seconds: 4), _buscar);
     _temporizador = Timer.periodic(const Duration(hours: 6), (_) => _buscar());
   }
 
   @override
   void dispose() {
+    _inicial?.cancel();
     _temporizador?.cancel();
     super.dispose();
   }
@@ -135,7 +137,9 @@ class _MyAvisoActualizacionState extends State<MyAvisoActualizacion> {
             left: movil ? MySpacing.md : null,
             right: MySpacing.md,
             top: MediaQuery.paddingOf(context).top + (movil ? MySpacing.sm : 84),
-            child: tarjeta,
+            // En la PC el Positioned solo tiene borde derecho: sin ancho fijo
+            // la tarjeta no sabe cuánto medir.
+            child: movil ? tarjeta : SizedBox(width: 400, child: tarjeta),
           ),
       ],
     );
@@ -231,12 +235,13 @@ class _Tarjeta extends StatelessWidget {
                   Text(error!, style: MyType.bodySm.copyWith(color: MyColors.error)),
                   const SizedBox(height: MySpacing.sm),
                 ],
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: MySpacing.xs,
+                  runSpacing: MySpacing.xs,
                   children: [
                     if (onMasTarde != null)
                       TextButton(onPressed: onMasTarde, child: const Text('Más tarde')),
-                    const SizedBox(width: MySpacing.xs),
                     FilledButton.icon(
                       onPressed: onActualizar,
                       style: FilledButton.styleFrom(minimumSize: const Size(0, 44), textStyle: MyType.labelLg),
