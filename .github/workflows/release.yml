@@ -77,10 +77,8 @@ jobs:
             exit 0
           fi
           # Al pegar el secreto en la web se cuelan espacios o saltos de línea.
-          KEYSTORE_PASSWORD=$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '
-')
-          if ! printf '%s' "$KEYSTORE_BASE64" | tr -d ' 
-	' | base64 -d > "$RUNNER_TEMP/modoya-release.jks" 2>/dev/null; then
+          KEYSTORE_PASSWORD=$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '\r\n')
+          if ! printf '%s' "$KEYSTORE_BASE64" | tr -d ' \r\n\t' | base64 -d > "$RUNNER_TEMP/modoya-release.jks" 2>/dev/null; then
             echo "::error::ANDROID_KEYSTORE_BASE64 no es un base64 válido (${#KEYSTORE_BASE64} caracteres; el archivo tiene 5816). ¿Quedó incompleto o se cargó la contraseña en su lugar?"
             exit 1
           fi
