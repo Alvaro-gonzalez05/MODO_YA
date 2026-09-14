@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -11,44 +12,46 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es_AR');
 
-  Entorno.validar();
+  // Solo para pruebas automatizadas en web: expone el arbol de accesibilidad
+  // como elementos del DOM para poder leer y tocar la app desde un navegador.
+  // Se activa con --dart-define=MY_SEMANTICA=true; ninguna build real lo lleva.
+  if (const bool.fromEnvironment('MY_SEMANTICA')) {
+    SemanticsBinding.instance.ensureSemantics();
+  }
 
-  // En release, un widget que revienta se dibuja como un hueco vacio y el
-  // problema pasa desapercibido. Preferimos verlo.
   ErrorWidget.builder = (detalle) => Material(
-        color: const Color(0xFFFFDAD6),
+        color: MyColors.errorContainer,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Text(
             detalle.exceptionAsString(),
-            style: const TextStyle(fontSize: 11, color: Color(0xFF93000A)),
+            style: const TextStyle(fontSize: 11, color: MyColors.onErrorContainer),
           ),
         ),
       );
 
-  runApp(
-    ProviderScope(
-      overrides: [
-        // Hasta que entre Supabase Auth, la sesion es la del cadete demo.
-        sesionProvider.overrideWithValue(Sesion.demoRepartidor),
-      ],
-      child: const AppRepartidor(),
-    ),
-  );
+  try {
+    await Backend.inicializar();
+  } catch (e) {
+    runApp(MaterialApp(home: Scaffold(body: MyEmptyState(title: 'La app no esta configurada', message: '$e'))));
+    return;
+  }
+
+  runApp(const ProviderScope(child: AppRepartidor()));
 }
 
-/// App del cadete.
+/// App del rider.
 ///
-/// Va separada de la de Gestion a proposito: necesita ubicacion en segundo
-/// plano, y ese permiso es el que mas miran Apple y Google en la revision. Si
-/// viviera dentro de la app del comercio, lo mas probable es que la rechacen.
+/// Va separada de la app MODO YA a proposito: necesita ubicacion (y mas
+/// adelante, ubicacion en segundo plano), el permiso que mas revisan Apple y
+/// Google. Dentro de una app de clientes lo mas probable es que la rechacen.
 class AppRepartidor extends ConsumerWidget {
   const AppRepartidor({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: 'MODO YA Cadete',
+      title: 'MODO YA Rider',
       debugShowCheckedModeBanner: false,
       theme: MyTheme.light,
       routerConfig: ref.watch(routerProvider),

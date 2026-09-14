@@ -6,7 +6,7 @@ environment:
   sdk: ^3.13.0
 
 workspace:
-  - apps/gestion
+  - apps/modo_ya
   - apps/repartidor
   - packages/my_core
   - packages/my_ui

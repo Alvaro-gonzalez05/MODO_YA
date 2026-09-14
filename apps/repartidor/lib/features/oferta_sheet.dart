@@ -5,28 +5,31 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-/// B3 - Oferta de nuevo servicio.
+/// Respuesta del rider a una oferta.
+enum RespuestaOferta { acepta, rechaza, vencio }
+
+/// Oferta de nuevo servicio (B3). El anillo es la cuenta regresiva: si no
+/// responde a tiempo, el envio pasa al siguiente rider.
 ///
-/// El cadete tiene una ventana corta para aceptar; si no responde, el envio se
-/// le ofrece al siguiente. Por eso el anillo de cuenta regresiva es el centro
-/// visual de la pantalla.
+/// Sin datos del cliente: todavia no acepto (la vista de la base tampoco los
+/// trae).
 class OfertaSheet extends StatefulWidget {
   const OfertaSheet({super.key, required this.oferta});
 
   final OfertaServicio oferta;
 
-  /// Devuelve `true` si el cadete acepto.
-  static Future<bool?> mostrar(BuildContext context, OfertaServicio oferta) =>
-      showModalBottomSheet<bool>(
-        context: context,
-        // Sin el navigator raiz, la hoja se abre dentro de la rama del shell
-        // y el dock flotante le queda encima, tapando los botones.
-        useRootNavigator: true,
-        isScrollControlled: true,
-        isDismissible: false,
-        enableDrag: false,
-        builder: (_) => OfertaSheet(oferta: oferta),
-      );
+  static Future<RespuestaOferta> mostrar(BuildContext context, OfertaServicio oferta) async {
+    final r = await showModalBottomSheet<RespuestaOferta>(
+      context: context,
+      // Sin el navigator raiz, el dock flotante queda encima de los botones.
+      useRootNavigator: true,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (_) => OfertaSheet(oferta: oferta),
+    );
+    return r ?? RespuestaOferta.vencio;
+  }
 
   @override
   State<OfertaSheet> createState() => _OfertaSheetState();
@@ -34,21 +37,17 @@ class OfertaSheet extends StatefulWidget {
 
 class _OfertaSheetState extends State<OfertaSheet> {
   late Timer _timer;
-  late Duration _restante;
-  late final Duration _total;
+  late Duration _restante = widget.oferta.restante;
+  late final int _totalMs = (widget.oferta.expiraEn.difference(widget.oferta.envio.creadoEn)).inMilliseconds.clamp(1, 600000);
 
   @override
   void initState() {
     super.initState();
-    _restante = widget.oferta.restante;
-    _total = _restante == Duration.zero ? const Duration(seconds: 30) : _restante;
     _timer = Timer.periodic(const Duration(milliseconds: 200), (_) {
-      final r = widget.oferta.restante;
       if (!mounted) return;
+      final r = widget.oferta.restante;
       setState(() => _restante = r);
-      // Si se agota la ventana, la oferta se cierra sola: el motor de
-      // asignacion ya la esta pasando al siguiente cadete.
-      if (r == Duration.zero) Navigator.of(context).pop(false);
+      if (r == Duration.zero) Navigator.of(context).pop(RespuestaOferta.vencio);
     });
   }
 
@@ -60,10 +59,9 @@ class _OfertaSheetState extends State<OfertaSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final envio = widget.oferta.envio;
-    final progreso = _total.inMilliseconds == 0
-        ? 0.0
-        : _restante.inMilliseconds / _total.inMilliseconds;
+    final o = widget.oferta;
+    final envio = o.envio;
+    final progreso = (_restante.inMilliseconds / _totalMs).clamp(0.0, 1.0);
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -74,19 +72,11 @@ class _OfertaSheetState extends State<OfertaSheet> {
           children: [
             Row(
               children: [
-                const MyBadge(
-                  'NUEVO SERVICIO',
-                  tone: MyBadgeTone.ember,
-                  icon: Symbols.notifications_active,
-                ),
+                const MyBadge('NUEVO SERVICIO', tone: MyBadgeTone.ember, icon: Symbols.notifications_active),
                 const Spacer(),
-                const Icon(Symbols.near_me,
-                    size: 18, color: MyColors.secondary),
-                const SizedBox(width: MySpacing.xxs),
-                Text('Malargue urbano', style: MyType.labelLg),
+                Text(envio.codigo, style: MyType.labelLg),
               ],
             ),
-
             const SizedBox(height: MySpacing.lg),
             Center(
               child: SizedBox(
@@ -101,106 +91,62 @@ class _OfertaSheetState extends State<OfertaSheet> {
                         strokeWidth: 12,
                         strokeCap: StrokeCap.round,
                         backgroundColor: MyColors.secondaryContainer,
-                        valueColor: const AlwaysStoppedAnimation(
-                          MyColors.primary,
-                        ),
+                        valueColor: const AlwaysStoppedAnimation(MyColors.primary),
                       ),
                     ),
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        MyBadge(
-                          '${_restante.inSeconds}s restantes',
-                          tone: MyBadgeTone.ember,
-                          icon: Symbols.timer,
-                        ),
+                        MyBadge('${_restante.inSeconds}s', tone: MyBadgeTone.ember, icon: Symbols.timer),
                         const SizedBox(height: MySpacing.xs),
-                        Text(
-                          Formato.pesos(envio.cotizacion.gananciaRepartidor),
-                          style: MyType.displayLg,
-                        ),
-                        const MyOverline('Tarifa cadete'),
+                        Text(Formato.pesos(envio.cotizacion.gananciaRepartidor), style: MyType.displayLg),
+                        const MyOverline('Tu ganancia'),
                       ],
                     ),
                   ],
                 ),
               ),
             ),
-
             const SizedBox(height: MySpacing.lg),
-            Container(
-              padding: const EdgeInsets.all(MySpacing.md),
-              decoration: BoxDecoration(
-                color: MyColors.secondaryContainer,
-                borderRadius: BorderRadius.circular(MyRadius.full),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Symbols.verified, size: 20,
-                      color: MyColors.primary),
-                  const SizedBox(width: MySpacing.xs),
-                  Expanded(
-                    child: Text(
-                      'Ganancia neta garantizada',
-                      style: MyType.bodyMd
-                          .copyWith(color: MyColors.onSecondaryFixed),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
+            MyStatRow(tiles: [
+              MyStatTile(icon: Symbols.near_me, value: Formato.km(o.distanciaAlRetiroKm), label: 'Hasta el local'),
+              MyStatTile(icon: Symbols.route, value: Formato.km(envio.cotizacion.distanciaKm), label: 'Viaje'),
+              MyStatTile(icon: Symbols.schedule, value: '${envio.cotizacion.minutosEstimados}', label: 'Min est.'),
+            ]),
+            const SizedBox(height: MySpacing.md),
+            if (envio.origen.tieneCoordenadas && envio.destino.tieneCoordenadas) ...[
+              MyMapaVista(
+                alto: 150,
+                marcadores: [
+                  MyMarcador(punto: LatLng(envio.origen.lat!, envio.origen.lng!), icono: Symbols.storefront),
+                  MyMarcador(punto: LatLng(envio.destino.lat!, envio.destino.lng!), icono: Symbols.home, color: MyColors.dock),
                 ],
               ),
-            ),
-
-            const SizedBox(height: MySpacing.md),
-            MyStatRow(
-              tiles: [
-                MyStatTile(
-                  icon: Symbols.route,
-                  value: Formato.km(envio.cotizacion.distanciaKm),
-                  label: 'Total viaje',
-                ),
-                MyStatTile(
-                  icon: Symbols.schedule,
-                  value: '${envio.cotizacion.minutosEstimados}',
-                  label: 'Tiempo est. (min)',
-                ),
-                MyStatTile(
-                  icon: Symbols.receipt_long,
-                  value: '1',
-                  label: 'Pedido en caja',
-                ),
-              ],
-            ),
-
-            const SizedBox(height: MySpacing.md),
+              const SizedBox(height: MySpacing.md),
+            ],
             MyRouteTimeline(
               stops: [
                 MyRouteStop(
-                  overline: 'Punto de retiro',
+                  overline: 'Retiro',
                   title: envio.comercioNombre,
-                  subtitle: '${envio.origen.calle} - a '
-                      '${Formato.km(widget.oferta.distanciaAlRetiroKm)} de vos',
-                  badge: 'A preparar',
+                  subtitle: envio.origen.calle,
                   icon: Symbols.restaurant,
                 ),
                 MyRouteStop(
-                  overline: 'Punto de entrega',
+                  overline: 'Entrega',
                   title: envio.destino.calle,
-                  subtitle: 'Distancia de entrega: '
-                      '${Formato.km(envio.cotizacion.distanciaKm)}',
-                  badge: 'Domicilio',
+                  subtitle: 'Los datos del cliente aparecen al aceptar',
                   icon: Symbols.home,
                   iconBackground: MyColors.dock,
                 ),
               ],
             ),
-
             const SizedBox(height: MySpacing.lg),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
+                    onPressed: () => Navigator.of(context).pop(RespuestaOferta.rechaza),
                     child: const Text('Rechazar'),
                   ),
                 ),
@@ -208,9 +154,9 @@ class _OfertaSheetState extends State<OfertaSheet> {
                 Expanded(
                   flex: 2,
                   child: FilledButton.icon(
-                    onPressed: () => Navigator.of(context).pop(true),
+                    onPressed: () => Navigator.of(context).pop(RespuestaOferta.acepta),
                     icon: const Icon(Symbols.bolt, size: 22, fill: 1),
-                    label: const Text('Aceptar pedido'),
+                    label: const Text('Aceptar'),
                   ),
                 ),
               ],

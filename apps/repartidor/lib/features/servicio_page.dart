@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-/// B4 a B7 - Servicio en curso.
-///
-/// Una sola pantalla recorre toda la secuencia del diseno (ir al comercio,
-/// llegue, retire el pedido, en camino, confirmar entrega, finalizado): lo
-/// unico que cambia es el estado del envio y, con el, la accion principal.
+/// Servicio en curso (B4 a B7): ir al local, retirar, llevar y confirmar con
+/// el codigo que dicta el cliente.
 class ServicioEnCursoPage extends ConsumerWidget {
   const ServicioEnCursoPage({super.key, required this.envioId});
 
@@ -17,273 +15,215 @@ class ServicioEnCursoPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final enCurso = ref.watch(envioEnCursoProvider);
+    final envio = ref.watch(envioProvider(envioId));
 
     return Scaffold(
-      backgroundColor: MyColors.surface,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Symbols.arrow_back),
-          onPressed: () => context.goNamed('inicio'),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
         ),
-        title: const Text('Servicio en curso'),
+        title: const Text('Servicio'),
       ),
-      body: enCurso.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (envio) {
-          if (envio == null || envio.id != envioId) {
-            return _Finalizado(onVolver: () => context.goNamed('inicio'));
-          }
-          return _Contenido(envio: envio);
-        },
+      body: MyAsync(
+        valor: envio,
+        datos: (e) => e == null
+            ? const MyEmptyState(title: 'Servicio no encontrado', message: 'Puede que lo hayan cancelado.')
+            : _Contenido(envio: e),
       ),
     );
   }
 }
 
-class _Contenido extends ConsumerStatefulWidget {
+class _Contenido extends ConsumerWidget {
   const _Contenido({required this.envio});
 
   final Envio envio;
 
-  @override
-  ConsumerState<_Contenido> createState() => _ContenidoState();
-}
-
-class _ContenidoState extends ConsumerState<_Contenido> {
-  var _procesando = false;
-
-  /// Siguiente paso del flujo segun el estado actual.
-  ({String label, IconData icon, EstadoEnvio siguiente})? get _accion =>
-      switch (widget.envio.estado) {
-        EstadoEnvio.asignado => (
-            label: 'Llegue al local',
-            icon: Symbols.storefront,
-            siguiente: EstadoEnvio.enLocal,
-          ),
-        EstadoEnvio.enLocal => (
-            label: 'Retire el pedido',
-            icon: Symbols.package_2,
-            siguiente: EstadoEnvio.retirado,
-          ),
-        EstadoEnvio.retirado => (
-            label: 'Voy al cliente',
-            icon: Symbols.navigation,
-            siguiente: EstadoEnvio.enCamino,
-          ),
-        // La entrega no avanza sola: necesita el codigo del cliente.
-        EstadoEnvio.enCamino => null,
+  ({String label, IconData icon, EstadoEnvio siguiente})? get _accion => switch (envio.estado) {
+        EstadoEnvio.asignado => (label: 'Llegue al local', icon: Symbols.storefront, siguiente: EstadoEnvio.enLocal),
+        EstadoEnvio.enLocal => (label: 'Retire el pedido', icon: Symbols.package_2, siguiente: EstadoEnvio.retirado),
+        EstadoEnvio.retirado => (label: 'Salgo para el cliente', icon: Symbols.navigation, siguiente: EstadoEnvio.enCamino),
         _ => null,
       };
 
-  Future<void> _avanzar(EstadoEnvio siguiente) async {
-    setState(() => _procesando = true);
-    final messenger = ScaffoldMessenger.of(context);
+  Future<void> _confirmarEntrega(BuildContext context, WidgetRef ref) async {
+    final codigo = await showDialog<String>(context: context, builder: (_) => const _DialogoCodigo());
+    if (codigo == null) return;
     try {
-      await ref
-          .read(enviosRepositoryProvider)
-          .cambiarEstado(widget.envio.id, siguiente);
+      await ref.read(enviosRepositoryProvider).confirmarEntrega(envio.id, codigo);
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('$e')));
-    } finally {
-      if (mounted) setState(() => _procesando = false);
-    }
-  }
-
-  Future<void> _confirmarEntrega() async {
-    final codigo = await showDialog<String>(
-      context: context,
-      builder: (_) => const _DialogoCodigo(),
-    );
-    if (codigo == null || !mounted) return;
-
-    setState(() => _procesando = true);
-    final messenger = ScaffoldMessenger.of(context);
-    final router = GoRouter.of(context);
-
-    try {
-      await ref.read(enviosRepositoryProvider).confirmarEntrega(
-            envioId: widget.envio.id,
-            codigo: codigo,
-          );
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Entrega confirmada')),
-      );
-      router.goNamed('inicio');
-    } on CodigoEntregaInvalido {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('El codigo no es correcto')),
-      );
-    } finally {
-      if (mounted) setState(() => _procesando = false);
+      if (context.mounted) mostrarError(context, e);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final envio = widget.envio;
-    final accion = _accion;
-    final esperandoCodigo = envio.estado == EstadoEnvio.enCamino;
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (envio.estado == EstadoEnvio.entregado) return _Finalizado(envio: envio);
+    if (envio.estado == EstadoEnvio.cancelado) {
+      return MyEmptyState(
+        icon: Symbols.cancel,
+        title: 'Servicio cancelado',
+        message: envio.motivoCancelacion ?? 'El envio se cancelo.',
+        action: FilledButton(onPressed: () => context.go('/'), child: const Text('Volver al inicio')),
+      );
+    }
 
-    return SafeArea(
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(MySpacing.screenEdge),
-              children: [
-                MyHeroCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    final accion = _accion;
+    // Los datos del cliente recien cuando el pedido esta en la mano: antes no
+    // hacen falta.
+    final mostrarCliente = envio.estado.index >= EstadoEnvio.retirado.index;
+    final vaAlLocal = envio.estado.index < EstadoEnvio.retirado.index;
+    final o = envio.origen;
+    final d = envio.destino;
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(MySpacing.screenEdge),
+            children: [
+              MyHeroCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        MyBadge(envio.codigo, tone: MyBadgeTone.dark),
+                        const Spacer(),
+                        Text(Formato.pesos(envio.cotizacion.gananciaRepartidor),
+                            style: MyType.headlineMd.copyWith(color: Colors.white)),
+                      ],
+                    ),
+                    const SizedBox(height: MySpacing.md),
+                    Text(
+                      vaAlLocal ? 'Anda a ${envio.comercioNombre}' : 'Llevalo a ${d.calle}',
+                      style: MyType.headlineLg.copyWith(color: Colors.white),
+                    ),
+                    Text(
+                      switch (envio.estado) {
+                        EstadoEnvio.asignado => 'Retira el pedido en ${o.calle}.',
+                        EstadoEnvio.enLocal => 'Avisale al local que llegaste y retira el pedido.',
+                        EstadoEnvio.retirado => 'Tenes el pedido. Sali para el domicilio.',
+                        EstadoEnvio.enCamino => 'Al llegar, pedile el codigo de 4 numeros al cliente.',
+                        _ => '',
+                      },
+                      style: MyType.bodyLg.copyWith(color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: MySpacing.md),
+              if (o.tieneCoordenadas && d.tieneCoordenadas) ...[
+                MyMapaVista(
+                  alto: 220,
+                  interactivo: true,
+                  marcadores: [
+                    MyMarcador(punto: LatLng(o.lat!, o.lng!), icono: Symbols.storefront, etiqueta: vaAlLocal ? 'Ir aca' : null),
+                    MyMarcador(
+                      punto: LatLng(d.lat!, d.lng!),
+                      icono: Symbols.home,
+                      color: MyColors.dock,
+                      etiqueta: vaAlLocal ? null : 'Ir aca',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: MySpacing.md),
+              ],
+              MyRouteTimeline(
+                background: MyColors.surfaceContainerLowest,
+                stops: [
+                  MyRouteStop(
+                    overline: 'Retiro',
+                    title: envio.comercioNombre,
+                    subtitle: [o.calle, if (o.referencia != null) o.referencia!].join(' - '),
+                    icon: Symbols.restaurant,
+                  ),
+                  MyRouteStop(
+                    overline: 'Entrega',
+                    title: d.calle,
+                    subtitle: d.referencia,
+                    icon: Symbols.home,
+                    iconBackground: MyColors.dock,
+                  ),
+                ],
+              ),
+              if (mostrarCliente) ...[
+                const SizedBox(height: MySpacing.md),
+                MyCard(
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          MyBadge('#${envio.codigo}', tone: MyBadgeTone.dark),
-                          const Spacer(),
-                          Text(
-                            Formato.pesos(envio.cotizacion.gananciaRepartidor),
-                            style: MyType.headlineMd
-                                .copyWith(color: Colors.white),
-                          ),
-                        ],
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: const BoxDecoration(color: MyColors.secondaryContainer, shape: BoxShape.circle),
+                        child: const Icon(Symbols.person, color: MyColors.primary),
                       ),
-                      const SizedBox(height: MySpacing.md),
-                      Text(
-                        envio.estado.label,
-                        style:
-                            MyType.headlineLg.copyWith(color: Colors.white),
+                      const SizedBox(width: MySpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const MyOverline('Cliente'),
+                            Text(envio.cliente.nombre, style: MyType.headlineSm),
+                            SelectableText(envio.cliente.telefono, style: MyType.bodyMd),
+                            if (envio.cliente.indicaciones != null)
+                              Text(envio.cliente.indicaciones!, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: MySpacing.xxs),
-                      Text(
-                        switch (envio.estado) {
-                          EstadoEnvio.asignado =>
-                            'Anda al local a retirar el pedido.',
-                          EstadoEnvio.enLocal =>
-                            'Avisale al comercio que llegaste.',
-                          EstadoEnvio.retirado =>
-                            'Ya tenes el pedido. Sali para el domicilio.',
-                          EstadoEnvio.enCamino =>
-                            'Al llegar, pedile el codigo al cliente.',
-                          _ => '',
+                      IconButton(
+                        tooltip: 'Copiar telefono',
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: envio.cliente.telefono));
+                          if (context.mounted) mostrarAviso(context, 'Telefono copiado');
                         },
-                        style:
-                            MyType.bodyLg.copyWith(color: Colors.white70),
+                        icon: const Icon(Symbols.content_copy, color: MyColors.primary),
                       ),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: MySpacing.md),
-                MyStatRow(
-                  tiles: [
-                    MyStatTile(
-                      icon: Symbols.route,
-                      value: Formato.km(envio.cotizacion.distanciaKm),
-                      label: 'Total viaje',
-                    ),
-                    MyStatTile(
-                      icon: Symbols.schedule,
-                      value: '${envio.cotizacion.minutosEstimados}',
-                      label: 'Minutos est.',
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: MySpacing.md),
-                MyRouteTimeline(
-                  background: MyColors.surfaceContainerLowest,
-                  stops: [
-                    MyRouteStop(
-                      overline: 'Punto de retiro',
-                      title: envio.comercioNombre,
-                      subtitle: envio.origen.calle,
-                      icon: Symbols.restaurant,
-                    ),
-                    MyRouteStop(
-                      overline: 'Punto de entrega',
-                      title: envio.destino.calle,
-                      subtitle: envio.destino.referencia,
-                      icon: Symbols.home,
-                      iconBackground: MyColors.dock,
-                    ),
-                  ],
-                ),
-
-                // Los datos del cliente solo se muestran una vez que el cadete
-                // tiene el pedido en la mano: antes no los necesita.
-                if (envio.estado.index >= EstadoEnvio.retirado.index) ...[
-                  const SizedBox(height: MySpacing.md),
-                  MyCard(
-                    padding: const EdgeInsets.all(MySpacing.md),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 46,
-                          height: 46,
-                          decoration: const BoxDecoration(
-                            color: MyColors.secondaryContainer,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Symbols.person,
-                              size: 23, color: MyColors.primary),
-                        ),
-                        const SizedBox(width: MySpacing.sm),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const MyOverline('Cliente'),
-                              Text(envio.cliente.nombre,
-                                  style: MyType.headlineSm),
-                              if (envio.cliente.indicaciones != null)
-                                Text(
-                                  envio.cliente.indicaciones!,
-                                  style: MyType.bodySm
-                                      .copyWith(color: MyColors.secondary),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const MyCircleIconButton(
-                          icon: Symbols.call,
-                          background: MyColors.primary,
-                          foreground: MyColors.onPrimary,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
-            ),
+              if (envio.quienPaga == QuienPaga.cliente && envio.pedidoId == null) ...[
+                const SizedBox(height: MySpacing.sm),
+                Text(
+                  'El envio lo paga el cliente.',
+                  style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                ),
+              ],
+            ],
           ),
-
-          // Accion principal anclada abajo, al alcance del pulgar.
-          Padding(
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
             padding: const EdgeInsets.all(MySpacing.screenEdge),
-            child: _procesando
-                ? const Center(child: CircularProgressIndicator())
-                : esperandoCodigo
-                    ? FilledButton.icon(
-                        onPressed: _confirmarEntrega,
-                        icon: const Icon(Symbols.verified, size: 22),
-                        label: const Text('Confirmar entrega'),
-                      )
-                    : accion == null
-                        ? const SizedBox.shrink()
-                        : FilledButton.icon(
-                            onPressed: () => _avanzar(accion.siguiente),
-                            icon: Icon(accion.icon, size: 22),
-                            label: Text(accion.label),
-                          ),
+            child: envio.estado == EstadoEnvio.enCamino
+                ? MyBotonAccion(
+                    label: 'Confirmar entrega',
+                    icon: Symbols.verified,
+                    onPressed: () => _confirmarEntrega(context, ref),
+                  )
+                : accion == null
+                    ? const SizedBox.shrink()
+                    : MyBotonAccion(
+                        label: accion.label,
+                        icon: accion.icon,
+                        onPressed: () async {
+                          try {
+                            await ref.read(enviosRepositoryProvider).avanzar(envio.id, accion.siguiente);
+                          } catch (e) {
+                            if (context.mounted) mostrarError(context, e);
+                          }
+                        },
+                      ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-/// Pide el codigo de 4 digitos que el cliente le dicta al cadete.
 class _DialogoCodigo extends StatefulWidget {
   const _DialogoCodigo();
 
@@ -292,11 +232,11 @@ class _DialogoCodigo extends StatefulWidget {
 }
 
 class _DialogoCodigoState extends State<_DialogoCodigo> {
-  final _controller = TextEditingController();
+  final _c = TextEditingController();
 
   @override
   void dispose() {
-    _controller.dispose();
+    _c.dispose();
     super.dispose();
   }
 
@@ -306,31 +246,26 @@ class _DialogoCodigoState extends State<_DialogoCodigo> {
       title: const Text('Codigo de entrega'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Pedile al cliente los 4 digitos que ve en su pedido.',
-            style: MyType.bodyMd.copyWith(color: MyColors.secondary),
-          ),
+          Text('Pedile al cliente los 4 numeros que ve en su pedido.', style: MyType.bodyMd),
           const SizedBox(height: MySpacing.md),
           TextField(
-            controller: _controller,
+            controller: _c,
             autofocus: true,
             keyboardType: TextInputType.number,
             maxLength: 4,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             textAlign: TextAlign.center,
-            style: MyType.displayLg,
+            style: MyType.displayLg.copyWith(letterSpacing: 8),
             decoration: const InputDecoration(counterText: ''),
+            onSubmitted: (v) => v.length == 4 ? Navigator.pop(context, v) : null,
           ),
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Volver'),
-        ),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Volver')),
         FilledButton(
-          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          onPressed: () => _c.text.length == 4 ? Navigator.pop(context, _c.text) : null,
           child: const Text('Confirmar'),
         ),
       ],
@@ -338,21 +273,42 @@ class _DialogoCodigoState extends State<_DialogoCodigo> {
   }
 }
 
-/// B7 - Servicio finalizado.
 class _Finalizado extends StatelessWidget {
-  const _Finalizado({required this.onVolver});
+  const _Finalizado({required this.envio});
 
-  final VoidCallback onVolver;
+  final Envio envio;
 
   @override
   Widget build(BuildContext context) {
-    return MyEmptyState(
-      icon: Symbols.check_circle,
-      title: 'Servicio finalizado',
-      message: 'La ganancia ya quedo registrada en tu historial.',
-      action: FilledButton(
-        onPressed: onVolver,
-        child: const Text('Volver al inicio'),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: Padding(
+          padding: const EdgeInsets.all(MySpacing.screenEdge),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Symbols.check_circle, size: 72, color: MyColors.success, fill: 1),
+              const SizedBox(height: MySpacing.md),
+              Text('Entregado', style: MyType.displayLg, textAlign: TextAlign.center),
+              Text('Buen trabajo. La ganancia ya quedo registrada.',
+                  style: MyType.bodyLg.copyWith(color: MyColors.secondary), textAlign: TextAlign.center),
+              const SizedBox(height: MySpacing.lg),
+              MyHeroCard(
+                child: Column(
+                  children: [
+                    const MyOverline('Ganaste', color: Colors.white70),
+                    Text(Formato.pesos(envio.cotizacion.gananciaRepartidor),
+                        style: MyType.displayLg.copyWith(color: Colors.white)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: MySpacing.xl),
+              FilledButton(onPressed: () => context.go('/'), child: const Text('Volver al inicio')),
+            ],
+          ),
+        ),
       ),
     );
   }

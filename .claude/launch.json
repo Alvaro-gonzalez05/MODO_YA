@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "gestion-web",
+      "name": "modo-ya-web",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5051", "--directory", "apps/gestion/build/web"],
+      "runtimeArgs": ["-m", "http.server", "5051", "--directory", "apps/modo_ya/build/web"],
       "port": 5051
     },
     {

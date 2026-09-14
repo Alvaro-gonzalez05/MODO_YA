@@ -5,101 +5,67 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-/// Listado de servicios del cadete: lo que tiene en curso y lo que ya cerro.
+/// Servicios del rider: el que tiene en curso y los ultimos que hizo.
 class ServiciosPage extends ConsumerWidget {
   const ServiciosPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final id = ref.watch(sesionProvider).repartidorId;
-    final todos = ref.watch(enviosActivosProvider).value ?? const <Envio>[];
-    final mios = todos.where((e) => e.repartidorId == id).toList();
+    final envios = ref.watch(enviosDelRepartidorProvider);
 
     return Column(
       children: [
-        const MyTopBar(zona: 'Malargue urbano'),
+        const MyTopBar(zona: 'Mis servicios'),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              MySpacing.screenEdge,
-              MySpacing.xs,
-              MySpacing.screenEdge,
-              MySpacing.dockClearance,
-            ),
-            children: [
-              Text('Mis servicios', style: MyType.headlineLg),
-              const SizedBox(height: MySpacing.xxs),
-              Text(
-                'Lo que tenes asignado ahora mismo',
-                style: MyType.bodyMd.copyWith(color: MyColors.secondary),
-              ),
-              const SizedBox(height: MySpacing.lg),
-
-              if (mios.isEmpty)
-                const MyEmptyState(
-                  icon: Symbols.local_shipping,
-                  title: 'No tenes servicios asignados',
-                  message:
-                      'Cuando aceptes una oferta, el servicio va a aparecer '
-                      'aca con todos sus pasos.',
-                )
-              else
-                for (final e in mios) ...[
-                  MyCard(
-                    onTap: () => context.goNamed(
-                      'servicio',
-                      pathParameters: {'id': e.id},
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+          child: MyAsync(
+            valor: envios,
+            onReintentar: () => ref.invalidate(enviosDelRepartidorProvider),
+            datos: (lista) => lista.isEmpty
+                ? const MyEmptyState(
+                    icon: Symbols.local_shipping,
+                    title: 'Todavia no hiciste servicios',
+                    message: 'Cuando aceptes una oferta, aparece aca.',
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(MySpacing.screenEdge, MySpacing.xs, MySpacing.screenEdge, MySpacing.dockClearance),
+                    itemCount: lista.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: MySpacing.sm),
+                    itemBuilder: (_, i) {
+                      final e = lista[i];
+                      return MyCard(
+                        onTap: () => context.push('/servicio/${e.id}'),
+                        color: e.estado.esActivo ? MyColors.primaryFixed : MyColors.surfaceContainerLowest,
+                        child: Row(
                           children: [
-                            MyOverline('Pedido #${e.codigo}'),
-                            const Spacer(),
-                            MyBadge(e.estado.label),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      MyOverline(e.codigo),
+                                      const SizedBox(width: MySpacing.xs),
+                                      MyBadge(e.estado.label,
+                                          tone: e.estado.esActivo
+                                              ? MyBadgeTone.ember
+                                              : (e.estado == EstadoEnvio.entregado ? MyBadgeTone.success : MyBadgeTone.danger)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: MySpacing.xxs),
+                                  Text(e.comercioNombre, style: MyType.headlineSm),
+                                  Text('-> ${e.destino.calle}', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                                  Text('${Formato.fechaCorta(e.creadoEn)} ${Formato.hora(e.creadoEn)}',
+                                      style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                                ],
+                              ),
+                            ),
+                            Text(Formato.pesos(e.cotizacion.gananciaRepartidor),
+                                style: MyType.headlineSm.copyWith(color: MyColors.primary)),
                           ],
                         ),
-                        const SizedBox(height: MySpacing.sm),
-                        MyRouteTimeline(
-                          padding: const EdgeInsets.all(MySpacing.sm),
-                          stops: [
-                            MyRouteStop(
-                              overline: 'Retiro',
-                              title: e.comercioNombre,
-                              subtitle: e.origen.calle,
-                              icon: Symbols.restaurant,
-                            ),
-                            MyRouteStop(
-                              overline: 'Entrega',
-                              title: e.destino.calle,
-                              icon: Symbols.home,
-                              iconBackground: MyColors.dock,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: MySpacing.sm),
-                        Row(
-                          children: [
-                            Text(
-                              'Tu ganancia',
-                              style: MyType.labelMd
-                                  .copyWith(color: MyColors.secondary),
-                            ),
-                            const Spacer(),
-                            Text(
-                              Formato.pesos(e.cotizacion.gananciaRepartidor),
-                              style: MyType.headlineSm
-                                  .copyWith(color: MyColors.primary),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                  const SizedBox(height: MySpacing.sm),
-                ],
-            ],
           ),
         ),
       ],

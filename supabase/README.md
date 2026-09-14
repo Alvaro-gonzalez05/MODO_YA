@@ -26,6 +26,10 @@ van en una migración nueva.
 | `0015_politicas_catalogo.sql` | mismo arreglo que 0011, sobre el catálogo |
 | `0016_permisos_por_columna.sql` | **crítico**: nadie puede cambiarse el rol ni autoaprobarse |
 | `0017_cuentas_storage_realtime.sql` | alta automática de clientes, sesión, vistas, fotos, tiempo real |
+| `0018_rol_por_update_de_auth.sql` | el rol también se toma cuando Auth lo escribe en un UPDATE |
+| `0019_huecos_de_flujo.sql` | código de entrega para el cliente, horarios nocturnos, pg_cron |
+| `0020_horario_testeable.sql` | la lógica de horarios recibe el momento a evaluar |
+| `0021_validar_opciones_del_pedido.sql` | opciones obligatorias, únicas y máximos, validados en el servidor |
 
 ## Decisiones de diseño
 
@@ -167,11 +171,23 @@ el texto del mensaje.
 
 ## Pruebas de regresión
 
-Las tres dejan la base como la encontraron. Se corren con:
+Todas dejan la base como la encontraron. Se corren con:
 
 ```powershell
 .\supabase\scripts\sql.ps1 supabase\tests\permisos.sql
 ```
+
+**`tests/horarios.sql`** — `comercio_abierto_en()` con momentos fijos: turnos
+normales, que cruzan medianoche, vuelta de sábado a domingo, pausa manual.
+
+**`tests/cuentas.ps1`** — alta de cuentas contra la API real de Auth y la Edge
+Function. Existe porque GoTrue escribe el `app_metadata` en un UPDATE posterior
+al INSERT, algo que un test SQL no puede ver (ver 0018).
+
+**`../packages/my_core/test/integracion_test.dart`** — los repositorios de la app
+contra la base real: nombres de columnas de las vistas, parámetros de las RPC,
+parseo de respuestas y Realtime con el RLS de cada usuario. Se prepara con
+`tests/preparar_prueba_app.ps1`.
 
 **`tests/permisos.sql`** — escalada de privilegios. Cliente que intenta hacerse
 admin, local que intenta aprobarse, rider que se infla los viajes o valida su
@@ -198,8 +214,6 @@ pedido y envío, comprueba las tres reglas de privacidad de arriba.
 
 ## Pendiente
 
-- **pg_cron** para vencer ofertas automáticamente (`vencer_ofertas()` ya está
-  escrita). Hay que habilitar la extensión desde el dashboard.
 - **Custom Access Token Hook** para llevar el rol en el JWT. Hoy las políticas
   lo leen de `perfiles` con funciones `security definer`, que funciona bien; el
   hook ahorraría una consulta por request.

@@ -1,16 +1,58 @@
 import 'estados.dart';
 
-/// Un punto en el mapa con su direccion escrita y una referencia libre.
+/// Lectores tolerantes de las filas que devuelve PostgREST.
+///
+/// Los numeric de Postgres llegan como num (a veces String si son muy grandes);
+/// los timestamps como String ISO. Centralizarlo evita casts sueltos por todo
+/// el codigo.
+abstract final class Fila {
+  static String texto(Map<String, dynamic> f, String k) => (f[k] ?? '').toString();
+
+  static String? textoOpcional(Map<String, dynamic> f, String k) {
+    final v = f[k];
+    if (v == null) return null;
+    final s = v.toString();
+    return s.isEmpty ? null : s;
+  }
+
+  static int entero(Map<String, dynamic> f, String k, [int defecto = 0]) {
+    final v = f[k];
+    if (v is num) return v.toInt();
+    if (v is String) return num.tryParse(v)?.toInt() ?? defecto;
+    return defecto;
+  }
+
+  static int? enteroOpcional(Map<String, dynamic> f, String k) =>
+      f[k] == null ? null : entero(f, k);
+
+  static double decimal(Map<String, dynamic> f, String k, [double defecto = 0]) {
+    final v = f[k];
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? defecto;
+    return defecto;
+  }
+
+  static double? decimalOpcional(Map<String, dynamic> f, String k) =>
+      f[k] == null ? null : decimal(f, k);
+
+  static bool booleano(Map<String, dynamic> f, String k, [bool defecto = false]) {
+    final v = f[k];
+    return v is bool ? v : defecto;
+  }
+
+  static DateTime fecha(Map<String, dynamic> f, String k) =>
+      DateTime.parse(f[k] as String).toLocal();
+
+  static DateTime? fechaOpcional(Map<String, dynamic> f, String k) =>
+      f[k] == null ? null : DateTime.parse(f[k] as String).toLocal();
+}
+
+/// Un punto con su direccion escrita y una referencia libre.
 ///
 /// En Malargue la numeracion no siempre es confiable, asi que la referencia
-/// ("porton verde, al lado del kiosco") es tan importante como la calle.
+/// ("porton verde, al lado del kiosco") importa tanto como la calle.
 class Direccion {
-  const Direccion({
-    required this.calle,
-    this.referencia,
-    this.lat,
-    this.lng,
-  });
+  const Direccion({required this.calle, this.referencia, this.lat, this.lng});
 
   final String calle;
   final String? referencia;
@@ -18,40 +60,10 @@ class Direccion {
   final double? lng;
 
   bool get tieneCoordenadas => lat != null && lng != null;
-
-  factory Direccion.fromJson(Map<String, dynamic> json) => Direccion(
-        calle: json['calle'] as String,
-        referencia: json['referencia'] as String?,
-        lat: (json['lat'] as num?)?.toDouble(),
-        lng: (json['lng'] as num?)?.toDouble(),
-      );
-
-  Map<String, dynamic> toJson() => {
-        'calle': calle,
-        if (referencia != null) 'referencia': referencia,
-        if (lat != null) 'lat': lat,
-        if (lng != null) 'lng': lng,
-      };
-
-  Direccion copyWith({
-    String? calle,
-    String? referencia,
-    double? lat,
-    double? lng,
-  }) =>
-      Direccion(
-        calle: calle ?? this.calle,
-        referencia: referencia ?? this.referencia,
-        lat: lat ?? this.lat,
-        lng: lng ?? this.lng,
-      );
 }
 
-/// Cuadro tarifario vigente.
-///
-/// Todos los importes son configurables desde administracion: la clienta pidio
-/// explicitamente poder actualizarlos sin publicar una version nueva de la app
-/// (seccion 4 del documento).
+/// Cuadro tarifario vigente. Editable desde administracion (se versiona: cada
+/// cambio crea uno nuevo en la base).
 class Tarifario {
   const Tarifario({
     required this.gananciaRepartidorBase,
@@ -60,74 +72,34 @@ class Tarifario {
     required this.precioKmAdicional,
     required this.radioBusquedaKm,
     required this.segundosParaAceptar,
+    this.id,
+    this.ciudadId,
+    this.precioSuscripcionMensual,
   });
 
-  /// Lo que cobra el cadete por un viaje dentro de [kmIncluidos].
+  final String? id;
+  final String? ciudadId;
   final int gananciaRepartidorBase;
-
-  /// Lo que se queda MODO YA por servicio.
   final int comisionModoYa;
-
-  /// Kilometros cubiertos por la tarifa base.
   final double kmIncluidos;
-
-  /// Precio de cada kilometro que exceda [kmIncluidos].
-  ///
-  /// Pendiente de definir con la clienta; arranca en 0 para no inventar plata.
   final int precioKmAdicional;
-
-  /// Radio inicial de busqueda de cadetes.
   final double radioBusquedaKm;
-
-  /// Tiempo que tiene cada cadete para aceptar antes de pasar al siguiente.
   final int segundosParaAceptar;
-
-  /// Valores iniciales de la etapa de prueba, tal cual el documento MVP:
-  /// $3.000 para el cadete + $500 de comision = $3.500 hasta 2 km.
-  static const inicial = Tarifario(
-    gananciaRepartidorBase: 3000,
-    comisionModoYa: 500,
-    kmIncluidos: 2,
-    precioKmAdicional: 0,
-    radioBusquedaKm: 3,
-    segundosParaAceptar: 30,
-  );
+  final int? precioSuscripcionMensual;
 
   int get precioBase => gananciaRepartidorBase + comisionModoYa;
 
-  /// Cotiza un envio de [km] kilometros.
-  ///
-  /// El calculo definitivo tiene que correr en el servidor (una funcion SQL con
-  /// PostGIS): aca esta para previsualizar en la app antes de confirmar, pero
-  /// el precio que vale es el que devuelve la base.
-  Cotizacion cotizar(double km) {
-    final excedente = km <= kmIncluidos ? 0.0 : km - kmIncluidos;
-    final adicional = (excedente * precioKmAdicional).round();
-    return Cotizacion(
-      distanciaKm: km,
-      gananciaRepartidor: gananciaRepartidorBase + adicional,
-      comision: comisionModoYa,
-      kmAdicionales: excedente,
-    );
-  }
-
-  factory Tarifario.fromJson(Map<String, dynamic> json) => Tarifario(
-        gananciaRepartidorBase: json['ganancia_repartidor_base'] as int,
-        comisionModoYa: json['comision_modo_ya'] as int,
-        kmIncluidos: (json['km_incluidos'] as num).toDouble(),
-        precioKmAdicional: json['precio_km_adicional'] as int,
-        radioBusquedaKm: (json['radio_busqueda_km'] as num).toDouble(),
-        segundosParaAceptar: json['segundos_para_aceptar'] as int,
+  factory Tarifario.fromRow(Map<String, dynamic> f) => Tarifario(
+        id: Fila.textoOpcional(f, 'id'),
+        ciudadId: Fila.textoOpcional(f, 'ciudad_id'),
+        gananciaRepartidorBase: Fila.entero(f, 'ganancia_repartidor_base'),
+        comisionModoYa: Fila.entero(f, 'comision_modo_ya'),
+        kmIncluidos: Fila.decimal(f, 'km_incluidos'),
+        precioKmAdicional: Fila.entero(f, 'precio_km_adicional'),
+        radioBusquedaKm: Fila.decimal(f, 'radio_busqueda_km'),
+        segundosParaAceptar: Fila.entero(f, 'segundos_para_aceptar'),
+        precioSuscripcionMensual: Fila.enteroOpcional(f, 'precio_suscripcion_mensual'),
       );
-
-  Map<String, dynamic> toJson() => {
-        'ganancia_repartidor_base': gananciaRepartidorBase,
-        'comision_modo_ya': comisionModoYa,
-        'km_incluidos': kmIncluidos,
-        'precio_km_adicional': precioKmAdicional,
-        'radio_busqueda_km': radioBusquedaKm,
-        'segundos_para_aceptar': segundosParaAceptar,
-      };
 
   Tarifario copyWith({
     int? gananciaRepartidorBase,
@@ -138,23 +110,27 @@ class Tarifario {
     int? segundosParaAceptar,
   }) =>
       Tarifario(
-        gananciaRepartidorBase:
-            gananciaRepartidorBase ?? this.gananciaRepartidorBase,
+        id: id,
+        ciudadId: ciudadId,
+        gananciaRepartidorBase: gananciaRepartidorBase ?? this.gananciaRepartidorBase,
         comisionModoYa: comisionModoYa ?? this.comisionModoYa,
         kmIncluidos: kmIncluidos ?? this.kmIncluidos,
         precioKmAdicional: precioKmAdicional ?? this.precioKmAdicional,
         radioBusquedaKm: radioBusquedaKm ?? this.radioBusquedaKm,
         segundosParaAceptar: segundosParaAceptar ?? this.segundosParaAceptar,
+        precioSuscripcionMensual: precioSuscripcionMensual,
       );
 }
 
-/// Resultado de cotizar un envio: cuanto sale y como se reparte.
+/// Cotizacion de un envio. El precio que vale siempre es el del servidor.
 class Cotizacion {
   const Cotizacion({
     required this.distanciaKm,
     required this.gananciaRepartidor,
     required this.comision,
-    required this.kmAdicionales,
+    this.kmAdicionales = 0,
+    this.totalServidor,
+    this.minutosServidor,
   });
 
   final double distanciaKm;
@@ -162,15 +138,24 @@ class Cotizacion {
   final int comision;
   final double kmAdicionales;
 
-  int get total => gananciaRepartidor + comision;
+  /// Lo que devolvio la base. Si no vino, se reconstruye.
+  final int? totalServidor;
+  final int? minutosServidor;
 
-  /// Estimacion de minutos de viaje. Provisoria: asume 22 km/h promedio en
-  /// zona urbana mas 4 minutos fijos de retiro. Cuando tengamos PostGIS y
-  /// datos reales del piloto, esto se reemplaza por el calculo del servidor.
-  int get minutosEstimados => 4 + (distanciaKm / 22 * 60).round();
+  int get total => totalServidor ?? gananciaRepartidor + comision;
+  int get minutosEstimados => minutosServidor ?? 4 + (distanciaKm / 22 * 60).round();
+
+  factory Cotizacion.fromJson(Map<String, dynamic> f) => Cotizacion(
+        distanciaKm: Fila.decimal(f, 'distancia_km'),
+        kmAdicionales: Fila.decimal(f, 'km_adicionales'),
+        gananciaRepartidor: Fila.entero(f, 'ganancia_repartidor'),
+        comision: Fila.entero(f, 'comision'),
+        totalServidor: Fila.enteroOpcional(f, 'total'),
+        minutosServidor: Fila.enteroOpcional(f, 'minutos_estimados'),
+      );
 }
 
-/// Un comercio adherido.
+/// Un local. Se lee de la vista `v_comercios`.
 class Comercio {
   const Comercio({
     required this.id,
@@ -179,53 +164,50 @@ class Comercio {
     required this.direccion,
     required this.telefono,
     required this.aprobacion,
-    required this.suscripcion,
+    this.rubroId,
     this.logoUrl,
-    this.enviosDelMes = 0,
+    this.abierto = false,
+    this.aceptaPedidos = true,
+    this.demoraEstimadaMin = 25,
   });
 
   final String id;
   final String nombre;
   final String rubro;
+  final String? rubroId;
   final Direccion direccion;
   final String telefono;
   final EstadoAprobacion aprobacion;
-  final EstadoSuscripcion suscripcion;
   final String? logoUrl;
-  final int enviosDelMes;
 
-  /// Solo un comercio aprobado y al dia puede pedir cadetes.
-  bool get puedePedirEnvios =>
-      aprobacion.puedeOperar && suscripcion.permiteOperar;
+  /// Calculado en la base con los horarios y el interruptor de pausa.
+  final bool abierto;
+  final bool aceptaPedidos;
+  final int demoraEstimadaMin;
 
-  factory Comercio.fromJson(Map<String, dynamic> json) => Comercio(
-        id: json['id'] as String,
-        nombre: json['nombre'] as String,
-        rubro: json['rubro'] as String,
-        direccion: Direccion.fromJson(
-          Map<String, dynamic>.from(json['direccion'] as Map),
+  bool get puedePedirEnvios => aprobacion.puedeOperar && direccion.tieneCoordenadas;
+
+  factory Comercio.fromRow(Map<String, dynamic> f) => Comercio(
+        id: Fila.texto(f, 'id'),
+        nombre: Fila.texto(f, 'nombre'),
+        rubro: Fila.textoOpcional(f, 'rubro_nombre') ?? Fila.texto(f, 'rubro'),
+        rubroId: Fila.textoOpcional(f, 'rubro_id'),
+        direccion: Direccion(
+          calle: Fila.texto(f, 'calle'),
+          referencia: Fila.textoOpcional(f, 'referencia'),
+          lat: Fila.decimalOpcional(f, 'lat'),
+          lng: Fila.decimalOpcional(f, 'lng'),
         ),
-        telefono: json['telefono'] as String,
-        aprobacion: EstadoAprobacion.fromWire(json['aprobacion'] as String),
-        suscripcion: EstadoSuscripcion.fromWire(json['suscripcion'] as String),
-        logoUrl: json['logo_url'] as String?,
-        enviosDelMes: json['envios_del_mes'] as int? ?? 0,
+        telefono: Fila.texto(f, 'telefono'),
+        aprobacion: EstadoAprobacion.fromWire(f['estado_aprobacion'] as String?),
+        logoUrl: Fila.textoOpcional(f, 'logo_url'),
+        abierto: Fila.booleano(f, 'abierto'),
+        aceptaPedidos: Fila.booleano(f, 'acepta_pedidos', true),
+        demoraEstimadaMin: Fila.entero(f, 'demora_estimada_min', 25),
       );
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'nombre': nombre,
-        'rubro': rubro,
-        'direccion': direccion.toJson(),
-        'telefono': telefono,
-        'aprobacion': aprobacion.wire,
-        'suscripcion': suscripcion.wire,
-        if (logoUrl != null) 'logo_url': logoUrl,
-        'envios_del_mes': enviosDelMes,
-      };
 }
 
-/// Un cadete.
+/// Un rider. Se lee de la vista `v_repartidores`.
 class Repartidor {
   const Repartidor({
     required this.id,
@@ -236,6 +218,7 @@ class Repartidor {
     this.conectado = false,
     this.ocupado = false,
     this.ubicacion,
+    this.ubicacionEn,
     this.reputacion = 5.0,
     this.viajesCompletados = 0,
     this.fotoUrl,
@@ -246,100 +229,44 @@ class Repartidor {
   final String telefono;
   final Vehiculo vehiculo;
   final EstadoAprobacion aprobacion;
-
-  /// El cadete apreto "Conectarme" y comparte ubicacion.
   final bool conectado;
-
-  /// Ya tiene un envio en curso: el motor de asignacion no debe ofrecerle otro.
   final bool ocupado;
-
   final Direccion? ubicacion;
+  final DateTime? ubicacionEn;
   final double reputacion;
   final int viajesCompletados;
   final String? fotoUrl;
 
-  /// Condiciones para que el motor le ofrezca un envio.
-  bool get esElegible => aprobacion.puedeOperar && conectado && !ocupado;
-
-  factory Repartidor.fromJson(Map<String, dynamic> json) => Repartidor(
-        id: json['id'] as String,
-        nombre: json['nombre'] as String,
-        telefono: json['telefono'] as String,
-        vehiculo: Vehiculo.fromWire(json['vehiculo'] as String),
-        aprobacion: EstadoAprobacion.fromWire(json['aprobacion'] as String),
-        conectado: json['conectado'] as bool? ?? false,
-        ocupado: json['ocupado'] as bool? ?? false,
-        ubicacion: json['ubicacion'] == null
-            ? null
-            : Direccion.fromJson(
-                Map<String, dynamic>.from(json['ubicacion'] as Map),
-              ),
-        reputacion: (json['reputacion'] as num?)?.toDouble() ?? 5.0,
-        viajesCompletados: json['viajes_completados'] as int? ?? 0,
-        fotoUrl: json['foto_url'] as String?,
-      );
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'nombre': nombre,
-        'telefono': telefono,
-        'vehiculo': vehiculo.wire,
-        'aprobacion': aprobacion.wire,
-        'conectado': conectado,
-        'ocupado': ocupado,
-        if (ubicacion != null) 'ubicacion': ubicacion!.toJson(),
-        'reputacion': reputacion,
-        'viajes_completados': viajesCompletados,
-        if (fotoUrl != null) 'foto_url': fotoUrl,
-      };
-
-  Repartidor copyWith({
-    bool? conectado,
-    bool? ocupado,
-    Direccion? ubicacion,
-    EstadoAprobacion? aprobacion,
-  }) =>
-      Repartidor(
-        id: id,
-        nombre: nombre,
-        telefono: telefono,
-        vehiculo: vehiculo,
-        aprobacion: aprobacion ?? this.aprobacion,
-        conectado: conectado ?? this.conectado,
-        ocupado: ocupado ?? this.ocupado,
-        ubicacion: ubicacion ?? this.ubicacion,
-        reputacion: reputacion,
-        viajesCompletados: viajesCompletados,
-        fotoUrl: fotoUrl,
-      );
+  factory Repartidor.fromRow(Map<String, dynamic> f) {
+    final lat = Fila.decimalOpcional(f, 'lat');
+    final lng = Fila.decimalOpcional(f, 'lng');
+    return Repartidor(
+      id: Fila.texto(f, 'id'),
+      nombre: Fila.texto(f, 'nombre'),
+      telefono: Fila.texto(f, 'telefono'),
+      vehiculo: Vehiculo.fromWire(f['vehiculo'] as String?),
+      aprobacion: EstadoAprobacion.fromWire(f['estado_aprobacion'] as String?),
+      conectado: Fila.booleano(f, 'conectado'),
+      ocupado: Fila.booleano(f, 'ocupado'),
+      ubicacion: lat == null || lng == null ? null : Direccion(calle: '', lat: lat, lng: lng),
+      ubicacionEn: Fila.fechaOpcional(f, 'ultima_ubicacion_en'),
+      reputacion: Fila.decimal(f, 'reputacion', 5),
+      viajesCompletados: Fila.entero(f, 'viajes_completados'),
+      fotoUrl: Fila.textoOpcional(f, 'foto_url'),
+    );
+  }
 }
 
-/// Datos del destinatario. Solo se muestran completos al cadete asignado.
+/// Datos del destinatario. Solo los ve el rider asignado.
 class DatosCliente {
-  const DatosCliente({
-    required this.nombre,
-    required this.telefono,
-    this.indicaciones,
-  });
+  const DatosCliente({required this.nombre, required this.telefono, this.indicaciones});
 
   final String nombre;
   final String telefono;
   final String? indicaciones;
-
-  factory DatosCliente.fromJson(Map<String, dynamic> json) => DatosCliente(
-        nombre: json['nombre'] as String,
-        telefono: json['telefono'] as String,
-        indicaciones: json['indicaciones'] as String?,
-      );
-
-  Map<String, dynamic> toJson() => {
-        'nombre': nombre,
-        'telefono': telefono,
-        if (indicaciones != null) 'indicaciones': indicaciones,
-      };
 }
 
-/// Un envio: la entidad central del producto.
+/// Un envio. Se lee de la vista `v_envios`.
 class Envio {
   const Envio({
     required this.id,
@@ -353,6 +280,7 @@ class Envio {
     required this.quienPaga,
     required this.estado,
     required this.creadoEn,
+    this.pedidoId,
     this.repartidorId,
     this.repartidorNombre,
     this.codigoEntrega,
@@ -362,10 +290,8 @@ class Envio {
   });
 
   final String id;
-
-  /// Codigo corto y legible que se muestra en pantalla: `MY-8492`.
   final String codigo;
-
+  final String? pedidoId;
   final String comercioId;
   final String comercioNombre;
   final Direccion origen;
@@ -375,124 +301,73 @@ class Envio {
   final QuienPaga quienPaga;
   final EstadoEnvio estado;
   final DateTime creadoEn;
-
   final String? repartidorId;
   final String? repartidorNombre;
-
-  /// Codigo de 4 digitos que el cliente le dicta al cadete para cerrar la
-  /// entrega. Es el mecanismo verificable que pide el documento.
   final String? codigoEntrega;
-
   final DateTime? retiradoEn;
   final DateTime? entregadoEn;
   final String? motivoCancelacion;
 
   int get total => cotizacion.total;
 
-  /// Cuanto tiempo lleva abierto el envio.
-  Duration get antiguedad => DateTime.now().difference(creadoEn);
-
-  factory Envio.fromJson(Map<String, dynamic> json) => Envio(
-        id: json['id'] as String,
-        codigo: json['codigo'] as String,
-        comercioId: json['comercio_id'] as String,
-        comercioNombre: json['comercio_nombre'] as String,
-        origen: Direccion.fromJson(
-          Map<String, dynamic>.from(json['origen'] as Map),
+  factory Envio.fromRow(Map<String, dynamic> f) => Envio(
+        id: Fila.texto(f, 'id'),
+        codigo: Fila.texto(f, 'codigo'),
+        pedidoId: Fila.textoOpcional(f, 'pedido_id'),
+        comercioId: Fila.texto(f, 'comercio_id'),
+        comercioNombre: Fila.texto(f, 'comercio_nombre'),
+        origen: Direccion(
+          calle: Fila.texto(f, 'origen_calle'),
+          referencia: Fila.textoOpcional(f, 'origen_referencia'),
+          lat: Fila.decimalOpcional(f, 'origen_lat'),
+          lng: Fila.decimalOpcional(f, 'origen_lng'),
         ),
-        destino: Direccion.fromJson(
-          Map<String, dynamic>.from(json['destino'] as Map),
+        destino: Direccion(
+          calle: Fila.texto(f, 'destino_calle'),
+          referencia: Fila.textoOpcional(f, 'destino_referencia'),
+          lat: Fila.decimalOpcional(f, 'destino_lat'),
+          lng: Fila.decimalOpcional(f, 'destino_lng'),
         ),
-        cliente: DatosCliente.fromJson(
-          Map<String, dynamic>.from(json['cliente'] as Map),
+        cliente: DatosCliente(
+          nombre: Fila.texto(f, 'cliente_nombre'),
+          telefono: Fila.texto(f, 'cliente_telefono'),
+          indicaciones: Fila.textoOpcional(f, 'cliente_indicaciones'),
         ),
         cotizacion: Cotizacion(
-          distanciaKm: (json['distancia_km'] as num).toDouble(),
-          gananciaRepartidor: json['ganancia_repartidor'] as int,
-          comision: json['comision'] as int,
-          kmAdicionales: (json['km_adicionales'] as num?)?.toDouble() ?? 0,
+          distanciaKm: Fila.decimal(f, 'distancia_km'),
+          kmAdicionales: Fila.decimal(f, 'km_adicionales'),
+          gananciaRepartidor: Fila.entero(f, 'ganancia_repartidor'),
+          comision: Fila.entero(f, 'comision'),
+          totalServidor: Fila.enteroOpcional(f, 'total'),
+          minutosServidor: Fila.enteroOpcional(f, 'minutos_estimados'),
         ),
-        quienPaga: QuienPaga.fromWire(json['quien_paga'] as String),
-        estado: EstadoEnvio.fromWire(json['estado'] as String),
-        creadoEn: DateTime.parse(json['creado_en'] as String),
-        repartidorId: json['repartidor_id'] as String?,
-        repartidorNombre: json['repartidor_nombre'] as String?,
-        codigoEntrega: json['codigo_entrega'] as String?,
-        retiradoEn: json['retirado_en'] == null
-            ? null
-            : DateTime.parse(json['retirado_en'] as String),
-        entregadoEn: json['entregado_en'] == null
-            ? null
-            : DateTime.parse(json['entregado_en'] as String),
-        motivoCancelacion: json['motivo_cancelacion'] as String?,
-      );
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'codigo': codigo,
-        'comercio_id': comercioId,
-        'comercio_nombre': comercioNombre,
-        'origen': origen.toJson(),
-        'destino': destino.toJson(),
-        'cliente': cliente.toJson(),
-        'distancia_km': cotizacion.distanciaKm,
-        'ganancia_repartidor': cotizacion.gananciaRepartidor,
-        'comision': cotizacion.comision,
-        'km_adicionales': cotizacion.kmAdicionales,
-        'quien_paga': quienPaga.wire,
-        'estado': estado.wire,
-        'creado_en': creadoEn.toIso8601String(),
-        if (repartidorId != null) 'repartidor_id': repartidorId,
-        if (repartidorNombre != null) 'repartidor_nombre': repartidorNombre,
-        if (codigoEntrega != null) 'codigo_entrega': codigoEntrega,
-        if (retiradoEn != null) 'retirado_en': retiradoEn!.toIso8601String(),
-        if (entregadoEn != null) 'entregado_en': entregadoEn!.toIso8601String(),
-        if (motivoCancelacion != null) 'motivo_cancelacion': motivoCancelacion,
-      };
-
-  Envio copyWith({
-    EstadoEnvio? estado,
-    String? repartidorId,
-    String? repartidorNombre,
-    String? codigoEntrega,
-    DateTime? retiradoEn,
-    DateTime? entregadoEn,
-    String? motivoCancelacion,
-  }) =>
-      Envio(
-        id: id,
-        codigo: codigo,
-        comercioId: comercioId,
-        comercioNombre: comercioNombre,
-        origen: origen,
-        destino: destino,
-        cliente: cliente,
-        cotizacion: cotizacion,
-        quienPaga: quienPaga,
-        estado: estado ?? this.estado,
-        creadoEn: creadoEn,
-        repartidorId: repartidorId ?? this.repartidorId,
-        repartidorNombre: repartidorNombre ?? this.repartidorNombre,
-        codigoEntrega: codigoEntrega ?? this.codigoEntrega,
-        retiradoEn: retiradoEn ?? this.retiradoEn,
-        entregadoEn: entregadoEn ?? this.entregadoEn,
-        motivoCancelacion: motivoCancelacion ?? this.motivoCancelacion,
+        quienPaga: QuienPaga.fromWire((f['paga'] as String?) ?? 'comercio'),
+        estado: EstadoEnvio.fromWire(f['estado'] as String?),
+        creadoEn: Fila.fecha(f, 'creado_en'),
+        repartidorId: Fila.textoOpcional(f, 'repartidor_id'),
+        repartidorNombre: Fila.textoOpcional(f, 'repartidor_nombre'),
+        codigoEntrega: Fila.textoOpcional(f, 'codigo_entrega'),
+        retiradoEn: Fila.fechaOpcional(f, 'retirado_en'),
+        entregadoEn: Fila.fechaOpcional(f, 'entregado_en'),
+        motivoCancelacion: Fila.textoOpcional(f, 'motivo_cancelacion'),
       );
 }
 
-/// Oferta de un envio a un cadete concreto, con su ventana de tiempo.
+/// Oferta de un envio a un rider, con su ventana de tiempo.
+///
+/// Se lee de `ofertas_abiertas`, que a proposito NO trae los datos del cliente:
+/// el rider todavia no acepto.
 class OfertaServicio {
   const OfertaServicio({
+    required this.id,
     required this.envio,
     required this.distanciaAlRetiroKm,
     required this.expiraEn,
   });
 
+  final String id;
   final Envio envio;
-
-  /// A cuanto esta el cadete del punto de retiro.
   final double distanciaAlRetiroKm;
-
   final DateTime expiraEn;
 
   Duration get restante {
@@ -501,4 +376,37 @@ class OfertaServicio {
   }
 
   bool get vencida => restante == Duration.zero;
+
+  factory OfertaServicio.fromRow(Map<String, dynamic> f) => OfertaServicio(
+        id: Fila.texto(f, 'oferta_id'),
+        distanciaAlRetiroKm: Fila.decimal(f, 'distancia_al_retiro_km'),
+        expiraEn: Fila.fecha(f, 'expira_en'),
+        envio: Envio(
+          id: Fila.texto(f, 'envio_id'),
+          codigo: Fila.texto(f, 'codigo'),
+          comercioId: Fila.texto(f, 'comercio_id'),
+          comercioNombre: Fila.texto(f, 'comercio_nombre'),
+          origen: Direccion(
+            calle: Fila.texto(f, 'origen_calle'),
+            referencia: Fila.textoOpcional(f, 'origen_referencia'),
+            lat: Fila.decimalOpcional(f, 'origen_lat'),
+            lng: Fila.decimalOpcional(f, 'origen_lng'),
+          ),
+          destino: Direccion(
+            calle: Fila.texto(f, 'destino_calle'),
+            lat: Fila.decimalOpcional(f, 'destino_lat'),
+            lng: Fila.decimalOpcional(f, 'destino_lng'),
+          ),
+          cliente: const DatosCliente(nombre: '', telefono: ''),
+          cotizacion: Cotizacion(
+            distanciaKm: Fila.decimal(f, 'distancia_km'),
+            gananciaRepartidor: Fila.entero(f, 'ganancia_repartidor'),
+            comision: 0,
+            minutosServidor: Fila.enteroOpcional(f, 'minutos_estimados'),
+          ),
+          quienPaga: QuienPaga.cliente,
+          estado: EstadoEnvio.fromWire(f['estado'] as String?),
+          creadoEn: Fila.fecha(f, 'ofrecida_en'),
+        ),
+      );
 }

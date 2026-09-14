@@ -1,6 +1,6 @@
 {
-    "name": "modo_ya_repartidor",
-    "short_name": "modo_ya_repartidor",
+    "name": "MODO YA Rider",
+    "short_name": "MODO YA Rider",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

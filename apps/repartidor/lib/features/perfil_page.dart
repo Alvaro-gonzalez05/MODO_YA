@@ -4,67 +4,46 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-/// B1 - Perfil y documentacion del cadete.
-///
-/// La documentacion exigida depende del vehiculo y la define la
-/// administracion; hasta que la cuenta este aprobada el cadete no puede
-/// conectarse.
+import 'ubicacion.dart';
+
+/// Perfil del rider (B1).
 class PerfilPage extends ConsumerWidget {
   const PerfilPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repartidor = ref.watch(repartidorActualProvider).value;
+    final rider = ref.watch(repartidorActualProvider).value;
+    final s = ref.watch(sesionProvider);
 
     return Column(
       children: [
-        const MyTopBar(zona: 'Malargue urbano'),
+        const MyTopBar(zona: 'Mi perfil'),
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              MySpacing.screenEdge,
-              MySpacing.xs,
-              MySpacing.screenEdge,
-              MySpacing.dockClearance,
-            ),
+            padding: const EdgeInsets.fromLTRB(MySpacing.screenEdge, MySpacing.xs, MySpacing.screenEdge, MySpacing.dockClearance),
             children: [
-              Text('Mi perfil', style: MyType.headlineLg),
-              const SizedBox(height: MySpacing.lg),
-
               MyCard(
                 child: Row(
                   children: [
                     Container(
                       width: 64,
                       height: 64,
-                      decoration: const BoxDecoration(
-                        color: MyColors.primaryFixed,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Symbols.sports_motorsports,
-                          size: 32, color: MyColors.primary),
+                      decoration: const BoxDecoration(color: MyColors.primaryFixed, shape: BoxShape.circle),
+                      child: const Icon(Symbols.sports_motorsports, size: 32, color: MyColors.primary),
                     ),
                     const SizedBox(width: MySpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            repartidor?.nombre ?? 'Cadete',
-                            style: MyType.headlineMd,
-                          ),
-                          Text(
-                            repartidor?.telefono ?? '',
-                            style: MyType.bodySm
-                                .copyWith(color: MyColors.secondary),
-                          ),
-                          const SizedBox(height: MySpacing.xs),
-                          if (repartidor != null)
+                          Text(rider?.nombre ?? s.nombre, style: MyType.headlineMd),
+                          Text(s.email ?? '', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                          Text(rider?.telefono ?? '', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                          const SizedBox(height: MySpacing.xxs),
+                          if (rider != null)
                             MyBadge(
-                              repartidor.aprobacion.label,
-                              tone: repartidor.aprobacion.puedeOperar
-                                  ? MyBadgeTone.success
-                                  : MyBadgeTone.danger,
+                              rider.aprobacion.label,
+                              tone: rider.aprobacion.puedeOperar ? MyBadgeTone.success : MyBadgeTone.danger,
                             ),
                         ],
                       ),
@@ -72,84 +51,105 @@ class PerfilPage extends ConsumerWidget {
                   ],
                 ),
               ),
-
               const SizedBox(height: MySpacing.lg),
-              Text('Documentacion', style: MyType.headlineMd),
-              const SizedBox(height: MySpacing.xxs),
-              Text(
-                'Requerida para ${repartidor?.vehiculo.label.toLowerCase() ?? "tu vehiculo"}',
-                style: MyType.bodyMd.copyWith(color: MyColors.secondary),
-              ),
-              const SizedBox(height: MySpacing.sm),
-
               MyCard(
                 padding: const EdgeInsets.symmetric(vertical: MySpacing.xs),
                 child: Column(
                   children: [
-                    for (final doc
-                        in repartidor?.vehiculo.documentacionRequerida ??
-                            const <String>[])
-                      ListTile(
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: repartidor!.aprobacion.puedeOperar
-                                ? MyColors.successContainer
-                                : MyColors.surfaceContainerHigh,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            repartidor.aprobacion.puedeOperar
-                                ? Symbols.check_circle
-                                : Symbols.upload_file,
-                            size: 20,
-                            color: repartidor.aprobacion.puedeOperar
-                                ? MyColors.success
-                                : MyColors.secondary,
-                          ),
-                        ),
-                        title: Text(doc, style: MyType.labelLg),
-                        subtitle: Text(
-                          repartidor.aprobacion.puedeOperar
-                              ? 'Validado'
-                              : 'Pendiente de carga',
-                          style: MyType.bodySm
-                              .copyWith(color: MyColors.secondary),
-                        ),
-                        trailing: const Icon(Symbols.chevron_right,
-                            color: MyColors.outline),
-                        onTap: () {},
-                      ),
+                    ListTile(
+                      leading: const Icon(Symbols.two_wheeler, color: MyColors.primary),
+                      title: Text('Vehiculo', style: MyType.labelLg),
+                      subtitle: Text(rider?.vehiculo.label ?? '-', style: MyType.bodySm),
+                    ),
+                    ListTile(
+                      leading: const Icon(Symbols.lock, color: MyColors.primary),
+                      title: Text('Cambiar contrasena', style: MyType.labelLg),
+                      trailing: const Icon(Symbols.chevron_right),
+                      onTap: () => _cambiarPassword(context, ref),
+                    ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: MySpacing.lg),
+              const SizedBox(height: MySpacing.md),
               MyCard(
                 color: MyColors.secondaryContainer,
                 shadows: const [],
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Symbols.shield, size: 22,
-                        color: MyColors.secondary),
+                    const Icon(Symbols.shield, color: MyColors.secondary),
                     const SizedBox(width: MySpacing.sm),
                     Expanded(
                       child: Text(
-                        'Tu ubicacion se comparte unicamente mientras estas '
-                        'conectado o haciendo un servicio.',
-                        style: MyType.bodySm
-                            .copyWith(color: MyColors.onSecondaryFixed),
+                        'Tu ubicacion se comparte unicamente mientras estas conectado.',
+                        style: MyType.bodySm.copyWith(color: MyColors.onSecondaryFixed),
                       ),
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: MySpacing.lg),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  // Al salir se desconecta: un rider sin sesion no puede quedar
+                  // recibiendo ofertas.
+                  try {
+                    if (rider?.conectado ?? false) {
+                      await ref.read(repartidoresRepositoryProvider).setConectado(false);
+                    }
+                  } catch (_) {}
+                  ref.read(ubicacionRiderProvider.notifier).parar();
+                  await ref.read(authRepositoryProvider).salir();
+                },
+                icon: const Icon(Symbols.logout, size: 20),
+                label: const Text('Cerrar sesion'),
               ),
             ],
           ),
         ),
       ],
     );
+  }
+
+  Future<void> _cambiarPassword(BuildContext context, WidgetRef ref) async {
+    final nueva = TextEditingController();
+    final form = GlobalKey<FormState>();
+    await showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      builder: (h) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(h).bottom),
+        child: Form(
+          key: form,
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.all(MySpacing.screenEdge),
+            children: [
+              Text('Cambiar contrasena', style: MyType.headlineMd),
+              const SizedBox(height: MySpacing.md),
+              MyCampo(
+                controller: nueva,
+                label: 'Nueva contrasena',
+                ocultar: true,
+                validar: (t) => t.length < 8 ? 'Minimo 8 caracteres' : null,
+              ),
+              MyBotonAccion(
+                label: 'Guardar',
+                onPressed: () async {
+                  if (!form.currentState!.validate()) return;
+                  try {
+                    await ref.read(authRepositoryProvider).cambiarPassword(nueva.text);
+                    if (h.mounted) Navigator.pop(h);
+                  } catch (e) {
+                    if (h.mounted) mostrarError(h, e);
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    nueva.dispose();
   }
 }

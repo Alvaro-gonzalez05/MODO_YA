@@ -4,161 +4,102 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-/// B8 - Ganancias e historial del cadete.
+/// Ganancias del rider (B8), calculadas sobre los envios entregados.
+///
+/// La liquidacion (cada cuanto y por que medio le paga MODO YA) todavia no esta
+/// definida, asi que esto es lo ganado, no lo cobrado.
 class GananciasPage extends ConsumerWidget {
   const GananciasPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repartidor = ref.watch(repartidorActualProvider).value;
-    final id = ref.watch(sesionProvider).repartidorId;
-
-    // Del set demo tomamos los envios que hizo este cadete. Con Supabase esto
-    // va a ser una consulta filtrada por repartidor y rango de fechas.
-    final todos = ref.watch(enviosActivosProvider).value ?? const <Envio>[];
-    final mios = todos.where((e) => e.repartidorId == id).toList();
-    final ganado = mios.fold<int>(
-      0,
-      (s, e) => s + e.cotizacion.gananciaRepartidor,
-    );
+    final envios = ref.watch(enviosDelRepartidorProvider);
 
     return Column(
       children: [
-        const MyTopBar(zona: 'Malargue urbano'),
+        const MyTopBar(zona: 'Mis ganancias'),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              MySpacing.screenEdge,
-              MySpacing.xs,
-              MySpacing.screenEdge,
-              MySpacing.dockClearance,
-            ),
-            children: [
-              Text('Mis ganancias', style: MyType.headlineLg),
-              const SizedBox(height: MySpacing.lg),
+          child: MyAsync(
+            valor: envios,
+            datos: (lista) {
+              final entregados = lista.where((e) => e.estado == EstadoEnvio.entregado).toList();
+              final ahora = DateTime.now();
+              bool esHoy(DateTime d) => d.year == ahora.year && d.month == ahora.month && d.day == ahora.day;
+              final inicioSemana = DateTime(ahora.year, ahora.month, ahora.day).subtract(Duration(days: ahora.weekday - 1));
 
-              MyHeroCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              int suma(Iterable<Envio> es) => es.fold(0, (s, e) => s + e.cotizacion.gananciaRepartidor);
+              final hoy = entregados.where((e) => esHoy(e.entregadoEn ?? e.creadoEn));
+              final semana = entregados.where((e) => (e.entregadoEn ?? e.creadoEn).isAfter(inicioSemana));
+
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(MySpacing.screenEdge, MySpacing.xs, MySpacing.screenEdge, MySpacing.dockClearance),
+                children: [
+                  MyHeroCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const MyBadge('EN CURSO', tone: MyBadgeTone.dark),
-                        const Spacer(),
-                        const Icon(Symbols.payments,
-                            size: 24, color: Colors.white),
+                        const MyBadge('HOY', tone: MyBadgeTone.dark),
+                        const SizedBox(height: MySpacing.sm),
+                        Text(Formato.pesos(suma(hoy)), style: MyType.displayLg.copyWith(color: Colors.white)),
+                        Text('${hoy.length} viaje${hoy.length == 1 ? '' : 's'} entregado${hoy.length == 1 ? '' : 's'}',
+                            style: MyType.bodyMd.copyWith(color: Colors.white70)),
                       ],
                     ),
-                    const SizedBox(height: MySpacing.md),
-                    Text(
-                      Formato.pesos(ganado),
-                      style: MyType.displayLg.copyWith(color: Colors.white),
-                    ),
-                    Text(
-                      'Pendiente de liquidacion',
-                      style: MyType.bodyMd.copyWith(color: Colors.white70),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: MySpacing.md),
-              MyStatRow(
-                tiles: [
-                  MyStatTile(
-                    icon: Symbols.package_2,
-                    value: '${repartidor?.viajesCompletados ?? 0}',
-                    label: 'Viajes totales',
                   ),
-                  MyStatTile(
-                    icon: Symbols.star,
-                    value: (repartidor?.reputacion ?? 5).toStringAsFixed(1),
-                    label: 'Reputacion',
-                  ),
-                  MyStatTile(
-                    icon: Symbols.local_shipping,
-                    value: '${mios.length}',
-                    label: 'En curso',
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: MySpacing.lg),
-              MyCard(
-                color: MyColors.secondaryContainer,
-                shadows: const [],
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Symbols.info, size: 22,
-                        color: MyColors.secondary),
-                    const SizedBox(width: MySpacing.sm),
-                    Expanded(
-                      child: Text(
-                        'La frecuencia y el metodo de liquidacion todavia se '
-                        'estan definiendo con la administracion.',
-                        style: MyType.bodySm
-                            .copyWith(color: MyColors.onSecondaryFixed),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: MySpacing.lg),
-              Text('Historial', style: MyType.headlineMd),
-              const SizedBox(height: MySpacing.sm),
-
-              if (mios.isEmpty)
-                const MyEmptyState(
-                  icon: Symbols.receipt_long,
-                  title: 'Todavia no hiciste viajes',
-                  message: 'Conectate para empezar a recibir ofertas.',
-                )
-              else
-                for (final e in mios) ...[
+                  const SizedBox(height: MySpacing.md),
+                  MyStatRow(tiles: [
+                    MyStatTile(icon: Symbols.date_range, value: Formato.pesos(suma(semana)), label: 'Esta semana'),
+                    MyStatTile(icon: Symbols.package_2, value: '${entregados.length}', label: 'Entregados (ultimos 100)'),
+                  ]),
+                  const SizedBox(height: MySpacing.md),
                   MyCard(
-                    padding: const EdgeInsets.all(MySpacing.md),
+                    color: MyColors.secondaryContainer,
+                    shadows: const [],
                     child: Row(
                       children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: const BoxDecoration(
-                            color: MyColors.primaryFixed,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Symbols.package_2,
-                              size: 21, color: MyColors.primary),
-                        ),
+                        const Icon(Symbols.info, color: MyColors.secondary),
                         const SizedBox(width: MySpacing.sm),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('#${e.codigo}', style: MyType.labelLg),
-                              Text(
-                                '${e.comercioNombre} - '
-                                '${Formato.haceCuanto(e.creadoEn)}',
-                                style: MyType.bodySm
-                                    .copyWith(color: MyColors.secondary),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                          child: Text(
+                            'MODO YA te liquida lo ganado cada cierto tiempo. La frecuencia y el medio de pago se estan definiendo.',
+                            style: MyType.bodySm.copyWith(color: MyColors.onSecondaryFixed),
                           ),
-                        ),
-                        Text(
-                          Formato.pesos(e.cotizacion.gananciaRepartidor),
-                          style: MyType.headlineSm
-                              .copyWith(color: MyColors.primary),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: MySpacing.xs),
+                  const SizedBox(height: MySpacing.lg),
+                  Text('Ultimos viajes', style: MyType.headlineMd),
+                  const SizedBox(height: MySpacing.sm),
+                  if (entregados.isEmpty)
+                    const MyEmptyState(icon: Symbols.receipt_long, title: 'Sin viajes entregados', message: 'Conectate para empezar.')
+                  else
+                    for (final e in entregados.take(30)) ...[
+                      MyCard(
+                        padding: const EdgeInsets.all(MySpacing.md),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('${e.codigo} - ${e.comercioNombre}', style: MyType.labelLg),
+                                  Text(
+                                    '${Formato.fechaCorta(e.entregadoEn ?? e.creadoEn)} ${Formato.hora(e.entregadoEn ?? e.creadoEn)} - ${Formato.km(e.cotizacion.distanciaKm)}',
+                                    style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(Formato.pesos(e.cotizacion.gananciaRepartidor), style: MyType.headlineSm.copyWith(color: MyColors.primary)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: MySpacing.xs),
+                    ],
                 ],
-            ],
+              );
+            },
           ),
         ),
       ],
