@@ -76,7 +76,18 @@ jobs:
             echo "::warning::Sin clave de firma: el APK sale firmado con la clave de debug (solo para probar)."
             exit 0
           fi
-          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/modoya-release.jks"
+          # Al pegar el secreto en la web se cuelan espacios o saltos de línea.
+          KEYSTORE_PASSWORD=$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '
+')
+          if ! printf '%s' "$KEYSTORE_BASE64" | tr -d ' 
+	' | base64 -d > "$RUNNER_TEMP/modoya-release.jks" 2>/dev/null; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 no es un base64 válido (${#KEYSTORE_BASE64} caracteres; el archivo tiene 5816). ¿Quedó incompleto o se cargó la contraseña en su lugar?"
+            exit 1
+          fi
+          if ! keytool -list -keystore "$RUNNER_TEMP/modoya-release.jks" -storepass "$KEYSTORE_PASSWORD" -alias modoya > /dev/null 2>&1; then
+            echo "::error::La clave se decodificó ($(stat -c %s "$RUNNER_TEMP/modoya-release.jks") bytes) pero no abre con ANDROID_KEYSTORE_PASSWORD (${#KEYSTORE_PASSWORD} caracteres). Revisar la contraseña."
+            exit 1
+          fi
           printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=modoya\nkeyPassword=%s\n' \
             "$RUNNER_TEMP/modoya-release.jks" "$KEYSTORE_PASSWORD" "$KEYSTORE_PASSWORD" > "$RUNNER_TEMP/key.properties"
           echo "MY_KEY_PROPERTIES=$RUNNER_TEMP/key.properties" >> "$GITHUB_ENV"
