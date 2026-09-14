@@ -56,6 +56,23 @@ cd apps/repartidor
 flutter run -d android --dart-define-from-file=../../env/dev.json
 ```
 
+### Instalables
+
+```bash
+cd apps/modo_ya
+flutter build apk --release --target-platform android-arm64 --dart-define-from-file=../../env/dev.json
+```
+
+(Igual en `apps/repartidor`.) Salen solo para celulares de 64 bits, que son
+casi todos; firmados con la clave de debug, sirven para probar pero no para
+publicar en Play Store.
+
+Windows: `.\installer\armar_windows.ps1` compila y arma
+`build\instaladores\MODO_YA_Setup_<version>.exe` con Inno Setup 6 (instala por
+usuario, sin pedir administrador).
+
+Los binarios se publican en los *Releases* de GitHub, no en el repo.
+
 ### Requisitos en Windows
 
 - **Modo desarrollador** activado (los plugins usan symlinks).
@@ -110,8 +127,9 @@ el cliente. Tambien cadeteria, rechazos, reglas de opciones y tiempo real.
 - **Pagos:** no esta decidido como se cobra. Mientras tanto, la administracion
   confirma cada pago a mano desde la app.
 - **Ubicacion del rider en segundo plano:** hoy se manda con la app abierta.
-- **Mails:** el registro de clientes necesita SMTP propio o desactivar la
-  confirmacion de email (ver `docs/preguntas-para-la-clienta.md`).
+- **Mails:** la confirmacion de email esta desactivada (cualquiera se registra
+  sin validar su correo). Falta SMTP propio para volver a activarla y para
+  recuperar contrasenas (ver `docs/preguntas-para-la-clienta.md`).
 - **Fuentes:** se descargan en tiempo de ejecucion; conviene empaquetarlas.
 
 ## Del diseno que no se implemento a proposito

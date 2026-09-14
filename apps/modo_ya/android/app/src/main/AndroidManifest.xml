@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Sin esto la version release no tiene red (la plantilla solo lo pone en debug). -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="MODO YA"
         android:name="${applicationName}"
