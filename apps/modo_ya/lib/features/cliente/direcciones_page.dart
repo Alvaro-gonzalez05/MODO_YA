@@ -5,11 +5,11 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-import '../../comun/marca.dart';
+import '../../comun/formulario_emergente.dart';
 import 'carrito.dart';
 
-/// Direcciones del cliente. Se marca el pin en el mapa: en Malargue la
-/// numeracion no siempre alcanza para encontrar una casa.
+/// Direcciones del cliente. Se marca el pin en el mapa: en Malargüe la
+/// numeración no siempre alcanza para encontrar una casa.
 class DireccionesPage extends ConsumerWidget {
   const DireccionesPage({super.key});
 
@@ -18,22 +18,25 @@ class DireccionesPage extends ConsumerWidget {
     final direcciones = ref.watch(direccionesProvider);
     final elegida = ref.watch(direccionElegidaProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(Symbols.arrow_back), onPressed: () => context.pop()),
-        title: const Text('Mis direcciones'),
-      ),
-      body: MyAsync(
+    return MyPagina(
+      volver: () => context.canPop() ? context.pop() : context.go('/cliente'),
+      rotulo: 'Entrega',
+      titulo: 'Mis direcciones',
+      bajada: 'Tocá una para usarla en tus pedidos',
+      anchoMaximo: 760,
+      conDock: false,
+      children: [
+        MyAsync(
         valor: direcciones,
         onReintentar: () => ref.invalidate(direccionesProvider),
-        datos: (lista) => FormularioCentrado(
-          ancho: 560,
+        datos: (lista) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (lista.isEmpty)
               const MyEmptyState(
                 icon: Symbols.home_pin,
-                title: 'Todavia no guardaste direcciones',
-                message: 'Agrega a donde queres que te llevemos los pedidos.',
+                title: 'Todavía no guardaste direcciones',
+                message: 'Agregá a dónde querés que te llevemos los pedidos.',
               ),
             for (final d in lista) ...[
               MyCard(
@@ -75,7 +78,7 @@ class DireccionesPage extends ConsumerWidget {
                           if (v == 0) {
                             await ref.read(direccionesRepositoryProvider).hacerPredeterminada(d.id);
                           } else {
-                            final ok = await confirmar(context, titulo: 'Borrar direccion', mensaje: d.calle, aceptar: 'Borrar', peligroso: true);
+                            final ok = await confirmar(context, titulo: 'Borrar dirección', mensaje: d.calle, aceptar: 'Borrar', peligroso: true);
                             if (!ok) return;
                             await ref.read(direccionesRepositoryProvider).borrar(d.id);
                           }
@@ -95,22 +98,26 @@ class DireccionesPage extends ConsumerWidget {
               const SizedBox(height: MySpacing.sm),
             ],
             const SizedBox(height: MySpacing.md),
-            FilledButton.icon(
-              onPressed: () => _nueva(context, ref, esPrimera: lista.isEmpty),
-              icon: const Icon(Symbols.add_location, size: 20),
-              label: const Text('Agregar direccion'),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: MyBoton(
+                onPressed: () => _nueva(context, ref, esPrimera: lista.isEmpty),
+                icon: Symbols.add_location,
+                label: 'Agregar dirección',
+              ),
             ),
           ],
         ),
       ),
+      ],
     );
   }
 
   Future<void> _nueva(BuildContext context, WidgetRef ref, {required bool esPrimera}) async {
     final punto = await MyMapa.elegirPunto(
       context,
-      titulo: 'Donde te llevamos el pedido',
-      ayuda: 'Mueve el mapa hasta que el pin quede sobre tu puerta.',
+      titulo: 'Dónde te llevamos el pedido',
+      ayuda: 'Mové el mapa hasta que el pin quede sobre tu puerta.',
     );
     if (punto == null || !context.mounted) return;
 
@@ -119,33 +126,27 @@ class DireccionesPage extends ConsumerWidget {
     final referencia = TextEditingController();
     final form = GlobalKey<FormState>();
 
-    await showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      builder: (s) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(s).bottom),
-        child: Form(
+    await mostrarFormularioEmergente(
+      context,
+      titulo: 'Datos de la dirección',
+      builder: (s) => Form(
           key: form,
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.all(MySpacing.screenEdge),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Datos de la direccion', style: MyType.headlineMd),
-              const SizedBox(height: MySpacing.md),
               MyMapaVista(alto: 120, marcadores: [MyMarcador(punto: punto, icono: Symbols.home)]),
               const SizedBox(height: MySpacing.md),
-              MyCampo(controller: calle, label: 'Calle y numero', hint: 'Av. San Martin 1240', icon: Symbols.location_on),
+              MyCampo(controller: calle, label: 'Calle y número', hint: 'Av. San Martín 1240', icon: Symbols.location_on),
               MyCampo(
                 controller: referencia,
                 label: 'Referencia (opcional)',
-                hint: 'Porton negro, piso 2 dpto B',
+                hint: 'Portón negro, piso 2 dpto B',
                 icon: Symbols.pin_drop,
                 obligatorio: false,
               ),
               MyCampo(controller: alias, label: 'Nombre', hint: 'Casa, Trabajo...', icon: Symbols.label),
               MyBotonAccion(
-                label: 'Guardar direccion',
+                label: 'Guardar dirección',
                 onPressed: () async {
                   if (!form.currentState!.validate()) return;
                   try {
@@ -167,7 +168,6 @@ class DireccionesPage extends ConsumerWidget {
             ],
           ),
         ),
-      ),
     );
     for (final c in [alias, calle, referencia]) {
       c.dispose();

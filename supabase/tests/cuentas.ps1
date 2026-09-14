@@ -76,7 +76,7 @@ try {
 
   # ---- 4-7. Alta de un local ------------------------------------------------
   $localMail = "test-local-$stamp@modoya.test"
-  $rubro = (Api GET '/rest/v1/rubros?select=id&nombre=eq.Pizzeria' $null (Con $jwtAdmin)).body[0].id
+  $rubro = (Api GET '/rest/v1/rubros?select=id&nombre=eq.Pizzer%C3%ADa' $null (Con $jwtAdmin)).body[0].id
   $r = Api POST '/functions/v1/admin-crear-usuario' @{
     rol = 'comercio'; email = $localMail; nombre = 'Pizzeria Test'; telefono = '+54 260 400-0000'
     rubro_id = $rubro; calle = 'Av. Roca 420'; referencia = 'Frente a la plaza'
@@ -98,7 +98,7 @@ try {
 
   $r = Api GET "/rest/v1/v_comercios?select=nombre,lat,rubro_nombre&id=eq.$($s.body.comercio_id)" $null (Con $jwtLocal)
   $v = $r.body | Select-Object -First 1
-  "05 vidriera con lat/lng numericos        -> $($v.nombre) ($($v.rubro_nombre)) lat=$($v.lat) $(Veredicto ($v.lat -eq -35.4761))"
+  "05 vidriera con lat/lng numericos        -> $($v.nombre) lat=$($v.lat) $(Veredicto ($v.lat -eq -35.4761))"
 
   # ---- 6. Alta de un rider --------------------------------------------------
   $riderMail = "test-rider-$stamp@modoya.test"
@@ -138,6 +138,45 @@ try {
   $r = Api POST '/auth/v1/token?grant_type=password' @{ email = $cliMail; password = $cliPass } $hPub
   $s = Api POST '/rest/v1/rpc/mi_sesion' @{} (Con $r.body.access_token)
   "10 NO registro con rol=admin en metadata -> rol=$($s.body.rol) ficha_cliente=$([bool]$s.body.cliente_id) $(Veredicto (($s.body.rol -eq 'cliente') -and $s.body.cliente_id))"
+
+  # ---- 12-16. Usuario generado y contrasena restablecida --------------------
+  # Sin email: el servidor arma nombre@modoya.com. Los nombres llevan el sello
+  # para no chocar con cuentas reales, y se borran en el finally.
+  $r = Api POST '/functions/v1/admin-crear-usuario' @{
+    rol = 'comercio'; nombre = "ZZ Prueba Local $stamp"; telefono = '1'; calle = 'Av. Roca 1'
+    lat = -35.4761; lng = -69.5839
+  } (Con $jwtAdmin)
+  if ($r.body.usuario_id) { [void]$creados.Add($r.body.usuario_id) }
+  $genLocal = $r.body.email
+  $genLocalId = $r.body.comercio_id
+  "12 alta sin email genera el usuario      -> $genLocal $(Veredicto ($genLocal -eq "zz.prueba.local.$stamp@modoya.com"))"
+
+  $r = Api POST '/functions/v1/admin-crear-usuario' @{
+    rol = 'comercio'; nombre = "ZZ Prueba Local $stamp"; telefono = '1'; calle = 'Av. Roca 2'
+    lat = -35.4761; lng = -69.5839
+  } (Con $jwtAdmin)
+  if ($r.body.usuario_id) { [void]$creados.Add($r.body.usuario_id) }
+  "13 mismo nombre suma un numero           -> $($r.body.email) $(Veredicto ($r.body.email -eq "zz.prueba.local.$stamp.2@modoya.com"))"
+
+  $r = Api POST '/functions/v1/admin-crear-usuario' @{
+    rol = 'repartidor'; nombre = "ZZ Prueba Rider $stamp"; telefono = '1'; vehiculo = 'moto'
+  } (Con $jwtAdmin)
+  if ($r.body.usuario_id) { [void]$creados.Add($r.body.usuario_id) }
+  $genRider = $r.body.email
+  $t = Api POST '/auth/v1/token?grant_type=password' @{ email = $genRider; password = $r.body.password_temporal } $hPub
+  "14 rider generado entra con su clave     -> $genRider HTTP $($t.status) $(Veredicto (($genRider -eq "rider.zz.prueba.rider.$stamp@modoya.com") -and $t.status -eq 200))"
+
+  $r = Api POST '/functions/v1/admin-crear-usuario' @{ accion = 'restablecer_password'; comercio_id = $genLocalId } (Con $jwtAdmin)
+  $nueva = $r.body.password_temporal
+  $t = Api POST '/auth/v1/token?grant_type=password' @{ email = $genLocal; password = $nueva } $hPub
+  "15 restablecer contrasena de un local    -> HTTP $($r.status) entra=$($t.status) $(Veredicto (($r.status -eq 200) -and ($r.body.email -eq $genLocal) -and $t.status -eq 200))"
+
+  $r = Api POST '/functions/v1/admin-crear-usuario' @{ accion = 'restablecer_password'; comercio_id = $genLocalId } (Con $jwtLocal)
+  "16 NO un local restablece contrasenas    -> HTTP $($r.status) $(Veredicto ($r.status -eq 403))"
+
+  $u = Api POST '/rest/v1/rpc/admin_usuario_de' @{ p_comercio = $genLocalId } (Con $jwtAdmin)
+  $n = Api POST '/rest/v1/rpc/admin_usuario_de' @{ p_comercio = $genLocalId } (Con $jwtLocal)
+  "17 admin ve el usuario; el local no      -> admin=$($u.body) local=HTTP $($n.status) $(Veredicto (($u.body -eq $genLocal) -and $n.status -ge 400))"
 
   # ---- 11. Configuracion de registro (informativo) --------------------------
   $cfg = Invoke-RestMethod -Uri "https://api.supabase.com/v1/projects/$ref/config/auth" -Headers $mgmt

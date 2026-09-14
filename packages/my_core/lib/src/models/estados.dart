@@ -15,13 +15,13 @@ T _desdeWire<T extends Enum>(List<T> valores, String? wire, String Function(T) d
 enum EstadoEnvio {
   borrador('borrador', 'Borrador'),
   cotizado('cotizado', 'Cotizado'),
-  buscandoRepartidor('buscando_repartidor', 'Buscando cadete'),
-  asignado('asignado', 'Cadete en camino al local'),
-  enLocal('en_local', 'Cadete en el local'),
+  buscandoRepartidor('buscando_repartidor', 'Buscando rider'),
+  asignado('asignado', 'Rider en camino al local'),
+  enLocal('en_local', 'Rider en el local'),
   retirado('retirado', 'Retirado'),
   enCamino('en_camino', 'En camino'),
   entregado('entregado', 'Entregado'),
-  sinRepartidor('sin_repartidor', 'Sin cadete disponible'),
+  sinRepartidor('sin_repartidor', 'Sin rider disponible'),
   cancelado('cancelado', 'Cancelado');
 
   const EstadoEnvio(this.wire, this.label);
@@ -30,7 +30,7 @@ enum EstadoEnvio {
   final String label;
 
   static EstadoEnvio fromWire(String? v) =>
-      _desdeWire(values, v, (e) => e.wire, 'Estado de envio');
+      _desdeWire(values, v, (e) => e.wire, 'Estado de envío');
 
   bool get esFinal => this == entregado || this == cancelado || this == sinRepartidor;
 
@@ -44,7 +44,7 @@ enum EstadoPedido {
   pendientePago('pendiente_pago', 'Esperando pago'),
   pagado('pagado', 'Nuevo'),
   aceptado('aceptado', 'Aceptado'),
-  enPreparacion('en_preparacion', 'En preparacion'),
+  enPreparacion('en_preparacion', 'En preparación'),
   listo('listo', 'Listo para retirar'),
   enCamino('en_camino', 'En camino'),
   entregado('entregado', 'Entregado'),
@@ -67,7 +67,7 @@ enum EstadoPedido {
 }
 
 enum EstadoAprobacion {
-  pendiente('pendiente', 'En revision'),
+  pendiente('pendiente', 'En revisión'),
   aprobado('aprobado', 'Aprobado'),
   rechazado('rechazado', 'Rechazado'),
   suspendido('suspendido', 'Suspendido');
@@ -78,7 +78,7 @@ enum EstadoAprobacion {
   final String label;
 
   static EstadoAprobacion fromWire(String? v) =>
-      _desdeWire(values, v, (e) => e.wire, 'Estado de aprobacion');
+      _desdeWire(values, v, (e) => e.wire, 'Estado de aprobación');
 
   bool get puedeOperar => this == aprobado;
 }
@@ -108,7 +108,7 @@ enum Vehiculo {
   final String label;
 
   static Vehiculo fromWire(String? v) =>
-      _desdeWire(values, v, (e) => e.wire, 'Vehiculo');
+      _desdeWire(values, v, (e) => e.wire, 'Vehículo');
 }
 
 enum MetodoPago {
@@ -123,15 +123,15 @@ enum MetodoPago {
   final String label;
 
   static MetodoPago fromWire(String? v) =>
-      _desdeWire(values, v, (e) => e.wire, 'Metodo de pago');
+      _desdeWire(values, v, (e) => e.wire, 'Método de pago');
 }
 
 enum TipoOpcion {
   /// Se elige una sola (tamano).
-  unica('unica', 'Elegi una'),
+  unica('unica', 'Elegí una'),
 
   /// Se pueden elegir varias (agregados).
-  multiple('multiple', 'Elegi las que quieras');
+  multiple('multiple', 'Elegí las que quieras');
 
   const TipoOpcion(this.wire, this.label);
 
@@ -139,7 +139,7 @@ enum TipoOpcion {
   final String label;
 
   static TipoOpcion fromWire(String? v) =>
-      _desdeWire(values, v, (e) => e.wire, 'Tipo de opcion');
+      _desdeWire(values, v, (e) => e.wire, 'Tipo de opción');
 }
 
 /// Rol de la cuenta. Decide que app y que pantallas ve cada uno.

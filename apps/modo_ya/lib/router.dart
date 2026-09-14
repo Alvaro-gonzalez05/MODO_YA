@@ -93,33 +93,45 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // ---- Cliente --------------------------------------------------------
       StatefulShellRoute.indexedStack(
-        builder: (_, _, shell) => ClienteShell(navigationShell: shell),
+        builder: (_, state, shell) => ClienteShell(
+          navigationShell: shell,
+          enRaiz: ClienteShell.raices.contains(state.uri.path),
+        ),
         branches: [
           StatefulShellBranch(routes: [
-            GoRoute(path: '/cliente', builder: (_, _) => const HomeClientePage()),
+            GoRoute(
+              path: '/cliente',
+              builder: (_, _) => const HomeClientePage(),
+              routes: [
+                GoRoute(path: 'local/:id', builder: (_, st) => LocalPage(comercioId: st.pathParameters['id']!)),
+                GoRoute(path: 'carrito', builder: (_, _) => const CarritoPage()),
+                GoRoute(path: 'direcciones', builder: (_, _) => const DireccionesPage()),
+              ],
+            ),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/cliente/pedidos', builder: (_, _) => const MisPedidosPage()),
+            GoRoute(
+              path: '/cliente/pedidos',
+              builder: (_, _) => const MisPedidosPage(),
+              routes: [
+                GoRoute(path: ':id', builder: (_, st) => PedidoSeguimientoPage(pedidoId: st.pathParameters['id']!)),
+              ],
+            ),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/cliente/cuenta', builder: (_, _) => const CuentaClientePage()),
           ]),
         ],
       ),
-      GoRoute(
-        path: '/cliente/local/:id',
-        builder: (_, st) => LocalPage(comercioId: st.pathParameters['id']!),
-      ),
-      GoRoute(path: '/cliente/carrito', builder: (_, _) => const CarritoPage()),
-      GoRoute(path: '/cliente/direcciones', builder: (_, _) => const DireccionesPage()),
-      GoRoute(
-        path: '/cliente/pedido/:id',
-        builder: (_, st) => PedidoSeguimientoPage(pedidoId: st.pathParameters['id']!),
-      ),
 
       // ---- Local ----------------------------------------------------------
+      // Las pantallas de detalle van anidadas en su pestaña: en la PC siguen
+      // con la barra lateral, y en el celular el dock se oculta.
       StatefulShellRoute.indexedStack(
-        builder: (_, _, shell) => ComercioShell(navigationShell: shell),
+        builder: (_, state, shell) => ComercioShell(
+          navigationShell: shell,
+          enRaiz: ComercioShell.raices.contains(state.uri.path),
+        ),
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(path: '/local', builder: (_, _) => const InicioComercioPage()),
@@ -128,28 +140,41 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: '/local/pedidos', builder: (_, _) => const PedidosLocalPage()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/local/menu', builder: (_, _) => const MenuPage()),
+            GoRoute(
+              path: '/local/menu',
+              builder: (_, _) => const MenuPage(),
+              routes: [
+                GoRoute(path: 'producto', builder: (_, st) => ProductoFormPage(producto: st.extra as Producto?)),
+              ],
+            ),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/local/cuenta', builder: (_, _) => const CuentaLocalPage()),
+            GoRoute(
+              path: '/local/envios',
+              builder: (_, _) => const HistorialPage(),
+              routes: [
+                GoRoute(path: 'nuevo', builder: (_, _) => const CrearEnvioPage()),
+                GoRoute(path: ':id', builder: (_, st) => SeguimientoPage(envioId: st.pathParameters['id']!)),
+              ],
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/local/cuenta',
+              builder: (_, _) => const CuentaLocalPage(),
+              routes: [GoRoute(path: 'horarios', builder: (_, _) => const HorariosPage())],
+            ),
           ]),
         ],
-      ),
-      GoRoute(path: '/local/envio/nuevo', builder: (_, _) => const CrearEnvioPage()),
-      GoRoute(
-        path: '/local/envio/:id',
-        builder: (_, st) => SeguimientoPage(envioId: st.pathParameters['id']!),
-      ),
-      GoRoute(path: '/local/historial', builder: (_, _) => const HistorialPage()),
-      GoRoute(path: '/local/horarios', builder: (_, _) => const HorariosPage()),
-      GoRoute(
-        path: '/local/producto',
-        builder: (_, st) => ProductoFormPage(producto: st.extra as Producto?),
       ),
 
       // ---- Administracion -------------------------------------------------
       StatefulShellRoute.indexedStack(
-        builder: (_, _, shell) => AdminShell(navigationShell: shell),
+        builder: (_, state, shell) => AdminShell(
+          navigationShell: shell,
+          enRaiz: const {'/admin', '/admin/pedidos', '/admin/locales', '/admin/riders', '/admin/envios', '/admin/tarifas'}
+              .contains(state.uri.path),
+        ),
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(path: '/admin', builder: (_, _) => const DashboardPage()),
@@ -158,10 +183,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: '/admin/pedidos', builder: (_, _) => const PedidosPagoPage()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/admin/locales', builder: (_, _) => const AdminComerciosPage()),
+            GoRoute(
+              path: '/admin/locales',
+              builder: (_, _) => const AdminComerciosPage(),
+              routes: [GoRoute(path: 'nuevo', builder: (_, _) => const AltaCuentaPage(esLocal: true))],
+            ),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/admin/riders', builder: (_, _) => const AdminRepartidoresPage()),
+            GoRoute(
+              path: '/admin/riders',
+              builder: (_, _) => const AdminRepartidoresPage(),
+              routes: [GoRoute(path: 'nuevo', builder: (_, _) => const AltaCuentaPage(esLocal: false))],
+            ),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/admin/envios', builder: (_, _) => const AdminEnviosPage()),
@@ -170,10 +203,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: '/admin/tarifas', builder: (_, _) => const AdminTarifasPage()),
           ]),
         ],
-      ),
-      GoRoute(
-        path: '/admin/alta/:tipo',
-        builder: (_, st) => AltaCuentaPage(esLocal: st.pathParameters['tipo'] == 'local'),
       ),
     ],
     errorBuilder: (_, state) => Scaffold(

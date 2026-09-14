@@ -83,7 +83,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           const SizedBox(height: MySpacing.sm),
                           OutlinedButton(
                             onPressed: () => ref.read(authRepositoryProvider).salir(),
-                            child: const Text('Cerrar sesion'),
+                            child: const Text('Cerrar sesión'),
                           ),
                         ],
                       ),
@@ -101,7 +101,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ),
                           MyCampo(
                             controller: _password,
-                            label: 'Contrasena',
+                            label: 'Contraseña',
                             icon: Symbols.lock,
                             ocultar: true,
                             onSubmit: (_) => _entrar(),
@@ -112,7 +112,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                   const SizedBox(height: MySpacing.lg),
                   Text(
-                    'Queres ser rider? Tu cuenta te la da la administracion de MODO YA.',
+                    'Querés ser rider? Tu cuenta te la da la administración de MODO YA.',
                     style: MyType.bodySm.copyWith(color: MyColors.secondary),
                     textAlign: TextAlign.center,
                   ),

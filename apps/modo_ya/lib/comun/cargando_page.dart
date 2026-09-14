@@ -40,7 +40,7 @@ class CargandoPage extends ConsumerWidget {
                   const SizedBox(height: MySpacing.sm),
                   TextButton(
                     onPressed: () => ref.read(authRepositoryProvider).salir(),
-                    child: const Text('Cerrar sesion'),
+                    child: const Text('Cerrar sesión'),
                   ),
                 ] else
                   const CircularProgressIndicator(),

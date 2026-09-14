@@ -8,12 +8,12 @@ import 'package:my_ui/my_ui.dart';
 import 'carrito.dart';
 import 'iconos_rubro.dart';
 
-/// Home del cliente (D1): direccion, rubros y locales.
+/// Home del cliente (D1): dirección, rubros y locales.
 ///
-/// Del diseno quedaron afuera a proposito los puntos "Club MODO YA", los
+/// Del diseño quedaron afuera a propósito los puntos "Club MODO YA", los
 /// cupones y las estrellas de los locales: la base no tiene esos datos y el
 /// documento de la clienta excluye el programa de puntos. Mejor no mostrar
-/// numeros inventados.
+/// números inventados.
 class HomeClientePage extends ConsumerStatefulWidget {
   const HomeClientePage({super.key});
 
@@ -23,162 +23,140 @@ class HomeClientePage extends ConsumerStatefulWidget {
 
 class _HomeClientePageState extends ConsumerState<HomeClientePage> {
   String? _rubroId;
-  final _busqueda = TextEditingController();
-
-  @override
-  void dispose() {
-    _busqueda.dispose();
-    super.dispose();
-  }
+  var _texto = '';
 
   @override
   Widget build(BuildContext context) {
+    final sesion = ref.watch(sesionProvider);
     final direccion = ref.watch(direccionActualProvider);
     final rubros = ref.watch(rubrosProvider).value ?? const <Rubro>[];
     final locales = ref.watch(vidrieraProvider(_rubroId));
     final carrito = ref.watch(carritoProvider);
-    final texto = _busqueda.text.trim().toLowerCase();
+    final q = _texto.trim().toLowerCase();
+    final nombre = sesion.nombre.trim().split(' ').first;
 
-    return SafeArea(
-      bottom: false,
-      child: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(vidrieraProvider(_rubroId));
-          ref.invalidate(direccionesProvider);
-        },
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(MySpacing.screenEdge, MySpacing.md, MySpacing.screenEdge, MySpacing.dockClearance),
-          children: [
-            // ---- Direccion -------------------------------------------------
-            MyCard(
-              padding: const EdgeInsets.all(MySpacing.sm),
-              color: MyColors.surfaceContainerLow,
-              shadows: const [],
-              onTap: () => context.push('/cliente/direcciones'),
+    final direccionCard = MyCard(
+      padding: const EdgeInsets.all(MySpacing.sm),
+      onTap: () => context.go('/cliente/direcciones'),
+      child: Row(
+        children: [
+          const MyIconoCaja(Symbols.location_on, tamano: 40, circular: true),
+          const SizedBox(width: MySpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(direccion?.calle ?? 'Agregá tu dirección', style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(
+                  direccion == null ? 'Para ver cuánto sale el envío' : '${direccion.alias} · Malargüe',
+                  style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Symbols.keyboard_arrow_down, color: MyColors.secondary),
+        ],
+      ),
+    );
+
+    final buscador = MyBuscador(
+      hint: 'Buscar pizzas, empanadas, farmacias…',
+      onChanged: (t) => setState(() => _texto = t),
+    );
+
+    return MyPagina(
+      rotulo: 'Malargüe',
+      titulo: nombre.isEmpty ? '¿Qué pedimos hoy?' : 'Hola, $nombre',
+      bajada: nombre.isEmpty ? null : '¿Qué pedimos hoy?',
+      onRefresh: () async {
+        ref.invalidate(vidrieraProvider(_rubroId));
+        ref.invalidate(direccionesProvider);
+      },
+      children: [
+        if (context.esMovil) ...[
+          direccionCard,
+          const SizedBox(height: MySpacing.sm),
+          buscador,
+        ] else
+          Row(
+            children: [
+              Expanded(flex: 3, child: buscador),
+              const SizedBox(width: MySpacing.md),
+              Expanded(flex: 2, child: direccionCard),
+            ],
+          ),
+        if (!carrito.vacio) ...[
+          const SizedBox(height: MySpacing.md),
+          MyHeroCard(
+            padding: const EdgeInsets.symmetric(horizontal: MySpacing.md, vertical: MySpacing.sm),
+            child: InkWell(
+              onTap: () => context.go('/cliente/carrito'),
               child: Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(color: MyColors.primaryFixed, shape: BoxShape.circle),
-                    child: const Icon(Symbols.location_on, size: 20, color: MyColors.primary, fill: 1),
-                  ),
+                  const Icon(Symbols.shopping_bag, color: Colors.white),
                   const SizedBox(width: MySpacing.sm),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          direccion?.calle ?? 'Agrega tu direccion',
-                          style: MyType.labelLg,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          direccion == null ? 'Para ver cuanto sale el envio' : '${direccion.alias} - Malargue',
-                          style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                        ),
-                      ],
+                    child: Text(
+                      'Tu pedido en ${carrito.comercio!.nombre} (${carrito.cantidad})',
+                      style: MyType.labelLg.copyWith(color: Colors.white),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Icon(Symbols.keyboard_arrow_down, color: MyColors.outline),
+                  Text(Formato.pesos(carrito.subtotal), style: MyType.headlineSm.copyWith(color: Colors.white)),
+                  const Icon(Symbols.chevron_right, color: Colors.white),
                 ],
               ),
             ),
-            const SizedBox(height: MySpacing.md),
-
-            // ---- Busqueda --------------------------------------------------
-            TextField(
-              controller: _busqueda,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: 'Buscar pizzas, empanadas, farmacias...',
-                prefixIcon: const Icon(Symbols.search, size: 22, color: MyColors.outline),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(MyRadius.full), borderSide: BorderSide.none),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(MyRadius.full), borderSide: BorderSide.none),
-              ),
-            ),
-
-            if (!carrito.vacio) ...[
-              const SizedBox(height: MySpacing.md),
-              MyHeroCard(
-                padding: const EdgeInsets.symmetric(horizontal: MySpacing.md, vertical: MySpacing.sm),
-                child: InkWell(
-                  onTap: () => context.push('/cliente/carrito'),
-                  child: Row(
-                    children: [
-                      const Icon(Symbols.shopping_bag, color: Colors.white),
-                      const SizedBox(width: MySpacing.sm),
-                      Expanded(
-                        child: Text(
-                          'Tu pedido en ${carrito.comercio!.nombre} (${carrito.cantidad})',
-                          style: MyType.labelLg.copyWith(color: Colors.white),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(Formato.pesos(carrito.subtotal), style: MyType.headlineSm.copyWith(color: Colors.white)),
-                      const Icon(Symbols.chevron_right, color: Colors.white),
-                    ],
-                  ),
+          ),
+        ],
+        const SizedBox(height: MySpacing.lg),
+        SizedBox(
+          height: 96,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _Rubro(nombre: 'Todos', icono: Symbols.apps, activo: _rubroId == null, onTap: () => setState(() => _rubroId = null)),
+              for (final r in rubros)
+                _Rubro(
+                  nombre: r.nombre,
+                  icono: iconoDeRubro(r.icono),
+                  activo: _rubroId == r.id,
+                  onTap: () => setState(() => _rubroId = _rubroId == r.id ? null : r.id),
                 ),
-              ),
             ],
-
-            // ---- Rubros ----------------------------------------------------
-            const SizedBox(height: MySpacing.lg),
-            Text('Que te provoca hoy?', style: MyType.headlineMd),
-            const SizedBox(height: MySpacing.sm),
-            SizedBox(
-              height: 92,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _Rubro(nombre: 'Todos', icono: Symbols.apps, activo: _rubroId == null, onTap: () => setState(() => _rubroId = null)),
-                  for (final r in rubros)
-                    _Rubro(
-                      nombre: r.nombre,
-                      icono: iconoDeRubro(r.icono),
-                      activo: _rubroId == r.id,
-                      onTap: () => setState(() => _rubroId = _rubroId == r.id ? null : r.id),
-                    ),
-                ],
-              ),
-            ),
-
-            // ---- Locales ---------------------------------------------------
-            const SizedBox(height: MySpacing.md),
-            MySectionHeader(title: 'Locales en Malargue', subtitle: 'Abiertos primero'),
-            const SizedBox(height: MySpacing.md),
-            MyAsync(
-              valor: locales,
-              onReintentar: () => ref.invalidate(vidrieraProvider(_rubroId)),
-              datos: (lista) {
-                final visibles = texto.isEmpty
-                    ? lista
-                    : lista.where((c) => c.nombre.toLowerCase().contains(texto) || c.rubro.toLowerCase().contains(texto)).toList();
-                if (visibles.isEmpty) {
-                  return MyEmptyState(
-                    icon: Symbols.storefront,
-                    title: lista.isEmpty ? 'Todavia no hay locales' : 'No encontramos nada',
-                    message: lista.isEmpty
-                        ? 'Muy pronto vas a poder pedir a los locales de Malargue.'
-                        : 'Proba con otra palabra o con otro rubro.',
-                  );
-                }
-                return Column(
-                  children: [
-                    for (final c in visibles) ...[
-                      _TarjetaLocal(comercio: c, direccionId: direccion?.id),
-                      const SizedBox(height: MySpacing.md),
-                    ],
-                  ],
-                );
-              },
-            ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: MySpacing.md),
+        const MySectionHeader(title: 'Locales en Malargüe', subtitle: 'Abiertos primero'),
+        const SizedBox(height: MySpacing.md),
+        MyAsync(
+          valor: locales,
+          onReintentar: () => ref.invalidate(vidrieraProvider(_rubroId)),
+          datos: (lista) {
+            final visibles = q.isEmpty
+                ? lista
+                : lista.where((c) => c.nombre.toLowerCase().contains(q) || c.rubro.toLowerCase().contains(q)).toList();
+            if (visibles.isEmpty) {
+              return MyCard(
+                child: MyEmptyState(
+                  icon: Symbols.storefront,
+                  title: lista.isEmpty ? 'Todavía no hay locales' : 'No encontramos nada',
+                  message: lista.isEmpty
+                      ? 'Muy pronto vas a poder pedir a los locales de Malargüe.'
+                      : 'Probá con otra palabra o con otro rubro.',
+                ),
+              );
+            }
+            return MyGrilla(
+              anchoMinimo: 290,
+              maxColumnas: 4,
+              espacio: MySpacing.md,
+              children: [for (final c in visibles) _TarjetaLocal(comercio: c, direccionId: direccion?.id)],
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -195,26 +173,34 @@ class _Rubro extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: MySpacing.sm),
-      child: GestureDetector(
-        onTap: onTap,
-        child: SizedBox(
-          width: 72,
-          child: Column(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: activo ? MyColors.primaryFixed : MyColors.secondaryContainer,
-                  shape: BoxShape.circle,
-                  border: activo ? Border.all(color: MyColors.primary, width: 2) : null,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onTap,
+          child: SizedBox(
+            width: 76,
+            child: Column(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 62,
+                  height: 62,
+                  decoration: BoxDecoration(
+                    color: activo ? MyColors.primary : MyColors.surfaceContainerLowest,
+                    shape: BoxShape.circle,
+                    boxShadow: MyShadows.subtle,
+                  ),
+                  child: Icon(icono, size: 26, color: activo ? Colors.white : MyColors.primary),
                 ),
-                child: Icon(icono, size: 26, color: MyColors.primary),
-              ),
-              const SizedBox(height: MySpacing.xxs),
-              Text(nombre, style: MyType.labelSm, maxLines: 1, overflow: TextOverflow.ellipsis),
-            ],
+                const SizedBox(height: MySpacing.xxs),
+                Text(
+                  nombre,
+                  style: MyType.labelMd.copyWith(color: activo ? MyColors.primary : MyColors.onSurface),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -236,7 +222,7 @@ class _TarjetaLocal extends ConsumerWidget {
 
     return MyCard(
       padding: EdgeInsets.zero,
-      onTap: () => context.push('/cliente/local/${comercio.id}'),
+      onTap: () => context.go('/cliente/local/${comercio.id}'),
       child: Opacity(
         opacity: comercio.abierto ? 1 : 0.6,
         child: Column(
@@ -244,10 +230,7 @@ class _TarjetaLocal extends ConsumerWidget {
           children: [
             Stack(
               children: [
-                AspectRatio(
-                  aspectRatio: 16 / 8,
-                  child: MyImagen(url: comercio.logoUrl, radio: 0, icono: iconoDeRubro(null)),
-                ),
+                MyImagen(url: comercio.logoUrl, alto: 150, radio: MyRadius.card, icono: iconoDeRubro(null)),
                 Positioned(
                   left: MySpacing.sm,
                   top: MySpacing.sm,
@@ -270,7 +253,7 @@ class _TarjetaLocal extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(comercio.nombre, style: MyType.headlineSm),
+                  Text(comercio.nombre, style: MyType.headlineSm, maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
                   Text(comercio.rubro, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
                   const SizedBox(height: MySpacing.xs),
@@ -278,9 +261,12 @@ class _TarjetaLocal extends ConsumerWidget {
                     children: [
                       const Icon(Symbols.sports_motorsports, size: 16, color: MyColors.secondary),
                       const SizedBox(width: MySpacing.xxs),
-                      Text(
-                        cot == null ? 'Envio segun tu direccion' : 'Envio ${Formato.pesos(cot.costoEnvio)}',
-                        style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                      Flexible(
+                        child: Text(
+                          cot == null ? 'Envío según tu dirección' : 'Envío ${Formato.pesos(cot.costoEnvio)}',
+                          style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),

@@ -49,7 +49,7 @@ class GananciasPage extends ConsumerWidget {
                   const SizedBox(height: MySpacing.md),
                   MyStatRow(tiles: [
                     MyStatTile(icon: Symbols.date_range, value: Formato.pesos(suma(semana)), label: 'Esta semana'),
-                    MyStatTile(icon: Symbols.package_2, value: '${entregados.length}', label: 'Entregados (ultimos 100)'),
+                    MyStatTile(icon: Symbols.package_2, value: '${entregados.length}', label: 'Entregados (últimos 100)'),
                   ]),
                   const SizedBox(height: MySpacing.md),
                   MyCard(
@@ -61,7 +61,7 @@ class GananciasPage extends ConsumerWidget {
                         const SizedBox(width: MySpacing.sm),
                         Expanded(
                           child: Text(
-                            'MODO YA te liquida lo ganado cada cierto tiempo. La frecuencia y el medio de pago se estan definiendo.',
+                            'MODO YA te liquida lo ganado cada cierto tiempo. La frecuencia y el medio de pago se están definiendo.',
                             style: MyType.bodySm.copyWith(color: MyColors.onSecondaryFixed),
                           ),
                         ),
@@ -69,7 +69,7 @@ class GananciasPage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: MySpacing.lg),
-                  Text('Ultimos viajes', style: MyType.headlineMd),
+                  Text('Últimos viajes', style: MyType.headlineMd),
                   const SizedBox(height: MySpacing.sm),
                   if (entregados.isEmpty)
                     const MyEmptyState(icon: Symbols.receipt_long, title: 'Sin viajes entregados', message: 'Conectate para empezar.')

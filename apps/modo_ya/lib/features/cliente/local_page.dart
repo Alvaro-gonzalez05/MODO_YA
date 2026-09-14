@@ -8,7 +8,8 @@ import 'package:my_ui/my_ui.dart';
 import 'carrito.dart';
 import 'producto_sheet.dart';
 
-/// Menu del local (D2).
+/// Menú del local (D2). En el celular, lista con barra de pedido abajo; en la
+/// PC, grilla con el pedido en un panel al costado.
 class LocalPage extends ConsumerStatefulWidget {
   const LocalPage({super.key, required this.comercioId});
 
@@ -26,9 +27,9 @@ class _LocalPageState extends ConsumerState<LocalPage> {
     if (!carrito.puedeAgregarDe(comercio)) {
       final ok = await confirmar(
         context,
-        titulo: 'Empezar un pedido nuevo?',
-        mensaje: 'Tenes productos de ${ref.read(carritoProvider).comercio?.nombre}. '
-            'Un pedido es de un solo local: si seguis, se vacia el carrito.',
+        titulo: '¿Empezar un pedido nuevo?',
+        mensaje: 'Tenés productos de ${ref.read(carritoProvider).comercio?.nombre}. '
+            'Un pedido es de un solo local: si seguís, se vacía el carrito.',
         aceptar: 'Vaciar y seguir',
       );
       if (!ok) return;
@@ -37,7 +38,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
     final item = await ProductoSheet.mostrar(context, p);
     if (item == null) return;
     carrito.agregar(comercio, item);
-    if (mounted) mostrarAviso(context, '${item.cantidad}x ${p.nombre} agregado');
+    if (mounted) mostrarAviso(context, '${item.cantidad}× ${p.nombre} agregado');
   }
 
   @override
@@ -52,11 +53,13 @@ class _LocalPageState extends ConsumerState<LocalPage> {
         valor: comercioAsync,
         datos: (comercio) {
           if (comercio == null) {
-            return const MyEmptyState(title: 'Local no disponible', message: 'Puede que ya no este en MODO YA.');
+            return const MyEmptyState(title: 'Local no disponible', message: 'Puede que ya no esté en MODO YA.');
           }
           final cot = direccion == null
               ? null
               : ref.watch(cotizacionEnvioProvider((comercioId: comercio.id, direccionId: direccion.id))).value;
+
+          if (!context.esMovil) return _ancho(comercio, menuAsync, carrito, cot);
 
           return Stack(
             children: [
@@ -119,8 +122,8 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                                   const SizedBox(width: MySpacing.xs),
                                   Text(
                                     cot == null
-                                        ? 'Agrega tu direccion para ver el envio'
-                                        : 'Envio ${Formato.pesos(cot.costoEnvio)}',
+                                        ? 'Agregá tu dirección para ver el envío'
+                                        : 'Envío ${Formato.pesos(cot.costoEnvio)}',
                                     style: MyType.labelLg,
                                   ),
                                 ],
@@ -129,7 +132,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                             if (!comercio.abierto) ...[
                               const SizedBox(height: MySpacing.sm),
                               Text(
-                                'Ahora no esta tomando pedidos. Podes mirar el menu.',
+                                'Ahora no está tomando pedidos. Podés mirar el menú.',
                                 style: MyType.bodySm.copyWith(color: MyColors.error),
                               ),
                             ],
@@ -140,7 +143,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                   ),
                   ...menuAsync.when(
                     loading: () => [const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()))],
-                    error: (e, _) => [SliverToBoxAdapter(child: MyEmptyState(title: 'No pudimos cargar el menu', message: '$e'))],
+                    error: (e, _) => [SliverToBoxAdapter(child: MyEmptyState(title: 'No pudimos cargar el menú', message: '$e'))],
                     data: (menu) => _slivers(comercio, menu),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 110)),
@@ -160,11 +163,207 @@ class _LocalPageState extends ConsumerState<LocalPage> {
     );
   }
 
+  /// PC y tableta: portada, menú en grilla y el pedido en un panel a la derecha.
+  Widget _ancho(Comercio comercio, AsyncValue<Menu> menuAsync, Carrito carrito, CotizacionPedido? cot) {
+    final delLocal = !carrito.vacio && carrito.comercio?.id == comercio.id;
+
+    final portada = MyCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          MyImagen(url: comercio.logoUrl, alto: 200, radio: MyRadius.card, icono: Symbols.storefront),
+          Padding(
+            padding: const EdgeInsets.all(MySpacing.lg),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: MySpacing.lg,
+              runSpacing: MySpacing.sm,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(comercio.nombre, style: MyType.headlineLg),
+                    Text(comercio.rubro, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+                  ],
+                ),
+                Wrap(
+                  spacing: MySpacing.xs,
+                  runSpacing: MySpacing.xs,
+                  children: [
+                    MyBadge(
+                      comercio.abierto ? 'Abierto' : 'Cerrado',
+                      tone: comercio.abierto ? MyBadgeTone.success : MyBadgeTone.dark,
+                      dot: true,
+                    ),
+                    if (cot != null) ...[
+                      MyBadge('${cot.minutosEstimados} min', tone: MyBadgeTone.info, icon: Symbols.schedule),
+                      MyBadge('Envío ${Formato.pesos(cot.costoEnvio)}', tone: MyBadgeTone.info, icon: Symbols.sports_motorsports),
+                    ] else
+                      const MyBadge('Agregá tu dirección para ver el envío', tone: MyBadgeTone.info),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final Widget menu = menuAsync.when(
+      loading: () => const Padding(padding: EdgeInsets.all(MySpacing.xxl), child: Center(child: CircularProgressIndicator())),
+      error: (e, _) => MyEmptyState(title: 'No pudimos cargar el menú', message: '$e'),
+      data: (m) {
+        if (m.productos.isEmpty) {
+          return const MyCard(
+            child: MyEmptyState(icon: Symbols.menu_book, title: 'Menú en armado', message: 'Este local todavía no cargó productos.'),
+          );
+        }
+        final secciones = m.secciones.where((x) => m.deSeccion(x.id).isNotEmpty).toList();
+        final visibles = _seccionId == null ? secciones : secciones.where((x) => x.id == _seccionId).toList();
+        Widget grilla(List<Producto> productos) => MyGrilla(
+              anchoMinimo: 260,
+              maxColumnas: 3,
+              children: [
+                for (final pr in productos)
+                  _TarjetaProductoAncha(producto: pr, habilitado: comercio.abierto, onAgregar: () => _agregar(comercio, pr)),
+              ],
+            );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (secciones.length > 1)
+              MyFiltros<String?>(
+                seleccionado: _seccionId,
+                onChanged: (v) => setState(() => _seccionId = v),
+                opciones: [
+                  (null, 'Todo', m.productos.length),
+                  for (final x in secciones) (x.id, x.nombre, m.deSeccion(x.id).length),
+                ],
+              ),
+            for (final x in visibles) ...[
+              const SizedBox(height: MySpacing.lg),
+              Text(x.nombre, style: MyType.headlineMd),
+              const SizedBox(height: MySpacing.sm),
+              grilla(m.deSeccion(x.id)),
+            ],
+            if (_seccionId == null && m.sinSeccion.isNotEmpty) ...[
+              const SizedBox(height: MySpacing.lg),
+              Text(secciones.isEmpty ? 'Menú' : 'Otros', style: MyType.headlineMd),
+              const SizedBox(height: MySpacing.sm),
+              grilla(m.sinSeccion),
+            ],
+          ],
+        );
+      },
+    );
+
+    final panel = MyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Symbols.shopping_bag, color: MyColors.primary),
+              const SizedBox(width: MySpacing.xs),
+              Text('Tu pedido', style: MyType.headlineSm),
+            ],
+          ),
+          const SizedBox(height: MySpacing.md),
+          if (!delLocal)
+            Text(
+              carrito.vacio
+                  ? 'Todavía no agregaste nada. Tocá un producto para sumarlo.'
+                  : 'Tenés un pedido abierto en ${carrito.comercio?.nombre}.',
+              style: MyType.bodyMd.copyWith(color: MyColors.secondary),
+            )
+          else ...[
+            for (final i in carrito.items)
+              Padding(
+                padding: const EdgeInsets.only(bottom: MySpacing.xs),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 30, child: Text('${i.cantidad}×', style: MyType.labelLg.copyWith(color: MyColors.primary))),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(i.producto.nombre, style: MyType.labelLg),
+                          if (i.elegidas.isNotEmpty)
+                            Text(i.elegidas.map((o) => o.nombre).join(', '), style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                        ],
+                      ),
+                    ),
+                    Text(Formato.pesos(i.subtotal), style: MyType.labelMd),
+                  ],
+                ),
+              ),
+            const Divider(height: MySpacing.lg),
+            Row(
+              children: [
+                Text('Productos', style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+                const Spacer(),
+                Text(Formato.pesos(carrito.subtotal), style: MyType.labelLg),
+              ],
+            ),
+            if (cot != null)
+              Row(
+                children: [
+                  Text('Envío', style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+                  const Spacer(),
+                  Text(Formato.pesos(cot.costoEnvio), style: MyType.labelLg),
+                ],
+              ),
+            const SizedBox(height: MySpacing.md),
+            MyBotonAccion(
+              label: 'Ver pedido · ${Formato.pesos(carrito.subtotal + (cot?.costoEnvio ?? 0))}',
+              icon: Symbols.arrow_forward,
+              onPressed: () async => context.go('/cliente/carrito'),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    return Stack(
+      children: [
+        MyPagina(
+          volver: () => context.canPop() ? context.pop() : context.go('/cliente'),
+          rotulo: comercio.rubro,
+          titulo: comercio.nombre,
+          bajada: comercio.abierto ? 'Tocá un producto para agregarlo' : 'Ahora no está tomando pedidos. Podés mirar el menú.',
+          conDock: false,
+          children: [
+            MyConPanel(
+              anchoPanel: 340,
+              principal: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [portada, const SizedBox(height: MySpacing.md), menu],
+              ),
+              panel: panel,
+            ),
+            if (!context.esEscritorio && delLocal) const SizedBox(height: 90),
+          ],
+        ),
+        if (!context.esEscritorio && delLocal)
+          Positioned(
+            left: MySpacing.xxl,
+            right: MySpacing.xxl,
+            bottom: MySpacing.lg,
+            child: _BarraPedido(carrito: carrito),
+          ),
+      ],
+    );
+  }
+
   List<Widget> _slivers(Comercio comercio, Menu menu) {
     if (menu.productos.isEmpty) {
       return [
         const SliverToBoxAdapter(
-          child: MyEmptyState(icon: Symbols.menu_book, title: 'Menu en armado', message: 'Este local todavia no cargo productos.'),
+          child: MyEmptyState(icon: Symbols.menu_book, title: 'Menú en armado', message: 'Este local todavía no cargó productos.'),
         ),
       ];
     }
@@ -202,7 +401,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(MySpacing.screenEdge, MySpacing.lg, MySpacing.screenEdge, MySpacing.sm),
-            child: Text(secciones.isEmpty ? 'Menu' : 'Otros', style: MyType.headlineMd),
+            child: Text(secciones.isEmpty ? 'Menú' : 'Otros', style: MyType.headlineMd),
           ),
         ),
         _listaProductos(comercio, menu.sinSeccion),
@@ -282,6 +481,65 @@ class _TarjetaProducto extends StatelessWidget {
   }
 }
 
+class _TarjetaProductoAncha extends StatelessWidget {
+  const _TarjetaProductoAncha({required this.producto, required this.habilitado, required this.onAgregar});
+
+  final Producto producto;
+  final bool habilitado;
+  final VoidCallback onAgregar;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = producto;
+    return MyCard(
+      padding: EdgeInsets.zero,
+      onTap: habilitado ? onAgregar : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          MyImagen(url: p.fotoUrl, alto: 160, radio: MyRadius.card, icono: Symbols.restaurant),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(MySpacing.md, MySpacing.sm, MySpacing.md, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(p.nombre, style: MyType.headlineSm, maxLines: 2, overflow: TextOverflow.ellipsis),
+                if (p.descripcion != null)
+                  Text(p.descripcion!, style: MyType.bodySm.copyWith(color: MyColors.secondary), maxLines: 2, overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.all(MySpacing.md),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(Formato.pesos(p.precio), style: MyType.headlineMd.copyWith(color: MyColors.primary)),
+                      if (p.tienePersonalizacion) Text('Personalizable', style: MyType.labelSm.copyWith(color: MyColors.secondary)),
+                    ],
+                  ),
+                ),
+                if (habilitado)
+                  MyCircleIconButton(
+                    icon: Symbols.add,
+                    size: 42,
+                    background: MyColors.primary,
+                    foreground: MyColors.onPrimary,
+                    onTap: onAgregar,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _BarraPedido extends StatelessWidget {
   const _BarraPedido({required this.carrito});
 
@@ -296,7 +554,7 @@ class _BarraPedido extends StatelessWidget {
       shadowColor: MyColors.primary.withValues(alpha: 0.4),
       child: InkWell(
         customBorder: const StadiumBorder(),
-        onTap: () => context.push('/cliente/carrito'),
+        onTap: () => context.go('/cliente/carrito'),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: MySpacing.md, vertical: MySpacing.sm),
           child: Row(

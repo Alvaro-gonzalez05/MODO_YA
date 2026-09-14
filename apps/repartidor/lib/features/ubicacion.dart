@@ -53,19 +53,19 @@ class UbicacionRider extends Notifier<Lectura?> {
     }
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {
-        return const LecturaError('La ubicacion del dispositivo esta apagada.');
+        return const LecturaError('La ubicación del dispositivo esta apagada.');
       }
       var permiso = await Geolocator.checkPermission();
       if (permiso == LocationPermission.denied) permiso = await Geolocator.requestPermission();
       if (permiso == LocationPermission.denied || permiso == LocationPermission.deniedForever) {
-        return const LecturaError('Sin permiso de ubicacion no te podemos ofrecer envios cercanos.');
+        return const LecturaError('Sin permiso de ubicación no te podemos ofrecer envíos cercanos.');
       }
       final p = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 15)),
       );
       return LecturaOk(p.latitude, p.longitude);
     } catch (e) {
-      return LecturaError('No pudimos leer tu ubicacion ($e).');
+      return LecturaError('No pudimos leer tu ubicación ($e).');
     }
   }
 

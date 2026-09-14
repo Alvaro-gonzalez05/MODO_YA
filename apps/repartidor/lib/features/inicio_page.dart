@@ -85,7 +85,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
 
     return Column(
       children: [
-        MyTopBar(zona: 'Malargue', onPerfil: () => context.go('/perfil')),
+        MyTopBar(zona: 'Malargüe', onPerfil: () => context.go('/perfil')),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(MySpacing.screenEdge, MySpacing.xs, MySpacing.screenEdge, MySpacing.dockClearance),
@@ -118,8 +118,8 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                   contentPadding: EdgeInsets.zero,
                   value: ubic.simular,
                   onChanged: (v) => setState(() => ubic.simular = v),
-                  title: Text('Simular ubicacion (solo desarrollo)', style: MyType.labelMd),
-                  subtitle: Text('Usa el centro de Malargue si esta PC no tiene GPS', style: MyType.bodySm),
+                  title: Text('Simular ubicación (solo desarrollo)', style: MyType.labelMd),
+                  subtitle: Text('Usa el centro de Malargüe si esta PC no tiene GPS', style: MyType.bodySm),
                 ),
               ],
 
@@ -153,8 +153,8 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
               const SizedBox(height: MySpacing.sm),
               MyStatRow(tiles: [
                 MyStatTile(icon: Symbols.package_2, value: '${rider?.viajesCompletados ?? 0}', label: 'Viajes'),
-                MyStatTile(icon: Symbols.star, value: (rider?.reputacion ?? 5).toStringAsFixed(1), label: 'Reputacion'),
-                MyStatTile(icon: Symbols.two_wheeler, value: rider?.vehiculo.label ?? '-', label: 'Vehiculo'),
+                MyStatTile(icon: Symbols.star, value: (rider?.reputacion ?? 5).toStringAsFixed(1), label: 'Reputación'),
+                MyStatTile(icon: Symbols.two_wheeler, value: rider?.vehiculo.label ?? '-', label: 'Vehículo'),
               ]),
 
               const SizedBox(height: MySpacing.lg),
@@ -166,7 +166,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                       const SizedBox(height: MySpacing.md),
                       Text('Esperando pedidos', style: MyType.headlineSm),
                       Text(
-                        'Cuando haya un envio cerca te aparece aca. Deja la app abierta.',
+                        'Cuando haya un envío cerca te aparece acá. Deja la app abierta.',
                         style: MyType.bodyMd.copyWith(color: MyColors.secondary),
                         textAlign: TextAlign.center,
                       ),
@@ -176,8 +176,8 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
               if (!conectado)
                 const MyEmptyState(
                   icon: Symbols.wifi_off,
-                  title: 'Estas desconectado',
-                  message: 'Conectate para recibir ofertas de envios cerca tuyo.',
+                  title: 'Estás desconectado',
+                  message: 'Conectate para recibir ofertas de envíos cerca tuyo.',
                 ),
             ],
           ),
@@ -229,7 +229,7 @@ class _TarjetaConexion extends StatelessWidget {
           Text(nombre.isEmpty ? 'Listo para trabajar' : 'Hola, ${nombre.split(' ').first}',
               style: MyType.headlineLg.copyWith(color: Colors.white)),
           Text(
-            'Tu ubicacion se comparte solo mientras estas conectado.',
+            'Tu ubicación se comparte solo mientras estás conectado.',
             style: MyType.bodyMd.copyWith(color: Colors.white70),
           ),
         ],
@@ -247,8 +247,8 @@ class _EstadoUbicacion extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = lectura;
     final (icono, texto, color) = switch (l) {
-      LecturaOk(simulada: true) => (Symbols.science, 'Ubicacion simulada (centro de Malargue)', MyColors.secondary),
-      LecturaOk() => (Symbols.my_location, 'Ubicacion enviada', MyColors.success),
+      LecturaOk(simulada: true) => (Symbols.science, 'Ubicación simulada (centro de Malargüe)', MyColors.secondary),
+      LecturaOk() => (Symbols.my_location, 'Ubicación enviada', MyColors.success),
       LecturaError(:final mensaje) => (Symbols.location_off, mensaje, MyColors.error),
     };
     return Row(

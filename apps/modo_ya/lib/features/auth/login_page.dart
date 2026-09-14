@@ -66,7 +66,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     MyCampo(
                       controller: _password,
-                      label: 'Contrasena',
+                      label: 'Contraseña',
                       icon: Symbols.lock,
                       ocultar: true,
                       autofill: const [AutofillHints.password],
@@ -97,7 +97,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     const SizedBox(width: MySpacing.sm),
                     Expanded(
                       child: Text(
-                        'Tenes un local o sos rider? Tu cuenta te la da la administracion '
+                        'Tenés un local o sos rider? Tu cuenta te la da la administración '
                         'de MODO YA. Los riders usan la app MODO YA Rider.',
                         style: MyType.bodySm.copyWith(color: MyColors.onSecondaryFixed),
                       ),

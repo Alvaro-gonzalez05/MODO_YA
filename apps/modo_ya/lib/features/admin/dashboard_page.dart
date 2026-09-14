@@ -7,7 +7,8 @@ import 'package:my_ui/my_ui.dart';
 
 import 'admin_shell.dart';
 
-/// Resumen de la operacion, con el mapa en vivo de riders y envios.
+/// Resumen de la operación: indicadores, mapa en vivo, lo que requiere
+/// atención y los envíos en la calle.
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
@@ -18,13 +19,103 @@ class DashboardPage extends ConsumerWidget {
     final activos = ref.watch(enviosActivosProvider).value ?? const <Envio>[];
     final porCobrar = ref.watch(pedidosPendientesDePagoProvider).value ?? const <Pedido>[];
 
+    final operativos = comercios.where((c) => c.aprobacion.puedeOperar).toList();
+    final abiertos = operativos.where((c) => c.abierto).length;
+    final aprobados = riders.where((r) => r.aprobacion.puedeOperar).length;
     final conectados = riders.where((r) => r.conectado).toList();
-    final libres = conectados.where((r) => !r.ocupado).length;
-    final abiertos = comercios.where((c) => c.abierto).length;
+    final enViaje = conectados.where((r) => r.ocupado).length;
+    final libres = conectados.length - enViaje;
     final buscando = activos.where((e) => e.estado == EstadoEnvio.buscandoRepartidor).length;
 
+    final kpis = MyGrilla(
+      anchoMinimo: context.esMovil ? 150 : 230,
+      children: [
+        MyKpi(
+          rotulo: 'Envíos en la calle',
+          valor: '${activos.length}',
+          icono: Symbols.route,
+          detalle: buscando == 0 ? 'Todos con rider' : '$buscando buscando rider',
+        ),
+        MyKpi(
+          rotulo: 'Locales abiertos',
+          valor: '$abiertos',
+          icono: Symbols.storefront,
+          pastilla: 'de ${operativos.length}',
+          detalle: '${comercios.length} locales en total',
+          progreso: operativos.isEmpty ? 0 : abiertos / operativos.length,
+        ),
+        MyKpi(
+          rotulo: 'Riders conectados',
+          valor: '${conectados.length}',
+          icono: Symbols.sports_motorsports,
+          pastilla: 'de $aprobados',
+          detalle: '$enViaje en viaje · $libres libres',
+          progreso: aprobados == 0 ? 0 : conectados.length / aprobados,
+        ),
+        MyKpi(
+          rotulo: 'Pedidos por cobrar',
+          valor: '${porCobrar.length}',
+          icono: Symbols.payments,
+          detalle: porCobrar.isEmpty ? 'Nada pendiente' : 'Tocá para confirmar el pago',
+          destacado: porCobrar.isNotEmpty,
+          onTap: () => context.go('/admin/pedidos'),
+        ),
+      ],
+    );
+
+    final mapa = _TarjetaMapa(riders: conectados, envios: activos);
+    final atencion = _RequiereAtencion(
+      porCobrar: porCobrar.length,
+      buscandoSinLibres: libres == 0 ? buscando : 0,
+      sinUbicacion: comercios.where((c) => c.aprobacion.puedeOperar && !c.direccion.tieneCoordenadas).toList(),
+      pendientes: comercios.where((c) => c.aprobacion == EstadoAprobacion.pendiente).length +
+          riders.where((r) => r.aprobacion == EstadoAprobacion.pendiente).length,
+    );
+
+    return MyPagina(
+      rotulo: 'Malargüe · en vivo',
+      titulo: 'Resumen',
+      bajada: 'Cómo viene la operación ahora',
+      onRefresh: () async {
+        ref.invalidate(todosLosComerciosProvider);
+        ref.invalidate(todosLosRepartidoresProvider);
+      },
+      children: [
+        kpis,
+        const SizedBox(height: MySpacing.lg),
+        if (context.esEscritorio)
+          // Sin IntrinsicHeight: el mapa usa LayoutBuilder, que no calcula
+          // alturas intrinsecas.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 3, child: mapa),
+              const SizedBox(width: MySpacing.lg),
+              Expanded(flex: 2, child: atencion),
+            ],
+          )
+        else ...[
+          atencion,
+          const SizedBox(height: MySpacing.lg),
+          mapa,
+        ],
+        const SizedBox(height: MySpacing.lg),
+        _EnviosEnCurso(envios: activos),
+      ],
+    );
+  }
+}
+
+class _TarjetaMapa extends StatelessWidget {
+  const _TarjetaMapa({required this.riders, required this.envios});
+
+  final List<Repartidor> riders;
+  final List<Envio> envios;
+
+  @override
+  Widget build(BuildContext context) {
     final marcadores = <MyMarcador>[
-      for (final r in conectados)
+      for (final r in riders)
         if (r.ubicacion?.tieneCoordenadas ?? false)
           MyMarcador(
             punto: LatLng(r.ubicacion!.lat!, r.ubicacion!.lng!),
@@ -32,166 +123,299 @@ class DashboardPage extends ConsumerWidget {
             color: r.ocupado ? MyColors.primary : MyColors.success,
             etiqueta: r.nombre.split(' ').first,
           ),
-      for (final e in activos)
+      for (final e in envios)
         if (e.destino.tieneCoordenadas)
           MyMarcador(punto: LatLng(e.destino.lat!, e.destino.lng!), icono: Symbols.home, color: MyColors.dock),
     ];
 
-    return ListView(
-      padding: const EdgeInsets.all(MySpacing.xl),
-      children: [
-        const AdminPageHeader(titulo: 'Resumen', bajada: 'Como viene la operacion en Malargue ahora'),
-
-        LayoutBuilder(
-          builder: (context, c) {
-            final columnas = c.maxWidth > 900 ? 4 : 2;
-            return GridView.count(
-              crossAxisCount: columnas,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: MySpacing.md,
-              mainAxisSpacing: MySpacing.md,
-              childAspectRatio: columnas == 4 ? 1.8 : 1.5,
-              children: [
-                _Kpi(
-                  icon: Symbols.storefront,
-                  valor: '$abiertos',
-                  label: 'Locales abiertos',
-                  detalle: '${comercios.length} en total',
-                ),
-                _Kpi(
-                  icon: Symbols.sports_motorsports,
-                  valor: '${conectados.length}',
-                  label: 'Riders conectados',
-                  detalle: '$libres libres ahora',
-                ),
-                _Kpi(
-                  icon: Symbols.package_2,
-                  valor: '${activos.length}',
-                  label: 'Envios en la calle',
-                  detalle: buscando == 0 ? 'Todos con rider' : '$buscando buscando rider',
-                ),
-                _Kpi(
-                  icon: Symbols.payments,
-                  valor: '${porCobrar.length}',
-                  label: 'Pedidos por cobrar',
-                  detalle: porCobrar.isEmpty ? 'Nada pendiente' : 'Toca para confirmar',
-                  destacado: porCobrar.isNotEmpty,
-                  onTap: () => context.go('/admin/pedidos'),
-                ),
-              ],
-            );
-          },
-        ),
-
-        if (buscando > 0 && libres == 0) ...[
-          const SizedBox(height: MySpacing.lg),
-          MyCard(
-            color: MyColors.errorContainer,
-            shadows: const [],
-            child: Row(
-              children: [
-                const Icon(Symbols.warning, color: MyColors.onErrorContainer),
-                const SizedBox(width: MySpacing.sm),
-                Expanded(
-                  child: Text(
-                    'Hay $buscando envio(s) buscando rider y no hay ninguno libre conectado.',
-                    style: MyType.labelLg.copyWith(color: MyColors.onErrorContainer),
-                  ),
-                ),
-              ],
-            ),
+    return MyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Text('Mapa en vivo', style: MyType.headlineSm),
+              const SizedBox(width: MySpacing.xs),
+              const MyBadge('En vivo', tone: MyBadgeTone.ember, dot: true),
+            ],
+          ),
+          const SizedBox(height: MySpacing.xs),
+          const Wrap(
+            spacing: MySpacing.md,
+            runSpacing: MySpacing.xxs,
+            children: [
+              _Referencia(color: MyColors.success, texto: 'Rider libre'),
+              _Referencia(color: MyColors.primary, texto: 'Rider en servicio'),
+              _Referencia(color: MyColors.dock, texto: 'Destino de un envío'),
+            ],
+          ),
+          const SizedBox(height: MySpacing.md),
+          MyMapaVista(
+            alto: context.esMovil ? 260 : 380,
+            radio: MyRadius.lg,
+            interactivo: true,
+            marcadores: marcadores,
           ),
         ],
+      ),
+    );
+  }
+}
 
-        const SizedBox(height: MySpacing.xl),
-        Text('Mapa en vivo', style: MyType.headlineMd),
-        const SizedBox(height: MySpacing.xxs),
-        Text(
-          'Verde: rider libre. Naranja: rider en servicio. Casa: destino de un envio en curso.',
-          style: MyType.bodySm.copyWith(color: MyColors.secondary),
-        ),
-        const SizedBox(height: MySpacing.sm),
-        MyMapaVista(alto: 360, radio: MyRadius.card, interactivo: true, marcadores: marcadores),
+class _Referencia extends StatelessWidget {
+  const _Referencia({required this.color, required this.texto});
 
-        const SizedBox(height: MySpacing.xl),
-        Text('Envios en curso', style: MyType.headlineMd),
-        const SizedBox(height: MySpacing.sm),
-        if (activos.isEmpty)
-          const MyEmptyState(
-            icon: Symbols.package_2,
-            title: 'No hay envios en la calle',
-            message: 'Cuando un local pida un rider o acepte un pedido, aparece aca.',
-          )
-        else
-          for (final e in activos) ...[
-            MyCard(
-              padding: const EdgeInsets.all(MySpacing.md),
-              child: Wrap(
-                spacing: MySpacing.md,
-                runSpacing: MySpacing.xs,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(e.codigo, style: MyType.labelLg),
-                  Text(e.comercioNombre, style: MyType.bodyMd),
-                  Text('-> ${e.destino.calle}', style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
-                  Text(e.repartidorNombre ?? 'Sin rider', style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
-                  MyBadge(
-                    e.estado.label,
-                    tone: e.estado == EstadoEnvio.buscandoRepartidor ? MyBadgeTone.neutral : MyBadgeTone.ember,
-                    dot: e.estado == EstadoEnvio.buscandoRepartidor,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: MySpacing.xs),
-          ],
+  final Color color;
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 9, height: 9, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: MySpacing.xxs),
+        Text(texto, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
       ],
     );
   }
 }
 
-class _Kpi extends StatelessWidget {
-  const _Kpi({
-    required this.icon,
-    required this.valor,
-    required this.label,
-    required this.detalle,
-    this.destacado = false,
-    this.onTap,
+class _RequiereAtencion extends StatelessWidget {
+  const _RequiereAtencion({
+    required this.porCobrar,
+    required this.buscandoSinLibres,
+    required this.sinUbicacion,
+    required this.pendientes,
   });
 
-  final IconData icon;
-  final String valor;
-  final String label;
-  final String detalle;
-  final bool destacado;
-  final VoidCallback? onTap;
+  final int porCobrar;
+  final int buscandoSinLibres;
+  final List<Comercio> sinUbicacion;
+  final int pendientes;
 
   @override
   Widget build(BuildContext context) {
-    final color = destacado ? Colors.white : MyColors.onSurface;
-    final hijo = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, size: 24, color: destacado ? Colors.white : MyColors.primary),
-        const SizedBox(height: MySpacing.xs),
-        FittedBox(child: Text(valor, style: MyType.headlineLg.copyWith(color: color))),
-        Text(label, style: MyType.labelLg.copyWith(color: color), maxLines: 1, overflow: TextOverflow.ellipsis),
-        Text(
-          detalle,
-          style: MyType.bodySm.copyWith(color: destacado ? Colors.white70 : MyColors.secondary),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+    final items = <Widget>[
+      if (buscandoSinLibres > 0)
+        _Alerta(
+          urgente: true,
+          icono: Symbols.warning,
+          titulo: buscandoSinLibres == 1
+              ? 'Un envío busca rider y no hay libres'
+              : '$buscandoSinLibres envíos buscan rider y no hay libres',
+          detalle: 'Conviene avisarle a algún rider que se conecte.',
+          accion: 'Ver envíos',
+          onTap: () => context.go('/admin/envios'),
         ),
+      if (porCobrar > 0)
+        _Alerta(
+          icono: Symbols.payments,
+          titulo: porCobrar == 1 ? 'Un pedido espera el pago' : '$porCobrar pedidos esperan el pago',
+          detalle: 'No le llegan al local hasta que se confirme.',
+          accion: 'Revisar',
+          onTap: () => context.go('/admin/pedidos'),
+        ),
+      for (final c in sinUbicacion)
+        _Alerta(
+          icono: Symbols.location_off,
+          titulo: '${c.nombre} no tiene ubicación',
+          detalle: 'Sin ubicación no puede pedir riders.',
+          accion: 'Ver local',
+          onTap: () => context.go('/admin/locales'),
+        ),
+      if (pendientes > 0)
+        _Alerta(
+          icono: Symbols.pending_actions,
+          titulo: pendientes == 1 ? 'Una cuenta en revisión' : '$pendientes cuentas en revisión',
+          detalle: 'Esperan que las apruebes.',
+          accion: 'Revisar',
+          onTap: () => context.go('/admin/locales'),
+        ),
+    ];
+
+    return MyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Symbols.notifications_active, color: MyColors.primary, size: 22),
+              const SizedBox(width: MySpacing.xs),
+              Expanded(child: Text('Requiere tu atención', style: MyType.headlineSm)),
+              if (items.isNotEmpty) MyBadge('${items.length} pendientes', tone: MyBadgeTone.danger),
+            ],
+          ),
+          const SizedBox(height: MySpacing.md),
+          if (items.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(MySpacing.lg),
+              decoration: BoxDecoration(
+                color: MyColors.successContainer.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(MyRadius.lg),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Symbols.task_alt, color: MyColors.success),
+                  const SizedBox(width: MySpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'Todo en orden. Si pasa algo que necesite tu intervención, aparece acá.',
+                      style: MyType.bodyMd.copyWith(color: const Color(0xFF0C5138)),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) const SizedBox(height: MySpacing.sm),
+              items[i],
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Alerta extends StatelessWidget {
+  const _Alerta({
+    required this.icono,
+    required this.titulo,
+    required this.detalle,
+    required this.accion,
+    required this.onTap,
+    this.urgente = false,
+  });
+
+  final IconData icono;
+  final String titulo;
+  final String detalle;
+  final String accion;
+  final VoidCallback onTap;
+  final bool urgente;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(MySpacing.md),
+      decoration: BoxDecoration(
+        color: urgente ? MyColors.errorContainer.withValues(alpha: 0.55) : MyColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(MyRadius.lg),
+      ),
+      child: Row(
+        children: [
+          MyIconoCaja(
+            icono,
+            fondo: urgente ? Colors.white : MyColors.primaryFixed,
+            color: urgente ? MyColors.error : MyColors.primary,
+          ),
+          const SizedBox(width: MySpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(titulo, style: MyType.labelLg),
+                Text(detalle, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+              ],
+            ),
+          ),
+          const SizedBox(width: MySpacing.xs),
+          MyBoton(
+            label: accion,
+            onPressed: onTap,
+            tipo: urgente ? MyBotonTipo.principal : MyBotonTipo.oscuro,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EnviosEnCurso extends StatelessWidget {
+  const _EnviosEnCurso({required this.envios});
+
+  final List<Envio> envios;
+
+  @override
+  Widget build(BuildContext context) {
+    if (envios.isEmpty) {
+      return const MyCard(
+        child: MyEmptyState(
+          icon: Symbols.route,
+          title: 'No hay envíos en la calle',
+          message: 'Cuando un local pida un rider o acepte un pedido, aparece acá en vivo.',
+        ),
+      );
+    }
+
+    if (context.esMovil) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Envíos en curso', style: MyType.headlineMd),
+          const SizedBox(height: MySpacing.sm),
+          for (final e in envios) ...[
+            MyCard(
+              padding: const EdgeInsets.all(MySpacing.md),
+              onTap: () => context.go('/admin/envios'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(e.codigo, style: MyType.labelLg.copyWith(color: MyColors.primary)),
+                      const Spacer(),
+                      MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true),
+                    ],
+                  ),
+                  const SizedBox(height: MySpacing.xs),
+                  Text(e.comercioNombre, style: MyType.headlineSm),
+                  Text(
+                    '${e.destino.calle} · ${e.repartidorNombre ?? 'sin rider'}',
+                    style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: MySpacing.sm),
+          ],
+        ],
+      );
+    }
+
+    return MyTabla(
+      titulo: 'Envíos en curso',
+      acciones: [const MyBadge('En vivo', tone: MyBadgeTone.ember, dot: true)],
+      columnas: const [
+        MyColumna('Envío'),
+        MyColumna('Hora'),
+        MyColumna('Local', flex: 2),
+        MyColumna('Rider', flex: 2),
+        MyColumna('Destino', flex: 2),
+        MyColumna('Total', alDerecha: true),
+        MyColumna('Estado', flex: 2, alDerecha: true),
+      ],
+      filas: [
+        for (final e in envios)
+          MyFila(
+            onTap: () => context.go('/admin/envios'),
+            celdas: [
+              Text(e.codigo, style: MyType.labelLg.copyWith(color: MyColors.primary)),
+              Text(Formato.hora(e.creadoEn), style: MyType.bodyMd),
+              Text(e.comercioNombre, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(
+                e.repartidorNombre ?? 'Buscando…',
+                style: MyType.bodyMd.copyWith(color: e.repartidorNombre == null ? MyColors.secondary : null),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(e.destino.calle, style: MyType.bodyMd, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(Formato.pesos(e.total), style: MyType.labelLg),
+              MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true),
+            ],
+          ),
       ],
     );
-
-    final tarjeta = destacado
-        ? MyHeroCard(padding: const EdgeInsets.all(MySpacing.md), child: hijo)
-        : MyCard(padding: const EdgeInsets.all(MySpacing.md), child: hijo);
-
-    return onTap == null ? tarjeta : GestureDetector(onTap: onTap, child: tarjeta);
   }
 }

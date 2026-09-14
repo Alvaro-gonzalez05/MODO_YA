@@ -23,8 +23,8 @@ class ServiciosPage extends ConsumerWidget {
             datos: (lista) => lista.isEmpty
                 ? const MyEmptyState(
                     icon: Symbols.local_shipping,
-                    title: 'Todavia no hiciste servicios',
-                    message: 'Cuando aceptes una oferta, aparece aca.',
+                    title: 'Todavía no hiciste servicios',
+                    message: 'Cuando aceptes una oferta, aparece acá.',
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(MySpacing.screenEdge, MySpacing.xs, MySpacing.screenEdge, MySpacing.dockClearance),

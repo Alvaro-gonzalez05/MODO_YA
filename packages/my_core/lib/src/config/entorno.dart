@@ -14,6 +14,10 @@ abstract final class Entorno {
   /// `dev` o `prod`.
   static const flavor = String.fromEnvironment('MY_FLAVOR', defaultValue: 'dev');
 
+  /// Version instalada. La pone el workflow de release desde el tag (v1.2.0 ->
+  /// 1.2.0); en desarrollo queda vacia y no se buscan actualizaciones.
+  static const version = String.fromEnvironment('MY_VERSION');
+
   static const supabaseUrl = String.fromEnvironment('MY_SUPABASE_URL');
   static const supabaseKey = String.fromEnvironment('MY_SUPABASE_KEY');
 

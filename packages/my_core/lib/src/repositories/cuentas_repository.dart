@@ -52,7 +52,7 @@ class CuentasRepository {
 
   SupabaseClient get _db => Backend.db;
 
-  Future<AltaCuenta> _alta(Map<String, dynamic> cuerpo) => intentar(() async {
+  Future<AltaCuenta> _llamar(Map<String, dynamic> cuerpo) => intentar(() async {
         final r = await _db.functions.invoke('admin-crear-usuario', body: cuerpo);
         final data = Map<String, dynamic>.from(r.data as Map);
         return AltaCuenta(
@@ -61,8 +61,13 @@ class CuentasRepository {
         );
       });
 
+  /// Crea un local. El usuario (email) y la contrasena los genera el servidor
+  /// con el nombre: pizzeria.don.luis@modoya.com.
+  ///
+  /// [email] solo lo usan las pruebas, para crear cuentas que despues puedan
+  /// identificar y borrar.
   Future<AltaCuenta> crearComercio({
-    required String email,
+    String? email,
     required String nombre,
     required String telefono,
     required String calle,
@@ -71,9 +76,9 @@ class CuentasRepository {
     String? rubroId,
     String? referencia,
   }) =>
-      _alta({
+      _llamar({
         'rol': 'comercio',
-        'email': email.trim(),
+        'email': ?email,
         'nombre': nombre.trim(),
         'telefono': telefono.trim(),
         'calle': calle.trim(),
@@ -83,17 +88,35 @@ class CuentasRepository {
         'lng': lng,
       });
 
+  /// Crea un rider: rider.juan.perez@modoya.com.
   Future<AltaCuenta> crearRepartidor({
-    required String email,
+    String? email,
     required String nombre,
     required String telefono,
     required Vehiculo vehiculo,
   }) =>
-      _alta({
+      _llamar({
         'rol': 'repartidor',
-        'email': email.trim(),
+        'email': ?email,
         'nombre': nombre.trim(),
         'telefono': telefono.trim(),
         'vehiculo': vehiculo.wire,
+      });
+
+  /// Nueva contrasena temporal para un local o un rider que se la olvido. Sus
+  /// emails generados no reciben correo, asi que la recuperacion pasa por aca.
+  Future<AltaCuenta> restablecerPassword({String? comercioId, String? repartidorId}) => _llamar({
+        'accion': 'restablecer_password',
+        'comercio_id': ?comercioId,
+        'repartidor_id': ?repartidorId,
+      });
+
+  /// Usuario (email) con el que entra un local o un rider. Solo admin.
+  Future<String?> usuarioDe({String? comercioId, String? repartidorId}) => intentar(() async {
+        final r = await _db.rpc('admin_usuario_de', params: {
+          'p_comercio': comercioId,
+          'p_repartidor': repartidorId,
+        });
+        return r as String?;
       });
 }

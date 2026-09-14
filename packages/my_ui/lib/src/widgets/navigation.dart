@@ -6,10 +6,13 @@ import '../typography.dart';
 
 /// Un destino del dock inferior.
 class MyDockItem {
-  const MyDockItem({required this.icon, required this.label});
+  const MyDockItem({required this.icon, required this.label, this.contador = 0});
 
   final IconData icon;
   final String label;
+
+  /// Numero en el icono (pedidos nuevos, por cobrar). 0 = nada.
+  final int contador;
 }
 
 /// Dock de navegacion flotante: capsula navy suspendida sobre el contenido,
@@ -88,7 +91,7 @@ class _DockSlot extends StatelessWidget {
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
               height: 52,
-              padding: EdgeInsets.symmetric(horizontal: active ? 18 : 12),
+              padding: EdgeInsets.symmetric(horizontal: active ? 12 : 8),
               decoration: BoxDecoration(
                 color: active ? MyColors.primary : Colors.transparent,
                 borderRadius: BorderRadius.circular(MyRadius.full),
@@ -97,21 +100,30 @@ class _DockSlot extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    item.icon,
-                    size: 22,
-                    color: active
-                        ? MyColors.onPrimary
-                        : const Color(0xFF94A3B8),
-                    fill: active ? 1 : 0,
+                  Badge(
+                    isLabelVisible: item.contador > 0,
+                    label: Text('${item.contador}'),
+                    backgroundColor: active ? MyColors.dock : MyColors.primaryContainer,
+                    child: Icon(
+                      item.icon,
+                      size: 22,
+                      color: active
+                          ? MyColors.onPrimary
+                          : const Color(0xFF94A3B8),
+                      fill: active ? 1 : 0,
+                    ),
                   ),
                   if (active) ...[
                     const SizedBox(height: 2),
-                    Text(
-                      item.label,
-                      style: MyType.labelSm.copyWith(color: MyColors.onPrimary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    // Con cinco botones en un celular angosto el texto no entra
+                    // entero: se achica en vez de cortarse ("Res...").
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        item.label,
+                        style: MyType.labelSm.copyWith(color: MyColors.onPrimary),
+                        maxLines: 1,
+                      ),
                     ),
                   ],
                 ],
@@ -128,7 +140,7 @@ class _DockSlot extends StatelessWidget {
 class MyTopBar extends StatelessWidget implements PreferredSizeWidget {
   const MyTopBar({
     super.key,
-    this.zona = 'Malargue, Mza',
+    this.zona = 'Malargüe, Mza',
     this.onZona,
     this.onPerfil,
     this.trailing,

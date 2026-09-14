@@ -140,7 +140,11 @@ class MyMarcador {
 }
 
 /// Mapa de solo lectura con uno o varios marcadores. Encuadra solo.
-class MyMapaVista extends StatelessWidget {
+///
+/// Interactivo se puede arrastrar y tiene botones de zoom. La rueda del mouse
+/// NO hace zoom a proposito: el mapa suele estar dentro de una pagina con
+/// scroll, y la rueda tiene que seguir bajando la pagina.
+class MyMapaVista extends StatefulWidget {
   const MyMapaVista({
     super.key,
     required this.marcadores,
@@ -155,8 +159,23 @@ class MyMapaVista extends StatelessWidget {
   final bool interactivo;
 
   @override
+  State<MyMapaVista> createState() => _MyMapaVistaState();
+}
+
+class _MyMapaVistaState extends State<MyMapaVista> {
+  final _control = MapController();
+
+  static const _gestos = InteractiveFlag.all & ~InteractiveFlag.rotate & ~InteractiveFlag.scrollWheelZoom;
+
+  void _zoom(double delta) {
+    final c = _control.camera;
+    _control.move(c.center, (c.zoom + delta).clamp(3, 19));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final puntos = marcadores.map((m) => m.punto).toList();
+    final puntos = widget.marcadores.map((m) => m.punto).toList();
+    final gestos = InteractionOptions(flags: widget.interactivo ? _gestos : InteractiveFlag.none);
     final MapOptions opciones;
     if (puntos.length >= 2) {
       opciones = MapOptions(
@@ -165,43 +184,56 @@ class MyMapaVista extends StatelessWidget {
           padding: const EdgeInsets.all(48),
           maxZoom: 17,
         ),
-        interactionOptions: InteractionOptions(
-          flags: interactivo ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.none,
-        ),
+        interactionOptions: gestos,
       );
     } else {
       opciones = MapOptions(
         initialCenter: puntos.isEmpty ? MyMapa.centroMalargue : puntos.first,
         initialZoom: puntos.isEmpty ? 14 : 16,
-        interactionOptions: InteractionOptions(
-          flags: interactivo ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.none,
-        ),
+        interactionOptions: gestos,
       );
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(radio),
+      borderRadius: BorderRadius.circular(widget.radio),
       child: SizedBox(
-        height: alto,
-        child: FlutterMap(
-          // La clave cambia con los puntos para re-encuadrar cuando se mueven.
-          key: ValueKey(puntos.map((p) => '${p.latitude},${p.longitude}').join('|')),
-          options: opciones,
+        height: widget.alto,
+        child: Stack(
           children: [
-            MyMapa._capaBase(),
-            MarkerLayer(
-              markers: [
-                for (final m in marcadores)
-                  Marker(
-                    point: m.punto,
-                    width: 120,
-                    height: 64,
-                    alignment: Alignment.topCenter,
-                    child: _Pin(marcador: m),
-                  ),
+            FlutterMap(
+              // La clave cambia con los puntos para re-encuadrar cuando se mueven.
+              key: ValueKey(puntos.map((p) => '${p.latitude},${p.longitude}').join('|')),
+              mapController: _control,
+              options: opciones,
+              children: [
+                MyMapa._capaBase(),
+                MarkerLayer(
+                  markers: [
+                    for (final m in widget.marcadores)
+                      Marker(
+                        point: m.punto,
+                        width: 120,
+                        height: 64,
+                        alignment: Alignment.topCenter,
+                        child: _Pin(marcador: m),
+                      ),
+                  ],
+                ),
+                MyMapa._atribucion(),
               ],
             ),
-            MyMapa._atribucion(),
+            if (widget.interactivo)
+              Positioned(
+                top: MySpacing.sm,
+                right: MySpacing.sm,
+                child: Column(
+                  children: [
+                    MyCircleIconButton(icon: Symbols.add, size: 36, onTap: () => _zoom(1)),
+                    const SizedBox(height: MySpacing.xs),
+                    MyCircleIconButton(icon: Symbols.remove, size: 36, onTap: () => _zoom(-1)),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

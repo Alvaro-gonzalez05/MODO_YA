@@ -20,13 +20,13 @@ class CuentaNoHabilitadaPage extends ConsumerWidget {
         ? (
             Symbols.sports_motorsports,
             'Esta app es para clientes y locales',
-            'Tu cuenta es de rider. Entra con el mismo email y contrasena en la app MODO YA Rider.',
+            'Tu cuenta es de rider. Entra con el mismo email y contraseña en la app MODO YA Rider.',
           )
         : (
             Symbols.block,
             'Tu local no esta habilitado',
             'La cuenta figura como "${s.aprobacion?.label.toLowerCase() ?? 'sin aprobar'}". '
-                'Comunicate con la administracion de MODO YA para reactivarla.',
+                'Comunicate con la administración de MODO YA para reactivarla.',
           );
 
     return Scaffold(
@@ -38,7 +38,7 @@ class CuentaNoHabilitadaPage extends ConsumerWidget {
           OutlinedButton.icon(
             onPressed: () => ref.read(authRepositoryProvider).salir(),
             icon: const Icon(Symbols.logout, size: 20),
-            label: const Text('Cerrar sesion'),
+            label: const Text('Cerrar sesión'),
           ),
         ],
       ),

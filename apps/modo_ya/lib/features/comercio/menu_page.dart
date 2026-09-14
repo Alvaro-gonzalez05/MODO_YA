@@ -5,7 +5,9 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-/// Editor del menu del local: secciones, productos, fotos y disponibilidad.
+/// Editor del menú del local: secciones, productos, fotos y disponibilidad.
+/// En la PC los productos van en grilla con la foto grande; en el celular, en
+/// lista.
 class MenuPage extends ConsumerWidget {
   const MenuPage({super.key});
 
@@ -15,10 +17,10 @@ class MenuPage extends ConsumerWidget {
     if (comercioId == null) return const SizedBox.shrink();
     final menu = ref.watch(menuDeComercioProvider(comercioId));
 
-    Future<void> nuevaSeccion([SeccionMenu? editar]) async {
+    Future<void> seccion([SeccionMenu? editar]) async {
       final nombre = await pedirTexto(
         context,
-        titulo: editar == null ? 'Nueva seccion' : 'Renombrar seccion',
+        titulo: editar == null ? 'Nueva sección' : 'Renombrar sección',
         label: 'Ej: Pizzas, Empanadas, Bebidas',
         aceptar: 'Guardar',
         inicial: editar?.nombre,
@@ -37,181 +39,254 @@ class MenuPage extends ConsumerWidget {
       }
     }
 
-    return Column(
+    Future<void> borrarSeccion(SeccionMenu s) async {
+      final ok = await confirmar(
+        context,
+        titulo: 'Borrar "${s.nombre}"',
+        mensaje: 'Los productos de la sección no se borran: quedan "sin sección".',
+        aceptar: 'Borrar',
+        peligroso: true,
+      );
+      if (!ok) return;
+      try {
+        await ref.read(catalogoRepositoryProvider).borrarSeccion(s.id);
+        ref.invalidate(menuDeComercioProvider(comercioId));
+      } catch (e) {
+        if (context.mounted) mostrarError(context, e);
+      }
+    }
+
+    final total = menu.value?.productos.length ?? 0;
+    final sinStock = menu.value?.productos.where((p) => !p.disponible).length ?? 0;
+
+    return MyPagina(
+      rotulo: 'Catálogo',
+      titulo: 'Menú',
+      bajada: total == 0
+          ? 'Lo que ven los clientes cuando entran a tu local'
+          : '$total productos${sinStock > 0 ? ' · $sinStock sin stock' : ''}',
+      onRefresh: () => ref.refresh(menuDeComercioProvider(comercioId).future),
+      acciones: [
+        MyBoton(label: 'Sección', icon: Symbols.playlist_add, tipo: MyBotonTipo.secundario, onPressed: seccion),
+        MyBoton(label: 'Producto', icon: Symbols.add, onPressed: () => context.go('/local/menu/producto')),
+      ],
       children: [
-        const MyTopBar(zona: 'Mi menu'),
-        Expanded(
-          child: MyAsync(
-            valor: menu,
-            onReintentar: () => ref.invalidate(menuDeComercioProvider(comercioId)),
-            datos: (m) => RefreshIndicator(
-              onRefresh: () => ref.refresh(menuDeComercioProvider(comercioId).future),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  MySpacing.screenEdge, MySpacing.xs, MySpacing.screenEdge, MySpacing.dockClearance,
+        MyAsync(
+          valor: menu,
+          onReintentar: () => ref.invalidate(menuDeComercioProvider(comercioId)),
+          datos: (m) {
+            if (m.productos.isEmpty && m.secciones.isEmpty) {
+              return MyCard(
+                child: MyEmptyState(
+                  icon: Symbols.menu_book,
+                  title: 'Tu menú está vacío',
+                  message: 'Creá secciones (Pizzas, Bebidas…) y cargá tus productos con foto. '
+                      'Es lo que ven los clientes cuando entran a tu local.',
+                  action: MyBoton(label: 'Cargar el primer producto', icon: Symbols.add, onPressed: () => context.go('/local/menu/producto')),
                 ),
-                children: [
-                  Row(
+              );
+            }
+
+            Widget bloque(SeccionMenu? s, List<Producto> productos) => Padding(
+                  padding: const EdgeInsets.only(bottom: MySpacing.xl),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: () => context.push('/local/producto'),
-                          icon: const Icon(Symbols.add, size: 20),
-                          label: const Text('Producto'),
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text.rich(
+                              TextSpan(children: [
+                                TextSpan(text: s?.nombre ?? 'Sin sección', style: MyType.headlineMd),
+                                TextSpan(text: '  ${productos.length}', style: MyType.labelLg.copyWith(color: MyColors.secondary)),
+                              ]),
+                            ),
+                          ),
+                          if (s != null)
+                            PopupMenuButton<int>(
+                              tooltip: 'Opciones de la sección',
+                              icon: const Icon(Symbols.more_horiz, color: MyColors.secondary),
+                              onSelected: (v) => v == 0 ? seccion(s) : borrarSeccion(s),
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(value: 0, child: Text('Renombrar')),
+                                PopupMenuItem(value: 1, child: Text('Borrar sección')),
+                              ],
+                            ),
+                        ],
                       ),
-                      const SizedBox(width: MySpacing.sm),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: nuevaSeccion,
-                          icon: const Icon(Symbols.playlist_add, size: 20),
-                          label: const Text('Seccion'),
+                      const SizedBox(height: MySpacing.sm),
+                      if (productos.isEmpty)
+                        Text('Sin productos todavía.', style: MyType.bodySm.copyWith(color: MyColors.secondary))
+                      else if (context.esMovil)
+                        for (final p in productos) ...[_FilaProducto(producto: p), const SizedBox(height: MySpacing.xs)]
+                      else
+                        MyGrilla(
+                          anchoMinimo: 250,
+                          maxColumnas: 5,
+                          children: [for (final p in productos) _TarjetaProducto(producto: p)],
                         ),
-                      ),
                     ],
                   ),
-                  const SizedBox(height: MySpacing.lg),
-                  if (m.productos.isEmpty && m.secciones.isEmpty)
-                    const MyEmptyState(
-                      icon: Symbols.menu_book,
-                      title: 'Tu menu esta vacio',
-                      message: 'Crea secciones (Pizzas, Bebidas...) y carga tus productos con foto. '
-                          'Es lo que ven los clientes cuando entran a tu local.',
-                    ),
-                  for (final s in m.secciones) ...[
-                    _EncabezadoSeccion(
-                      seccion: s,
-                      cantidad: m.deSeccion(s.id).length,
-                      onRenombrar: () => nuevaSeccion(s),
-                      onBorrar: () async {
-                        final ok = await confirmar(
-                          context,
-                          titulo: 'Borrar "${s.nombre}"',
-                          mensaje: 'Los productos de la seccion no se borran: quedan "sin seccion".',
-                          aceptar: 'Borrar',
-                          peligroso: true,
-                        );
-                        if (!ok) return;
-                        try {
-                          await ref.read(catalogoRepositoryProvider).borrarSeccion(s.id);
-                          ref.invalidate(menuDeComercioProvider(comercioId));
-                        } catch (e) {
-                          if (context.mounted) mostrarError(context, e);
-                        }
-                      },
-                    ),
-                    for (final p in m.deSeccion(s.id)) _FilaProducto(producto: p),
-                    const SizedBox(height: MySpacing.lg),
-                  ],
-                  if (m.sinSeccion.isNotEmpty) ...[
-                    _EncabezadoSeccion(cantidad: m.sinSeccion.length),
-                    for (final p in m.sinSeccion) _FilaProducto(producto: p),
-                  ],
-                ],
-              ),
-            ),
-          ),
+                );
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final s in m.secciones) bloque(s, m.deSeccion(s.id)),
+                if (m.sinSeccion.isNotEmpty) bloque(null, m.sinSeccion),
+              ],
+            );
+          },
         ),
       ],
     );
   }
 }
 
-class _EncabezadoSeccion extends StatelessWidget {
-  const _EncabezadoSeccion({
-    required this.cantidad,
-    this.seccion,
-    this.onRenombrar,
-    this.onBorrar,
-  });
-
-  final SeccionMenu? seccion;
-  final int cantidad;
-  final VoidCallback? onRenombrar;
-  final VoidCallback? onBorrar;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: MySpacing.xs),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              '${seccion?.nombre ?? 'Sin seccion'} ($cantidad)',
-              style: MyType.headlineSm,
-            ),
-          ),
-          if (seccion != null)
-            PopupMenuButton<int>(
-              icon: const Icon(Symbols.more_vert, color: MyColors.secondary),
-              onSelected: (v) => v == 0 ? onRenombrar?.call() : onBorrar?.call(),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 0, child: Text('Renombrar')),
-                PopupMenuItem(value: 1, child: Text('Borrar seccion')),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilaProducto extends ConsumerWidget {
-  const _FilaProducto({required this.producto});
+class _Disponible extends ConsumerWidget {
+  const _Disponible({required this.producto});
 
   final Producto producto;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: MySpacing.xs),
-      child: MyCard(
-        padding: const EdgeInsets.all(MySpacing.sm),
-        onTap: () => context.push('/local/producto', extra: producto),
-        child: Opacity(
-          opacity: producto.disponible ? 1 : 0.55,
-          child: Row(
-            children: [
-              MyImagen(url: producto.fotoUrl, ancho: 64, alto: 64, icono: Symbols.restaurant),
-              const SizedBox(width: MySpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(producto.nombre, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    Text(Formato.pesos(producto.precio), style: MyType.headlineSm.copyWith(color: MyColors.primary)),
-                    Text(
-                      [
-                        if (!producto.disponible) 'Sin stock',
-                        if (producto.tienePersonalizacion) '${producto.opciones.length} opciones',
-                        if (producto.fotoUrl == null) 'Sin foto',
-                      ].join(' - '),
-                      style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(producto.disponible ? 'Hay' : 'Sin stock', style: MyType.labelMd.copyWith(color: MyColors.secondary)),
+        const SizedBox(width: MySpacing.xxs),
+        Switch(
+          value: producto.disponible,
+          onChanged: (v) async {
+            try {
+              await ref.read(catalogoRepositoryProvider).setDisponible(producto.id, v);
+              ref.invalidate(menuDeComercioProvider(producto.comercioId));
+            } catch (e) {
+              if (context.mounted) mostrarError(context, e);
+            }
+          },
+        ),
+      ],
+    );
+  }
+}
+
+String _detalle(Producto p) => [
+      if (p.tienePersonalizacion) '${p.opciones.length} ${p.opciones.length == 1 ? 'opción' : 'opciones'}',
+      if (p.fotoUrl == null) 'Sin foto',
+    ].join(' · ');
+
+class _TarjetaProducto extends StatelessWidget {
+  const _TarjetaProducto({required this.producto});
+
+  final Producto producto;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = producto;
+    return MyCard(
+      padding: EdgeInsets.zero,
+      onTap: () => context.go('/local/menu/producto', extra: p),
+      child: Opacity(
+        opacity: p.disponible ? 1 : 0.6,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            MyImagen(url: p.fotoUrl, alto: 150, radio: MyRadius.card, icono: Symbols.restaurant),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(MySpacing.md, MySpacing.sm, MySpacing.sm, MySpacing.xs),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Switch(
-                    value: producto.disponible,
-                    onChanged: (v) async {
-                      try {
-                        await ref.read(catalogoRepositoryProvider).setDisponible(producto.id, v);
-                        ref.invalidate(menuDeComercioProvider(producto.comercioId));
-                      } catch (e) {
-                        if (context.mounted) mostrarError(context, e);
-                      }
-                    },
-                  ),
-                  Text(producto.disponible ? 'Hay' : 'No hay', style: MyType.labelSm),
+                  Text(p.nombre, style: MyType.labelLg.copyWith(fontSize: 15), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  if ((p.descripcion ?? '').isNotEmpty)
+                    Text(p.descripcion!, style: MyType.bodySm.copyWith(color: MyColors.secondary), maxLines: 2, overflow: TextOverflow.ellipsis),
                 ],
               ),
-            ],
-          ),
+            ),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(MySpacing.md, 0, MySpacing.xs, MySpacing.xs),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(Formato.pesos(p.precio), style: MyType.headlineSm.copyWith(color: MyColors.primary)),
+                        if (_detalle(p).isNotEmpty) Text(_detalle(p), style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                      ],
+                    ),
+                  ),
+                  _Disponible(producto: p),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _FilaProducto extends StatelessWidget {
+  const _FilaProducto({required this.producto});
+
+  final Producto producto;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = producto;
+    return MyCard(
+      padding: const EdgeInsets.all(MySpacing.sm),
+      onTap: () => context.go('/local/menu/producto', extra: p),
+      child: Opacity(
+        opacity: p.disponible ? 1 : 0.6,
+        child: Row(
+          children: [
+            MyImagen(url: p.fotoUrl, ancho: 68, alto: 68, icono: Symbols.restaurant),
+            const SizedBox(width: MySpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(p.nombre, style: MyType.labelLg, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  Text(Formato.pesos(p.precio), style: MyType.headlineSm.copyWith(color: MyColors.primary)),
+                  if (_detalle(p).isNotEmpty) Text(_detalle(p), style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                ],
+              ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _SoloSwitch(producto: p),
+                Text(p.disponible ? 'Hay' : 'Sin stock', style: MyType.labelSm.copyWith(color: MyColors.secondary)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SoloSwitch extends ConsumerWidget {
+  const _SoloSwitch({required this.producto});
+
+  final Producto producto;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Switch(
+      value: producto.disponible,
+      onChanged: (v) async {
+        try {
+          await ref.read(catalogoRepositoryProvider).setDisponible(producto.id, v);
+          ref.invalidate(menuDeComercioProvider(producto.comercioId));
+        } catch (e) {
+          if (context.mounted) mostrarError(context, e);
+        }
+      },
     );
   }
 }

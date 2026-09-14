@@ -117,10 +117,11 @@ abstract final class MyTheme {
           ),
         ),
 
-        // Campos sin borde visible: el relleno claro define la caja.
+        // Relleno celeste con borde suave: los campos van casi siempre sobre
+        // tarjetas blancas, y blanco sobre blanco no se ve donde escribir.
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: MyColors.surfaceContainerLowest,
+          fillColor: MyColors.surfaceContainerLow,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: MySpacing.md,
             vertical: MySpacing.md,
@@ -133,7 +134,7 @@ abstract final class MyTheme {
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(MyRadius.lg),
-            borderSide: BorderSide.none,
+            borderSide: const BorderSide(color: MyColors.surfaceContainerHigh),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(MyRadius.lg),

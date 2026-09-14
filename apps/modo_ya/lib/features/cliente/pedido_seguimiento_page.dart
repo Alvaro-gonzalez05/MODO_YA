@@ -7,9 +7,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-import '../../comun/marca.dart';
 
-/// Lo que ve el cliente del envio de su pedido. Se recalcula cada vez que el
+/// Lo que ve el cliente del envío de su pedido. Se recalcula cada vez que el
 /// pedido cambia.
 final _seguimientoProvider = FutureProvider.family<SeguimientoPedido?, String>((ref, id) async {
   final pedido = await ref.watch(pedidoProvider(id).future);
@@ -53,20 +52,11 @@ class _PedidoSeguimientoPageState extends ConsumerState<PedidoSeguimientoPage> {
     final pedido = ref.watch(pedidoProvider(widget.pedidoId));
     final seg = ref.watch(_seguimientoProvider(widget.pedidoId)).value;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Symbols.arrow_back),
-          onPressed: () => context.canPop() ? context.pop() : context.go('/cliente/pedidos'),
-        ),
-        title: const Text('Tu pedido'),
-      ),
-      body: MyAsync(
-        valor: pedido,
-        datos: (p) => p == null
-            ? const MyEmptyState(title: 'Pedido no encontrado', message: 'Puede que ya no exista.')
-            : _Contenido(pedido: p, seguimiento: seg),
-      ),
+    return MyAsync(
+      valor: pedido,
+      datos: (p) => p == null
+          ? const MyEmptyState(title: 'Pedido no encontrado', message: 'Puede que ya no exista.')
+          : _Contenido(pedido: p, seguimiento: seg),
     );
   }
 }
@@ -87,24 +77,29 @@ class _Contenido extends ConsumerWidget {
       EstadoPedido.pendientePago => ('Recibimos tu pedido', 'Estamos confirmando el pago. Te avisamos enseguida.'),
       EstadoPedido.pagado => ('Enviado al local', 'Esperando que ${pedido.comercioNombre} lo acepte.'),
       EstadoPedido.aceptado => ('Pedido aceptado', '${pedido.comercioNombre} ya lo tiene.'),
-      EstadoPedido.enPreparacion => ('En preparacion', 'Lo estan preparando.'),
+      EstadoPedido.enPreparacion => ('En preparación', 'Lo están preparando.'),
       EstadoPedido.listo => (
           s?.repartidorNombre == null ? 'Listo, buscando rider' : '${s!.repartidorNombre} va a buscarlo',
-          s?.repartidorNombre == null ? 'Le estamos avisando al rider mas cercano.' : 'En unos minutos sale para tu casa.'
+          s?.repartidorNombre == null ? 'Le estamos avisando al rider más cercano.' : 'En unos minutos sale para tu casa.'
         ),
       EstadoPedido.enCamino => ('En camino', '${s?.repartidorNombre ?? 'Tu rider'} va para tu casa.'),
-      EstadoPedido.entregado => ('Entregado', 'Que lo disfrutes!'),
+      EstadoPedido.entregado => ('Entregado', '¡Que lo disfrutes!'),
       EstadoPedido.rechazado => ('El local no pudo tomarlo', pedido.motivoRechazo ?? 'Te devolvemos el dinero.'),
-      EstadoPedido.cancelado => ('Pedido cancelado', 'Si ya habias pagado, te devolvemos el dinero.'),
+      EstadoPedido.cancelado => ('Pedido cancelado', 'Si ya habías pagado, te devolvemos el dinero.'),
       EstadoPedido.carrito => ('', ''),
     };
 
-    return FormularioCentrado(
-      ancho: 580,
+    return MyPagina(
+      volver: () => context.canPop() ? context.pop() : context.go('/cliente/pedidos'),
+      rotulo: pedido.comercioNombre,
+      titulo: 'Tu pedido',
+      bajada: 'Se actualiza solo',
+      anchoMaximo: 760,
+      conDock: false,
       children: [
         if (!e.esFinal && destino.tieneCoordenadas) ...[
           MyMapaVista(
-            alto: 220,
+            alto: context.esMovil ? 220 : 320,
             radio: MyRadius.card,
             marcadores: [
               MyMarcador(punto: LatLng(destino.lat!, destino.lng!), icono: Symbols.home, color: MyColors.dock),
@@ -163,11 +158,11 @@ class _Contenido extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: Text('Codigo de entrega', style: MyType.labelLg)),
+                          Expanded(child: Text('Código de entrega', style: MyType.labelLg)),
                           Text(s!.codigoEntrega!, style: MyType.headlineLg.copyWith(color: MyColors.primary, letterSpacing: 4)),
                         ],
                       ),
-                      Text('Decile este codigo al rider cuando te entregue.', style: MyType.bodySm),
+                      Text('Decile este código al rider cuando te entregue.', style: MyType.bodySm),
                     ],
                   ),
                 ),
@@ -212,7 +207,7 @@ class _Contenido extends ConsumerWidget {
               shape: const Border(),
               leading: const Icon(Symbols.receipt_long, color: MyColors.primary),
               title: Text('Detalle del pedido', style: MyType.labelLg),
-              subtitle: Text('${pedido.cantidadProductos} productos - ${Formato.pesos(pedido.total)}',
+              subtitle: Text('${pedido.cantidadProductos} productos · ${Formato.pesos(pedido.total)}',
                   style: MyType.bodySm.copyWith(color: MyColors.secondary)),
               childrenPadding: const EdgeInsets.fromLTRB(MySpacing.md, 0, MySpacing.md, MySpacing.md),
               children: [
@@ -222,7 +217,7 @@ class _Contenido extends ConsumerWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${i.cantidad}x ', style: MyType.labelLg),
+                        Text('${i.cantidad}× ', style: MyType.labelLg),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,7 +233,7 @@ class _Contenido extends ConsumerWidget {
                   ),
                 const Divider(),
                 _Linea('Productos', Formato.pesos(pedido.subtotal)),
-                _Linea('Envio', Formato.pesos(pedido.costoEnvio)),
+                _Linea('Envío', Formato.pesos(pedido.costoEnvio)),
                 _Linea('Total', Formato.pesos(pedido.total), destacado: true),
                 const SizedBox(height: MySpacing.xs),
                 _Linea('Entrega', destino.calle),
@@ -254,7 +249,7 @@ class _Contenido extends ConsumerWidget {
               final ok = await confirmar(
                 context,
                 titulo: 'Cancelar pedido',
-                mensaje: 'El local todavia no lo empezo a preparar. Si ya pagaste, te devolvemos el dinero.',
+                mensaje: 'El local todavía no lo empezó a preparar. Si ya pagaste, te devolvemos el dinero.',
                 aceptar: 'Cancelar pedido',
                 peligroso: true,
               );

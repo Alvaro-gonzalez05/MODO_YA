@@ -3,19 +3,36 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-/// Personalizacion de un producto antes de agregarlo (D2).
+/// Personalización de un producto antes de agregarlo (D2).
 class ProductoSheet extends StatefulWidget {
-  const ProductoSheet({super.key, required this.producto});
+  const ProductoSheet({super.key, required this.producto, this.enVentana = false});
 
   final Producto producto;
+  final bool enVentana;
 
-  static Future<ItemCarrito?> mostrar(BuildContext context, Producto producto) =>
-      showModalBottomSheet<ItemCarrito>(
+  /// Hoja inferior en el celular; ventana centrada en la PC.
+  static Future<ItemCarrito?> mostrar(BuildContext context, Producto producto) {
+    if (context.esMovil) {
+      return showModalBottomSheet<ItemCarrito>(
         context: context,
         useRootNavigator: true,
         isScrollControlled: true,
         builder: (_) => ProductoSheet(producto: producto),
       );
+    }
+    return showDialog<ItemCarrito>(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: MyColors.surfaceContainerLowest,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.hero)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520, maxHeight: 760),
+          child: ProductoSheet(producto: producto, enVentana: true),
+        ),
+      ),
+    );
+  }
 
   @override
   State<ProductoSheet> createState() => _ProductoSheetState();
@@ -70,15 +87,13 @@ class _ProductoSheetState extends State<ProductoSheet> {
     final p = widget.producto;
     final faltante = _faltante;
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: p.opciones.isEmpty ? 0.55 : 0.85,
-      maxChildSize: 0.95,
-      builder: (context, scroll) => Column(
+    Widget contenido(ScrollController? scroll) => Column(
+        mainAxisSize: widget.enVentana ? MainAxisSize.min : MainAxisSize.max,
         children: [
-          Expanded(
+          Flexible(
             child: ListView(
               controller: scroll,
+              shrinkWrap: widget.enVentana,
               padding: const EdgeInsets.all(MySpacing.screenEdge),
               children: [
                 if (p.fotoUrl != null) ...[
@@ -162,7 +177,7 @@ class _ProductoSheetState extends State<ProductoSheet> {
                                 ),
                               ),
                       child: Text(
-                        faltante != null ? 'Elegi $faltante' : 'Agregar ${Formato.pesos(_unitario * _cantidad)}',
+                        faltante != null ? 'Elegí $faltante' : 'Agregar ${Formato.pesos(_unitario * _cantidad)}',
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -172,7 +187,14 @@ class _ProductoSheetState extends State<ProductoSheet> {
             ),
           ),
         ],
-      ),
+      );
+
+    if (widget.enVentana) return contenido(null);
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: p.opciones.isEmpty ? 0.55 : 0.85,
+      maxChildSize: 0.95,
+      builder: (context, scroll) => contenido(scroll),
     );
   }
 }

@@ -8,9 +8,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-import '../../comun/marca.dart';
 
-/// Alta y edicion de un producto, con foto y personalizacion.
+/// Alta y edición de un producto, con foto y personalización.
 class ProductoFormPage extends ConsumerStatefulWidget {
   const ProductoFormPage({super.key, this.producto});
 
@@ -58,7 +57,7 @@ class _ProductoFormPageState extends ConsumerState<ProductoFormPage> {
       if (archivo == null) return;
       final bytes = await archivo.readAsBytes();
       if (bytes.lengthInBytes > 5 * 1024 * 1024) {
-        if (mounted) mostrarError(context, 'La foto pesa mas de 5 MB. Elegi una mas liviana.');
+        if (mounted) mostrarError(context, 'La foto pesa más de 5 MB. Elegí una más liviana.');
         return;
       }
       final ext = archivo.name.split('.').last.toLowerCase();
@@ -84,7 +83,7 @@ class _ProductoFormPageState extends ConsumerState<ProductoFormPage> {
       ];
       if (g.nombre.text.trim().isEmpty && items.isEmpty) continue;
       if (g.nombre.text.trim().isEmpty || items.isEmpty) {
-        mostrarError(context, 'Cada grupo de opciones necesita un nombre y al menos una opcion.');
+        mostrarError(context, 'Cada grupo de opciones necesita un nombre y al menos una opción.');
         return;
       }
       opciones.add(OpcionProducto(
@@ -120,7 +119,7 @@ class _ProductoFormPageState extends ConsumerState<ProductoFormPage> {
     final ok = await confirmar(
       context,
       titulo: 'Borrar "${p.nombre}"',
-      mensaje: 'Los pedidos que ya lo incluyeron no cambian. Si solo no tenes stock, mejor desactivalo.',
+      mensaje: 'Los pedidos que ya lo incluyeron no cambian. Si solo no tenés stock, mejor desactivalo.',
       aceptar: 'Borrar',
       peligroso: true,
     );
@@ -140,130 +139,154 @@ class _ProductoFormPageState extends ConsumerState<ProductoFormPage> {
     final secciones = comercioId == null
         ? const <SeccionMenu>[]
         : ref.watch(menuDeComercioProvider(comercioId)).value?.secciones ?? const <SeccionMenu>[];
+    final tieneFoto = _foto != null || widget.producto?.fotoUrl != null;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(Symbols.close), onPressed: () => context.pop()),
-        title: Text(widget.producto == null ? 'Nuevo producto' : 'Editar producto'),
-        actions: [
-          if (widget.producto != null)
-            IconButton(
-              tooltip: 'Borrar',
-              icon: const Icon(Symbols.delete, color: MyColors.error),
-              onPressed: _borrar,
+    final foto = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: _elegirFoto,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(MyRadius.card),
+              child: AspectRatio(
+                aspectRatio: 16 / 10,
+                child: _foto != null
+                    ? Image.memory(_foto!, fit: BoxFit.cover)
+                    : widget.producto?.fotoUrl != null
+                        ? MyImagen(url: widget.producto!.fotoUrl, radio: 0)
+                        : Container(
+                            color: MyColors.surfaceContainerHigh,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Symbols.add_a_photo, size: 40, color: MyColors.secondary),
+                                const SizedBox(height: MySpacing.xs),
+                                Text('Agregar foto', style: MyType.labelLg.copyWith(color: MyColors.secondary)),
+                                Text('Una buena foto vende mucho más', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                              ],
+                            ),
+                          ),
+              ),
             ),
+          ),
+        ),
+        if (tieneFoto)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _elegirFoto,
+              icon: const Icon(Symbols.photo_camera, size: 18),
+              label: const Text('Cambiar foto'),
+            ),
+          ),
+      ],
+    );
+
+    final datos = MyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          MyCampo(controller: _nombre, label: 'Nombre', hint: 'Pizza muzzarella'),
+          MyCampo(
+            controller: _descripcion,
+            label: 'Descripción (opcional)',
+            hint: 'Salsa de tomate casera, muzzarella y aceitunas',
+            obligatorio: false,
+            lineas: 3,
+          ),
+          MyCampo(
+            controller: _precio,
+            label: 'Precio (pesos)',
+            hint: '8200',
+            icon: Symbols.payments,
+            soloNumeros: true,
+            validar: (t) => (int.tryParse(t) ?? 0) <= 0 ? 'Poné un precio' : null,
+          ),
+          const MyOverline('Sección'),
+          const SizedBox(height: MySpacing.xs),
+          DropdownButtonFormField<String?>(
+            initialValue: secciones.any((s) => s.id == _seccionId) ? _seccionId : null,
+            items: [
+              const DropdownMenuItem(value: null, child: Text('Sin sección')),
+              for (final s in secciones) DropdownMenuItem(value: s.id, child: Text(s.nombre)),
+            ],
+            onChanged: (v) => setState(() => _seccionId = v),
+          ),
+          const SizedBox(height: MySpacing.sm),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _disponible,
+            onChanged: (v) => setState(() => _disponible = v),
+            title: Text('Disponible', style: MyType.labelLg),
+            subtitle: Text('Si lo apagás, los clientes no lo pueden pedir', style: MyType.bodySm),
+          ),
         ],
       ),
-      body: Form(
-        key: _form,
-        child: FormularioCentrado(
-          ancho: 620,
-          children: [
-            // ---- Foto ----------------------------------------------------------
-            GestureDetector(
-              onTap: _elegirFoto,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(MyRadius.card),
-                child: AspectRatio(
-                  aspectRatio: 16 / 10,
-                  child: _foto != null
-                      ? Image.memory(_foto!, fit: BoxFit.cover)
-                      : widget.producto?.fotoUrl != null
-                          ? MyImagen(url: widget.producto!.fotoUrl, radio: 0)
-                          : Container(
-                              color: MyColors.surfaceContainerHigh,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Symbols.add_a_photo, size: 40, color: MyColors.secondary),
-                                  const SizedBox(height: MySpacing.xs),
-                                  Text('Agregar foto', style: MyType.labelLg.copyWith(color: MyColors.secondary)),
-                                  Text('Una buena foto vende mucho mas',
-                                      style: MyType.bodySm.copyWith(color: MyColors.secondary)),
-                                ],
-                              ),
-                            ),
-                ),
-              ),
-            ),
-            if (_foto != null || widget.producto?.fotoUrl != null)
-              TextButton.icon(
-                onPressed: _elegirFoto,
-                icon: const Icon(Symbols.photo_camera, size: 18),
-                label: const Text('Cambiar foto'),
-              ),
-            const SizedBox(height: MySpacing.md),
+    );
 
-            // ---- Datos ---------------------------------------------------------
-            MyCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  MyCampo(controller: _nombre, label: 'Nombre', hint: 'Pizza muzzarella'),
-                  MyCampo(
-                    controller: _descripcion,
-                    label: 'Descripcion (opcional)',
-                    hint: 'Salsa de tomate casera, muzzarella y aceitunas',
-                    obligatorio: false,
-                    lineas: 3,
-                  ),
-                  MyCampo(
-                    controller: _precio,
-                    label: 'Precio (pesos)',
-                    hint: '8200',
-                    icon: Symbols.payments,
-                    soloNumeros: true,
-                    validar: (t) => (int.tryParse(t) ?? 0) <= 0 ? 'Pone un precio' : null,
-                  ),
-                  const MyOverline('Seccion'),
-                  const SizedBox(height: MySpacing.xs),
-                  DropdownButtonFormField<String?>(
-                    initialValue: secciones.any((s) => s.id == _seccionId) ? _seccionId : null,
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('Sin seccion')),
-                      for (final s in secciones) DropdownMenuItem(value: s.id, child: Text(s.nombre)),
-                    ],
-                    onChanged: (v) => setState(() => _seccionId = v),
-                  ),
-                  const SizedBox(height: MySpacing.sm),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _disponible,
-                    onChanged: (v) => setState(() => _disponible = v),
-                    title: Text('Disponible', style: MyType.labelLg),
-                    subtitle: Text('Si lo apagas, los clientes no lo ven', style: MyType.bodySm),
-                  ),
-                ],
-              ),
-            ),
-
-            // ---- Personalizacion ----------------------------------------------
-            const SizedBox(height: MySpacing.lg),
-            Text('Personalizacion', style: MyType.headlineSm),
-            Text(
-              'Opciones que elige el cliente: tamano, agregados, gustos...',
-              style: MyType.bodySm.copyWith(color: MyColors.secondary),
-            ),
-            const SizedBox(height: MySpacing.sm),
-            for (var i = 0; i < _grupos.length; i++) ...[
-              _EditorGrupo(
-                grupo: _grupos[i],
-                onCambio: () => setState(() {}),
-                onQuitar: () => setState(() => _grupos.removeAt(i).dispose()),
-              ),
-              const SizedBox(height: MySpacing.sm),
-            ],
-            OutlinedButton.icon(
-              onPressed: () => setState(() => _grupos.add(_GrupoEditable.vacio())),
-              icon: const Icon(Symbols.add, size: 20),
-              label: const Text('Agregar grupo de opciones'),
-            ),
-
-            const SizedBox(height: MySpacing.xl),
-            MyBotonAccion(label: 'Guardar producto', icon: Symbols.save, onPressed: _guardar),
-            const SizedBox(height: MySpacing.xl),
-          ],
+    final personalizacion = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Personalización', style: MyType.headlineSm),
+        Text(
+          'Opciones que elige el cliente: tamaño, agregados, gustos…',
+          style: MyType.bodySm.copyWith(color: MyColors.secondary),
         ),
+        const SizedBox(height: MySpacing.sm),
+        for (var i = 0; i < _grupos.length; i++) ...[
+          _EditorGrupo(
+            grupo: _grupos[i],
+            onCambio: () => setState(() {}),
+            onQuitar: () => setState(() => _grupos.removeAt(i).dispose()),
+          ),
+          const SizedBox(height: MySpacing.sm),
+        ],
+        Align(
+          alignment: Alignment.centerLeft,
+          child: MyBoton(
+            onPressed: () => setState(() => _grupos.add(_GrupoEditable.vacio())),
+            icon: Symbols.add,
+            label: 'Agregar grupo de opciones',
+            tipo: MyBotonTipo.secundario,
+          ),
+        ),
+      ],
+    );
+
+    final guardar = MyBotonAccion(label: 'Guardar producto', icon: Symbols.save, onPressed: _guardar);
+    const espacio = SizedBox(height: MySpacing.md);
+
+    return Form(
+      key: _form,
+      child: MyPagina(
+        volver: () => context.canPop() ? context.pop() : context.go('/local/menu'),
+        rotulo: 'Menú',
+        titulo: widget.producto == null ? 'Nuevo producto' : 'Editar producto',
+        anchoMaximo: 1180,
+        conDock: false,
+        acciones: [
+          if (widget.producto != null)
+            MyBoton(label: 'Borrar', icon: Symbols.delete, tipo: MyBotonTipo.peligro, onPressed: _borrar),
+        ],
+        children: context.esMovil
+            ? [foto, espacio, datos, const SizedBox(height: MySpacing.lg), personalizacion, const SizedBox(height: MySpacing.xl), guardar]
+            : [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [foto, espacio, datos])),
+                    const SizedBox(width: MySpacing.lg),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [personalizacion, const SizedBox(height: MySpacing.xl), guardar],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
       ),
     );
   }
@@ -332,7 +355,7 @@ class _EditorGrupo extends StatelessWidget {
               Expanded(
                 child: TextField(
                   controller: grupo.nombre,
-                  decoration: const InputDecoration(hintText: 'Nombre del grupo (ej: Tamano)'),
+                  decoration: const InputDecoration(hintText: 'Nombre del grupo (ej: Tamaño)'),
                 ),
               ),
               IconButton(onPressed: onQuitar, icon: const Icon(Symbols.delete, color: MyColors.error)),
@@ -372,7 +395,7 @@ class _EditorGrupo extends StatelessWidget {
                     flex: 3,
                     child: TextField(
                       controller: grupo.items[i].nombre,
-                      decoration: const InputDecoration(hintText: 'Opcion (ej: Grande)'),
+                      decoration: const InputDecoration(hintText: 'Opción (ej: Grande)'),
                     ),
                   ),
                   const SizedBox(width: MySpacing.xs),
@@ -402,7 +425,7 @@ class _EditorGrupo extends StatelessWidget {
               onCambio();
             },
             icon: const Icon(Symbols.add, size: 18),
-            label: const Text('Agregar opcion'),
+            label: const Text('Agregar opción'),
           ),
         ],
       ),

@@ -5,11 +5,10 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-import '../../comun/marca.dart';
 
-/// Horarios de atencion. Un turno puede cruzar la medianoche (20:00 a 01:00).
+/// Horarios de atención. Un turno puede cruzar la medianoche (20:00 a 01:00).
 ///
-/// Sin ningun horario cargado, el local se guia solo por el interruptor de
+/// Sin ningún horario cargado, el local se guía solo por el interruptor de
 /// pausa del inicio.
 class HorariosPage extends ConsumerStatefulWidget {
   const HorariosPage({super.key});
@@ -81,99 +80,118 @@ class _HorariosPageState extends ConsumerState<HorariosPage> {
     final id = ref.watch(sesionProvider).comercioId;
     final horarios = id == null ? const AsyncValue<List<Horario>>.data([]) : ref.watch(horariosProvider(id));
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(Symbols.arrow_back), onPressed: () => context.pop()),
-        title: const Text('Horarios de atencion'),
-      ),
-      body: MyAsync(
-        valor: horarios,
-        datos: (h) {
-          if (_dias == null) _cargar(h);
-          final dias = _dias!;
-          return FormularioCentrado(
-            ancho: 560,
-            children: [
-              Text(
-                'Los clientes solo pueden pedirte dentro de estos horarios. Si un turno '
-                'termina despues de medianoche (ej: 20:00 a 01:00) cargalo en el dia que empieza.',
-                style: MyType.bodySm.copyWith(color: MyColors.secondary),
-              ),
-              const SizedBox(height: MySpacing.md),
-              // Lunes primero, que es como se piensa la semana.
-              for (final d in [1, 2, 3, 4, 5, 6, 0]) ...[
-                MyCard(
-                  padding: const EdgeInsets.all(MySpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+    return MyAsync(
+      valor: horarios,
+      datos: (h) {
+        if (_dias == null) _cargar(h);
+        final dias = _dias!;
+
+        Widget dia(int d) => MyCard(
+              padding: const EdgeInsets.all(MySpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
                     children: [
-                      Row(
+                      Expanded(child: Text(Horario.nombresDias[d], style: MyType.headlineSm)),
+                      if (dias[d].isEmpty) Text('Cerrado', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                      IconButton(
+                        tooltip: 'Agregar turno',
+                        icon: const Icon(Symbols.add_circle, color: MyColors.primary),
+                        onPressed: () => setState(() => dias[d].add(
+                              dias[d].isEmpty
+                                  ? _Turno(const TimeOfDay(hour: 11, minute: 0), const TimeOfDay(hour: 15, minute: 0))
+                                  : _Turno(const TimeOfDay(hour: 20, minute: 0), const TimeOfDay(hour: 0, minute: 30)),
+                            )),
+                      ),
+                    ],
+                  ),
+                  for (final t in dias[d])
+                    Padding(
+                      padding: const EdgeInsets.only(top: MySpacing.xxs),
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: MySpacing.xs,
+                        runSpacing: MySpacing.xxs,
                         children: [
-                          Expanded(child: Text(Horario.nombresDias[d], style: MyType.headlineSm)),
-                          if (dias[d].isEmpty) Text('Cerrado', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                          _Hora(
+                            texto: _fmt(t.abre),
+                            onTap: () async {
+                              final n = await _elegir(t.abre);
+                              if (n != null) setState(() => t.abre = n);
+                            },
+                          ),
+                          const Text('a'),
+                          _Hora(
+                            texto: _fmt(t.cierra),
+                            onTap: () async {
+                              final n = await _elegir(t.cierra);
+                              if (n != null) setState(() => t.cierra = n);
+                            },
+                          ),
+                          if (_fmt(t.cierra).compareTo(_fmt(t.abre)) < 0) const MyBadge('cruza medianoche', tone: MyBadgeTone.info),
                           IconButton(
-                            tooltip: 'Agregar turno',
-                            icon: const Icon(Symbols.add_circle, color: MyColors.primary),
-                            onPressed: () => setState(() => dias[d].add(
-                                  dias[d].isEmpty
-                                      ? _Turno(const TimeOfDay(hour: 11, minute: 0), const TimeOfDay(hour: 15, minute: 0))
-                                      : _Turno(const TimeOfDay(hour: 20, minute: 0), const TimeOfDay(hour: 0, minute: 30)),
-                                )),
+                            tooltip: 'Quitar turno',
+                            icon: const Icon(Symbols.close, size: 20, color: MyColors.secondary),
+                            onPressed: () => setState(() => dias[d].remove(t)),
                           ),
                         ],
                       ),
-                      for (final t in dias[d])
-                        Row(
-                          children: [
-                            _Hora(
-                              texto: _fmt(t.abre),
-                              onTap: () async {
-                                final n = await _elegir(t.abre);
-                                if (n != null) setState(() => t.abre = n);
-                              },
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: MySpacing.xs),
-                              child: Text('a'),
-                            ),
-                            _Hora(
-                              texto: _fmt(t.cierra),
-                              onTap: () async {
-                                final n = await _elegir(t.cierra);
-                                if (n != null) setState(() => t.cierra = n);
-                              },
-                            ),
-                            const SizedBox(width: MySpacing.xs),
-                            if (_fmt(t.cierra).compareTo(_fmt(t.abre)) < 0)
-                              const MyBadge('cruza medianoche', tone: MyBadgeTone.info),
-                            const Spacer(),
-                            IconButton(
-                              icon: const Icon(Symbols.close, size: 20, color: MyColors.secondary),
-                              onPressed: () => setState(() => dias[d].remove(t)),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: MySpacing.xs),
-              ],
-              const SizedBox(height: MySpacing.md),
-              TextButton(
-                onPressed: () => setState(() {
-                  for (final d in [1, 2, 3, 4, 5]) {
-                    dias[d] = [for (final t in dias[1]) _Turno(t.abre, t.cierra)];
-                  }
-                }),
-                child: const Text('Copiar el lunes a toda la semana (lunes a viernes)'),
+                    ),
+                ],
               ),
-              const SizedBox(height: MySpacing.sm),
+            );
+
+        // Lunes primero, que es como se piensa la semana.
+        const orden = [1, 2, 3, 4, 5, 6, 0];
+        return MyPagina(
+          volver: () => context.canPop() ? context.pop() : context.go('/local/cuenta'),
+          rotulo: 'Mi local',
+          titulo: 'Horarios de atención',
+          bajada: 'Los clientes solo pueden pedirte dentro de estos horarios',
+          anchoMaximo: 1080,
+          conDock: false,
+          acciones: [
+            MyBoton(
+              label: 'Copiar lunes a viernes',
+              icon: Symbols.content_copy,
+              tipo: MyBotonTipo.secundario,
+              onPressed: () => setState(() {
+                for (final d in [2, 3, 4, 5]) {
+                  dias[d] = [for (final t in dias[1]) _Turno(t.abre, t.cierra)];
+                }
+              }),
+            ),
+            if (!context.esMovil) MyBoton(label: 'Guardar horarios', icon: Symbols.save, onPressed: _guardar),
+          ],
+          children: [
+            MyCard(
+              color: MyColors.secondaryContainer.withValues(alpha: 0.5),
+              shadows: const [],
+              padding: const EdgeInsets.all(MySpacing.md),
+              child: Row(
+                children: [
+                  const Icon(Symbols.nightlight, color: MyColors.onSecondaryFixedVariant),
+                  const SizedBox(width: MySpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'Si un turno termina después de medianoche (ej: 20:00 a 01:00), cargalo en el día que empieza.',
+                      style: MyType.bodySm.copyWith(color: MyColors.onSecondaryFixedVariant),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: MySpacing.md),
+            if (context.esMovil) ...[
+              for (final d in orden) ...[dia(d), const SizedBox(height: MySpacing.xs)],
+              const SizedBox(height: MySpacing.md),
               MyBotonAccion(label: 'Guardar horarios', icon: Symbols.save, onPressed: _guardar),
-              const SizedBox(height: MySpacing.xl),
-            ],
-          );
-        },
-      ),
+            ] else
+              MyGrilla(anchoMinimo: 380, maxColumnas: 2, espacio: MySpacing.sm, children: [for (final d in orden) dia(d)]),
+          ],
+        );
+      },
     );
   }
 }

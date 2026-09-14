@@ -135,7 +135,7 @@ void main() {
   test('02 admin: da de alta un local y un rider (Edge Function)', () async {
     final rubros = await catalogo.rubros();
     expect(rubros, isNotEmpty, reason: 'la semilla de rubros tiene que existir');
-    final pizzeria = rubros.firstWhere((r) => r.nombre == 'Pizzeria');
+    final pizzeria = rubros.firstWhere((r) => r.nombre == 'Pizzería');
 
     final altaLocal = await cuentas.crearComercio(
       email: _localEmail,
@@ -161,7 +161,7 @@ void main() {
     final todos = await comercios.todos();
     final c = todos.firstWhere((c) => c.nombre == 'Pizzeria Test $_sello');
     expect(c.aprobacion, EstadoAprobacion.aprobado);
-    expect(c.rubro, 'Pizzeria');
+    expect(c.rubro, 'Pizzería');
     expect(c.direccion.lat, closeTo(_local.lat, 0.0001), reason: 'v_comercios tiene que traer lat numerico');
     expect(c.abierto, isTrue, reason: 'sin horarios cargados manda el interruptor');
   }, timeout: largo);

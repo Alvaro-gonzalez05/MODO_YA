@@ -5,16 +5,22 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-/// Contenedor de las pantallas del local, con el dock flotante.
+import '../../comun/menu_usuario.dart';
+
+/// Contenedor de las pantallas del local: barra lateral en la PC, dock en el
+/// celular. Avisa de los pedidos nuevos esté donde esté.
 class ComercioShell extends ConsumerWidget {
-  const ComercioShell({super.key, required this.navigationShell});
+  const ComercioShell({super.key, required this.navigationShell, required this.enRaiz});
 
   final StatefulNavigationShell navigationShell;
+  final bool enRaiz;
+
+  static const raices = {'/local', '/local/pedidos', '/local/menu', '/local/envios', '/local/cuenta'};
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Se escucha aca, y no en la pantalla de pedidos, para que el aviso de un
-    // pedido nuevo llegue aunque el local este en otra pestana.
+    // Se escucha acá, y no en la pantalla de pedidos, para que el aviso de un
+    // pedido nuevo llegue aunque el local esté en otra pestaña.
     ref.listen(pedidosDelComercioProvider, (antes, ahora) {
       final previos = antes?.value?.where((p) => p.estado == EstadoPedido.pagado).map((p) => p.id).toSet();
       final nuevos = ahora.value?.where((p) => p.estado == EstadoPedido.pagado) ?? const [];
@@ -25,25 +31,41 @@ class ComercioShell extends ConsumerWidget {
         SnackBar(
           behavior: SnackBarBehavior.floating,
           backgroundColor: MyColors.primary,
-          content: Text('Nuevo pedido ${recienLlegados.first.codigo} - ${Formato.pesos(recienLlegados.first.total)}'),
-          action: SnackBarAction(
-            label: 'Ver',
-            textColor: Colors.white,
-            onPressed: () => navigationShell.goBranch(1),
-          ),
+          content: Text('Nuevo pedido ${recienLlegados.first.codigo} · ${Formato.pesos(recienLlegados.first.total)}'),
+          action: SnackBarAction(label: 'Ver', textColor: Colors.white, onPressed: () => navigationShell.goBranch(1)),
         ),
       );
     });
 
-    return MyDockScaffold(
-      items: const [
-        MyDockItem(icon: Symbols.home, label: 'Inicio'),
-        MyDockItem(icon: Symbols.receipt_long, label: 'Pedidos'),
-        MyDockItem(icon: Symbols.menu_book, label: 'Menu'),
-        MyDockItem(icon: Symbols.account_circle, label: 'Cuenta'),
+    final sesion = ref.watch(sesionProvider);
+    final comercio = ref.watch(comercioActualProvider).value;
+    final pedidos = ref.watch(pedidosDelComercioProvider).value ?? const <Pedido>[];
+    final nuevos = pedidos.where((p) => p.estado == EstadoPedido.pagado).length;
+
+    return MyAppShell(
+      seccion: 'Local',
+      subtitulo: comercio?.nombre ?? 'Malargüe · Mendoza',
+      destinos: [
+        const MyDestino(icon: Symbols.home, label: 'Inicio'),
+        MyDestino(icon: Symbols.receipt_long, label: 'Pedidos', contador: nuevos),
+        const MyDestino(icon: Symbols.menu_book, label: 'Menú'),
+        const MyDestino(icon: Symbols.sports_motorsports, label: 'Envíos'),
+        const MyDestino(icon: Symbols.storefront, label: 'Mi local'),
       ],
-      currentIndex: navigationShell.currentIndex,
+      indice: navigationShell.currentIndex,
       onSelect: (i) => navigationShell.goBranch(i, initialLocation: i == navigationShell.currentIndex),
+      usuarioNombre: comercio?.nombre ?? sesion.nombre,
+      usuarioDetalle: sesion.email,
+      accionesUsuario: accionesDeUsuario(context, ref),
+      estado: comercio == null
+          ? null
+          : MyPastillaEstado(
+              texto: comercio.abierto ? 'Recibiendo pedidos' : (comercio.aceptaPedidos ? 'Fuera de horario' : 'Pausado'),
+              detalle: nuevos > 0 ? '$nuevos pedido${nuevos == 1 ? '' : 's'} nuevo${nuevos == 1 ? '' : 's'}' : null,
+              color: comercio.abierto ? MyColors.success : MyColors.outline,
+            ),
+      version: versionVisible,
+      mostrarDock: enRaiz,
       body: navigationShell,
     );
   }

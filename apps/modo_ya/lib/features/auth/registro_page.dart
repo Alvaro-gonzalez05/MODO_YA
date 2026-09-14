@@ -50,7 +50,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
           title: const Text('Revisa tu email'),
           content: Text(
             'Te mandamos un mail a ${_email.text.trim()} para confirmar la cuenta. '
-            'Despues de confirmarla vas a poder entrar.',
+            'Después de confirmarla vas a poder entrar.',
           ),
           actions: [FilledButton(onPressed: () => Navigator.pop(c), child: const Text('Entendido'))],
         ),
@@ -89,13 +89,13 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
                     ),
                     MyCampo(
                       controller: _telefono,
-                      label: 'Telefono',
+                      label: 'Teléfono',
                       hint: '260 ...',
                       icon: Symbols.call,
                       keyboard: TextInputType.phone,
                       autofill: const [AutofillHints.telephoneNumber],
                       validar: (t) => t.replaceAll(RegExp(r'\D'), '').length < 8
-                          ? 'Pone un telefono donde te puedan llamar'
+                          ? 'Pone un teléfono donde te puedan llamar'
                           : null,
                     ),
                     MyCampo(
@@ -106,19 +106,19 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
                       autofill: const [AutofillHints.email],
                       validar: (t) => RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(t)
                           ? null
-                          : 'Ese email no es valido',
+                          : 'Ese email no es válido',
                     ),
                     MyCampo(
                       controller: _password,
-                      label: 'Contrasena',
+                      label: 'Contraseña',
                       icon: Symbols.lock,
                       ocultar: true,
                       autofill: const [AutofillHints.newPassword],
-                      validar: (t) => t.length < 8 ? 'Minimo 8 caracteres' : null,
+                      validar: (t) => t.length < 8 ? 'Mínimo 8 caracteres' : null,
                     ),
                     MyCampo(
                       controller: _repetir,
-                      label: 'Repeti la contrasena',
+                      label: 'Repetí la contraseña',
                       icon: Symbols.lock,
                       ocultar: true,
                       validar: (t) => t != _password.text ? 'No coincide' : null,

@@ -64,7 +64,7 @@ class _Contenido extends ConsumerWidget {
       return MyEmptyState(
         icon: Symbols.cancel,
         title: 'Servicio cancelado',
-        message: envio.motivoCancelacion ?? 'El envio se cancelo.',
+        message: envio.motivoCancelacion ?? 'El envío se canceló.',
         action: FilledButton(onPressed: () => context.go('/'), child: const Text('Volver al inicio')),
       );
     }
@@ -104,8 +104,8 @@ class _Contenido extends ConsumerWidget {
                       switch (envio.estado) {
                         EstadoEnvio.asignado => 'Retira el pedido en ${o.calle}.',
                         EstadoEnvio.enLocal => 'Avisale al local que llegaste y retira el pedido.',
-                        EstadoEnvio.retirado => 'Tenes el pedido. Sali para el domicilio.',
-                        EstadoEnvio.enCamino => 'Al llegar, pedile el codigo de 4 numeros al cliente.',
+                        EstadoEnvio.retirado => 'Tenés el pedido. Salí para el domicilio.',
+                        EstadoEnvio.enCamino => 'Al llegar, pedile el código de 4 números al cliente.',
                         _ => '',
                       },
                       style: MyType.bodyLg.copyWith(color: Colors.white70),
@@ -119,12 +119,12 @@ class _Contenido extends ConsumerWidget {
                   alto: 220,
                   interactivo: true,
                   marcadores: [
-                    MyMarcador(punto: LatLng(o.lat!, o.lng!), icono: Symbols.storefront, etiqueta: vaAlLocal ? 'Ir aca' : null),
+                    MyMarcador(punto: LatLng(o.lat!, o.lng!), icono: Symbols.storefront, etiqueta: vaAlLocal ? 'Ir acá' : null),
                     MyMarcador(
                       punto: LatLng(d.lat!, d.lng!),
                       icono: Symbols.home,
                       color: MyColors.dock,
-                      etiqueta: vaAlLocal ? null : 'Ir aca',
+                      etiqueta: vaAlLocal ? null : 'Ir acá',
                     ),
                   ],
                 ),
@@ -173,10 +173,10 @@ class _Contenido extends ConsumerWidget {
                         ),
                       ),
                       IconButton(
-                        tooltip: 'Copiar telefono',
+                        tooltip: 'Copiar teléfono',
                         onPressed: () async {
                           await Clipboard.setData(ClipboardData(text: envio.cliente.telefono));
-                          if (context.mounted) mostrarAviso(context, 'Telefono copiado');
+                          if (context.mounted) mostrarAviso(context, 'Teléfono copiado');
                         },
                         icon: const Icon(Symbols.content_copy, color: MyColors.primary),
                       ),
@@ -187,7 +187,7 @@ class _Contenido extends ConsumerWidget {
               if (envio.quienPaga == QuienPaga.cliente && envio.pedidoId == null) ...[
                 const SizedBox(height: MySpacing.sm),
                 Text(
-                  'El envio lo paga el cliente.',
+                  'El envío lo paga el cliente.',
                   style: MyType.bodySm.copyWith(color: MyColors.secondary),
                 ),
               ],
@@ -243,11 +243,11 @@ class _DialogoCodigoState extends State<_DialogoCodigo> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Codigo de entrega'),
+      title: const Text('Código de entrega'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Pedile al cliente los 4 numeros que ve en su pedido.', style: MyType.bodyMd),
+          Text('Pedile al cliente los 4 números que ve en su pedido.', style: MyType.bodyMd),
           const SizedBox(height: MySpacing.md),
           TextField(
             controller: _c,

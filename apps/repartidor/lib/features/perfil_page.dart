@@ -58,12 +58,12 @@ class PerfilPage extends ConsumerWidget {
                   children: [
                     ListTile(
                       leading: const Icon(Symbols.two_wheeler, color: MyColors.primary),
-                      title: Text('Vehiculo', style: MyType.labelLg),
+                      title: Text('Vehículo', style: MyType.labelLg),
                       subtitle: Text(rider?.vehiculo.label ?? '-', style: MyType.bodySm),
                     ),
                     ListTile(
                       leading: const Icon(Symbols.lock, color: MyColors.primary),
-                      title: Text('Cambiar contrasena', style: MyType.labelLg),
+                      title: Text('Cambiar contraseña', style: MyType.labelLg),
                       trailing: const Icon(Symbols.chevron_right),
                       onTap: () => _cambiarPassword(context, ref),
                     ),
@@ -80,7 +80,7 @@ class PerfilPage extends ConsumerWidget {
                     const SizedBox(width: MySpacing.sm),
                     Expanded(
                       child: Text(
-                        'Tu ubicacion se comparte unicamente mientras estas conectado.',
+                        'Tu ubicación se comparte únicamente mientras estás conectado.',
                         style: MyType.bodySm.copyWith(color: MyColors.onSecondaryFixed),
                       ),
                     ),
@@ -101,7 +101,7 @@ class PerfilPage extends ConsumerWidget {
                   await ref.read(authRepositoryProvider).salir();
                 },
                 icon: const Icon(Symbols.logout, size: 20),
-                label: const Text('Cerrar sesion'),
+                label: const Text('Cerrar sesión'),
               ),
             ],
           ),
@@ -125,13 +125,13 @@ class PerfilPage extends ConsumerWidget {
             shrinkWrap: true,
             padding: const EdgeInsets.all(MySpacing.screenEdge),
             children: [
-              Text('Cambiar contrasena', style: MyType.headlineMd),
+              Text('Cambiar contraseña', style: MyType.headlineMd),
               const SizedBox(height: MySpacing.md),
               MyCampo(
                 controller: nueva,
-                label: 'Nueva contrasena',
+                label: 'Nueva contraseña',
                 ocultar: true,
-                validar: (t) => t.length < 8 ? 'Minimo 8 caracteres' : null,
+                validar: (t) => t.length < 8 ? 'Mínimo 8 caracteres' : null,
               ),
               MyBotonAccion(
                 label: 'Guardar',

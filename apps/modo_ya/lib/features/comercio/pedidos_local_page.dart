@@ -5,10 +5,15 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import '../../comun/estados_ui.dart';
+
 /// Pedidos de la app que le llegan al local, en vivo.
 ///
-/// Flujo: Nuevo -> Aceptar -> En preparacion -> Listo (sale a buscar rider) ->
-/// el rider lo retira y el resto lo sigue el cliente.
+/// Flujo: Nuevo → Aceptar → En preparación → Listo (sale a buscar rider) → el
+/// rider lo retira y el resto lo sigue el cliente.
+///
+/// En la PC es un tablero por columnas, como una comanda. En el celular, una
+/// lista con filtros.
 class PedidosLocalPage extends ConsumerStatefulWidget {
   const PedidosLocalPage({super.key});
 
@@ -33,62 +38,148 @@ enum _Filtro {
 
 class _PedidosLocalPageState extends ConsumerState<PedidosLocalPage> {
   var _filtro = _Filtro.activos;
+  var _verCerrados = false;
 
   @override
   Widget build(BuildContext context) {
     final pedidos = ref.watch(pedidosDelComercioProvider);
 
-    return Column(
+    return MyPagina(
+      rotulo: 'En vivo',
+      titulo: 'Pedidos',
+      bajada: 'Los que te hacen desde la app. Suenan apenas llegan.',
+      anchoMaximo: 1600,
+      acciones: [
+        if (!context.esMovil)
+          MyBoton(
+            label: _verCerrados ? 'Ver tablero' : 'Ver cerrados',
+            icon: _verCerrados ? Symbols.view_kanban : Symbols.history,
+            tipo: MyBotonTipo.secundario,
+            onPressed: () => setState(() => _verCerrados = !_verCerrados),
+          ),
+      ],
       children: [
-        const MyTopBar(zona: 'Pedidos'),
-        SizedBox(
-          height: 52,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: MySpacing.screenEdge, vertical: MySpacing.xxs),
-            children: [
-              for (final f in _Filtro.values) ...[
-                MyChip(f.label, selected: f == _filtro, onTap: () => setState(() => _filtro = f)),
-                const SizedBox(width: MySpacing.xs),
+        MyAsync(
+          valor: pedidos,
+          onReintentar: () => ref.invalidate(pedidosDelComercioProvider),
+          datos: (lista) {
+            // Dentro de cada grupo, el más viejo arriba: es el que el cliente
+            // lleva más tiempo esperando.
+            final ordenada = [...lista]..sort((a, b) => a.creadoEn.compareTo(b.creadoEn));
+
+            if (context.esMovil) return _movil(ordenada);
+            if (_verCerrados) {
+              final cerrados = ordenada.where((p) => p.estado.esFinal).toList().reversed.toList();
+              return cerrados.isEmpty
+                  ? const MyCard(child: MyEmptyState(icon: Symbols.history, title: 'Sin pedidos cerrados', message: 'Los entregados, rechazados y cancelados aparecen acá.'))
+                  : MyGrilla(anchoMinimo: 320, maxColumnas: 3, children: [for (final p in cerrados) _TarjetaPedido(pedido: p)]);
+            }
+
+            List<Pedido> de(Set<EstadoPedido> estados) => ordenada.where((p) => estados.contains(p.estado)).toList();
+            final columnas = [
+              ('Nuevos', Symbols.notifications_active, de({EstadoPedido.pagado})),
+              ('En cocina', Symbols.skillet, de({EstadoPedido.aceptado, EstadoPedido.enPreparacion})),
+              ('Listos', Symbols.package_2, de({EstadoPedido.listo})),
+              ('En camino', Symbols.sports_motorsports, de({EstadoPedido.enCamino})),
+            ];
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < columnas.length; i++) ...[
+                  if (i > 0) const SizedBox(width: MySpacing.md),
+                  Expanded(
+                    child: _Columna(titulo: columnas[i].$1, icono: columnas[i].$2, pedidos: columnas[i].$3, destacada: i == 0),
+                  ),
+                ],
               ],
-            ],
-          ),
-        ),
-        Expanded(
-          child: MyAsync(
-            valor: pedidos,
-            onReintentar: () => ref.invalidate(pedidosDelComercioProvider),
-            datos: (lista) {
-              final visibles = lista.where(_filtro.incluye).toList();
-              if (_filtro == _Filtro.activos) {
-                // Los nuevos primero, y dentro de cada grupo el mas viejo arriba:
-                // es el que el cliente lleva mas tiempo esperando.
-                visibles.sort((a, b) {
-                  final orden = a.estado.index.compareTo(b.estado.index);
-                  return orden != 0 ? orden : a.creadoEn.compareTo(b.creadoEn);
-                });
-              }
-              if (visibles.isEmpty) {
-                return MyEmptyState(
-                  icon: Symbols.receipt_long,
-                  title: _filtro == _Filtro.activos ? 'No hay pedidos por atender' : 'Nada por aca',
-                  message: _filtro == _Filtro.activos
-                      ? 'Cuando un cliente te haga un pedido va a sonar aca y en el inicio.'
-                      : 'Los pedidos aparecen aca a medida que avanzan.',
-                );
-              }
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(
-                  MySpacing.screenEdge, MySpacing.sm, MySpacing.screenEdge, MySpacing.dockClearance,
-                ),
-                itemCount: visibles.length,
-                separatorBuilder: (_, _) => const SizedBox(height: MySpacing.sm),
-                itemBuilder: (_, i) => _TarjetaPedido(pedido: visibles[i]),
-              );
-            },
-          ),
+            );
+          },
         ),
       ],
+    );
+  }
+
+  Widget _movil(List<Pedido> lista) {
+    final visibles = lista.where(_filtro.incluye).toList();
+    if (_filtro == _Filtro.activos) {
+      visibles.sort((a, b) {
+        final orden = a.estado.index.compareTo(b.estado.index);
+        return orden != 0 ? orden : a.creadoEn.compareTo(b.creadoEn);
+      });
+    } else {
+      visibles.sort((a, b) => b.creadoEn.compareTo(a.creadoEn));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        MyFiltros<_Filtro>(
+          seleccionado: _filtro,
+          onChanged: (f) => setState(() => _filtro = f),
+          opciones: [for (final f in _Filtro.values) (f, f.label, lista.where(f.incluye).length)],
+        ),
+        const SizedBox(height: MySpacing.md),
+        if (visibles.isEmpty)
+          MyCard(
+            child: MyEmptyState(
+              icon: Symbols.receipt_long,
+              title: _filtro == _Filtro.activos ? 'No hay pedidos por atender' : 'Nada por acá',
+              message: _filtro == _Filtro.activos
+                  ? 'Cuando un cliente te haga un pedido, suena acá y en el inicio.'
+                  : 'Los pedidos aparecen acá a medida que avanzan.',
+            ),
+          )
+        else
+          for (final p in visibles) ...[
+            _TarjetaPedido(pedido: p),
+            const SizedBox(height: MySpacing.sm),
+          ],
+      ],
+    );
+  }
+}
+
+class _Columna extends StatelessWidget {
+  const _Columna({required this.titulo, required this.icono, required this.pedidos, this.destacada = false});
+
+  final String titulo;
+  final IconData icono;
+  final List<Pedido> pedidos;
+  final bool destacada;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(MySpacing.sm),
+      decoration: BoxDecoration(
+        color: destacada && pedidos.isNotEmpty ? MyColors.primaryFixed.withValues(alpha: 0.5) : MyColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(MyRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(MySpacing.xs, MySpacing.xs, MySpacing.xs, MySpacing.sm),
+            child: Row(
+              children: [
+                Icon(icono, size: 20, color: MyColors.primary),
+                const SizedBox(width: MySpacing.xs),
+                Expanded(child: Text(titulo, style: MyType.headlineSm)),
+                MyBadge('${pedidos.length}', tone: pedidos.isEmpty ? MyBadgeTone.neutral : MyBadgeTone.dark),
+              ],
+            ),
+          ),
+          if (pedidos.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: MySpacing.xl),
+              child: Text('Vacío', textAlign: TextAlign.center, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+            )
+          else
+            for (final p in pedidos) ...[
+              _TarjetaPedido(pedido: p),
+              const SizedBox(height: MySpacing.sm),
+            ],
+        ],
+      ),
     );
   }
 }
@@ -112,23 +203,28 @@ class _TarjetaPedido extends ConsumerWidget {
     final esNuevo = pedido.estado == EstadoPedido.pagado;
 
     return MyCard(
-      color: esNuevo ? MyColors.primaryFixed : MyColors.surfaceContainerLowest,
+      padding: const EdgeInsets.all(MySpacing.md),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               MyBadge(pedido.codigo, tone: MyBadgeTone.dark),
               const SizedBox(width: MySpacing.xs),
-              MyBadge(pedido.estado.label, tone: esNuevo ? MyBadgeTone.ember : MyBadgeTone.info, dot: esNuevo),
-              const Spacer(),
-              Text(Formato.haceCuanto(pedido.creadoEn), style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+              Expanded(
+                child: Text(
+                  Formato.haceCuanto(pedido.creadoEn),
+                  style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              MyBadge(pedido.estado.label, tone: tonoPedido(pedido.estado), dot: esNuevo),
             ],
           ),
           const SizedBox(height: MySpacing.sm),
           Text(pedido.clienteNombre ?? 'Cliente', style: MyType.headlineSm),
           Text(
-            [pedido.entrega.calle, if (pedido.entrega.referencia != null) pedido.entrega.referencia!].join(' - '),
+            [pedido.entrega.calle, if (pedido.entrega.referencia != null) pedido.entrega.referencia!].join(' · '),
             style: MyType.bodySm.copyWith(color: MyColors.secondary),
           ),
           const Divider(height: MySpacing.lg),
@@ -138,19 +234,19 @@ class _TarjetaPedido extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(width: 32, child: Text('${item.cantidad}x', style: MyType.labelLg.copyWith(color: MyColors.primary))),
+                  SizedBox(width: 30, child: Text('${item.cantidad}×', style: MyType.labelLg.copyWith(color: MyColors.primary))),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(item.nombreProducto, style: MyType.labelLg),
-                        for (final o in item.opciones)
-                          Text(o, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                        for (final o in item.opciones) Text(o, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
                         if (item.nota != null)
                           Text('"${item.nota}"', style: MyType.bodySm.copyWith(fontStyle: FontStyle.italic)),
                       ],
                     ),
                   ),
+                  const SizedBox(width: MySpacing.xs),
                   Text(Formato.pesos(item.subtotal), style: MyType.labelMd),
                 ],
               ),
@@ -158,57 +254,50 @@ class _TarjetaPedido extends ConsumerWidget {
           if (pedido.nota != null) ...[
             const SizedBox(height: MySpacing.xxs),
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(MySpacing.sm),
-              decoration: BoxDecoration(
-                color: MyColors.secondaryContainer,
-                borderRadius: BorderRadius.circular(MyRadius.md),
-              ),
+              decoration: BoxDecoration(color: MyColors.secondaryContainer, borderRadius: BorderRadius.circular(MyRadius.md)),
               child: Text('Nota: ${pedido.nota}', style: MyType.bodySm),
             ),
           ],
           const SizedBox(height: MySpacing.sm),
           Row(
             children: [
-              Text('Total', style: MyType.labelLg),
+              Text('Productos', style: MyType.labelLg),
               const Spacer(),
               Text(Formato.pesos(pedido.subtotal), style: MyType.headlineSm.copyWith(color: MyColors.primary)),
             ],
           ),
           Text(
-            'Productos. El envio (${Formato.pesos(pedido.costoEnvio)}) lo cobra MODO YA.',
+            'El envío (${Formato.pesos(pedido.costoEnvio)}) lo cobra MODO YA.',
             style: MyType.bodySm.copyWith(color: MyColors.secondary),
           ),
-
-          if (!pedido.estado.esFinal && pedido.estado != EstadoPedido.enCamino) ...[
+          if (!pedido.estado.esFinal) ...[
             const SizedBox(height: MySpacing.md),
             switch (pedido.estado) {
-              EstadoPedido.pagado => Row(
+              EstadoPedido.pagado => Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: MySpacing.xs,
+                  runSpacing: MySpacing.xs,
                   children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () async {
-                          final motivo = await pedirTexto(
-                            context,
-                            titulo: 'Rechazar ${pedido.codigo}',
-                            label: 'Motivo (se lo decimos al cliente)',
-                            aceptar: 'Rechazar',
-                          );
-                          if (motivo != null && context.mounted) {
-                            await _hacer(context, () => repo.rechazar(pedido.id, motivo));
-                          }
-                        },
-                        child: const Text('Rechazar'),
-                      ),
+                    MyBoton(
+                      label: 'Rechazar',
+                      tipo: MyBotonTipo.secundario,
+                      onPressed: () async {
+                        final motivo = await pedirTexto(
+                          context,
+                          titulo: 'Rechazar ${pedido.codigo}',
+                          label: 'Motivo (se lo decimos al cliente)',
+                          aceptar: 'Rechazar',
+                        );
+                        if (motivo != null && context.mounted) {
+                          await _hacer(context, () => repo.rechazar(pedido.id, motivo));
+                        }
+                      },
                     ),
-                    const SizedBox(width: MySpacing.sm),
-                    Expanded(
-                      flex: 2,
-                      child: MyBotonAccion(
-                        label: 'Aceptar pedido',
-                        icon: Symbols.check,
-                        onPressed: () => _hacer(context, () => repo.aceptar(pedido.id)),
-                      ),
+                    MyBoton(
+                      label: 'Aceptar pedido',
+                      icon: Symbols.check,
+                      onPressed: () => _hacer(context, () => repo.aceptar(pedido.id)),
                     ),
                   ],
                 ),
@@ -222,23 +311,16 @@ class _TarjetaPedido extends ConsumerWidget {
                   icon: Symbols.sports_motorsports,
                   onPressed: () => _hacer(context, () => repo.avanzar(pedido.id, EstadoPedido.listo)),
                 ),
-              EstadoPedido.listo => pedido.envioId == null
+              EstadoPedido.listo || EstadoPedido.enCamino => pedido.envioId == null
                   ? const SizedBox.shrink()
-                  : OutlinedButton.icon(
-                      onPressed: () => context.push('/local/envio/${pedido.envioId}'),
-                      icon: const Icon(Symbols.near_me, size: 20),
-                      label: const Text('Ver el rider'),
+                  : MyBoton(
+                      label: pedido.estado == EstadoPedido.listo ? 'Ver el rider' : 'Seguir el envío',
+                      icon: Symbols.near_me,
+                      tipo: MyBotonTipo.secundario,
+                      onPressed: () => context.go('/local/envios/${pedido.envioId}'),
                     ),
               _ => const SizedBox.shrink(),
             },
-          ],
-          if (pedido.estado == EstadoPedido.enCamino && pedido.envioId != null) ...[
-            const SizedBox(height: MySpacing.sm),
-            TextButton.icon(
-              onPressed: () => context.push('/local/envio/${pedido.envioId}'),
-              icon: const Icon(Symbols.near_me, size: 18),
-              label: const Text('Seguir el envio'),
-            ),
           ],
         ],
       ),
