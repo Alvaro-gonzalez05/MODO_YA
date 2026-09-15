@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'tokens.dart';
-
 /// Tipografia de MODO YA.
 ///
 /// Dos familias, con roles bien separados:
@@ -21,7 +19,7 @@ abstract final class MyType {
         fontWeight: weight,
         height: height / size,
         letterSpacing: tracking == null ? null : tracking * size,
-        color: color ?? MyColors.onSurface,
+        color: color,
       );
 
   static TextStyle _vietnam({
@@ -36,7 +34,7 @@ abstract final class MyType {
         fontWeight: weight,
         height: height / size,
         letterSpacing: tracking == null ? null : tracking * size,
-        color: color ?? MyColors.onSurface,
+        color: color,
       );
 
   // --- Display / Headline (Outfit) ---------------------------------------

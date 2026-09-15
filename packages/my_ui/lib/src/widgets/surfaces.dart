@@ -12,7 +12,7 @@ class MyCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(MySpacing.cardInner),
     this.radius = MyRadius.card,
-    this.color = MyColors.surfaceContainerLowest,
+    this.color,
     this.shadows = MyShadows.card,
     this.onTap,
   });
@@ -20,7 +20,11 @@ class MyCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final double radius;
-  final Color color;
+
+  /// Color de fondo. Si es null, toma el de la tarjeta del tema ambiente
+  /// (`CardThemeData.color`), que cambia entre [MyTheme.dark] y
+  /// [MyTheme.claro] segun la pantalla.
+  final Color? color;
   final List<BoxShadow> shadows;
   final VoidCallback? onTap;
 
@@ -28,7 +32,7 @@ class MyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final decorated = DecoratedBox(
       decoration: BoxDecoration(
-        color: color,
+        color: color ?? Theme.of(context).cardTheme.color ?? MyColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(radius),
         boxShadow: shadows,
       ),
@@ -149,6 +153,7 @@ class MyEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final esquema = Theme.of(context).colorScheme;
     // Column en vez de Center: este estado suele ir dentro de un ListView, y
     // Center pide toda la altura disponible (infinita en un scroll).
     return Padding(
@@ -159,18 +164,18 @@ class MyEmptyState extends StatelessWidget {
           Container(
             width: 72,
             height: 72,
-            decoration: const BoxDecoration(
-              color: MyColors.secondaryContainer,
+            decoration: BoxDecoration(
+              color: esquema.secondaryContainer,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 32, color: MyColors.secondary),
+            child: Icon(icon, size: 32, color: esquema.onSurfaceVariant),
           ),
           const SizedBox(height: MySpacing.md),
           Text(title, style: MyType.headlineSm, textAlign: TextAlign.center),
           const SizedBox(height: MySpacing.xs),
           Text(
             message,
-            style: MyType.bodyMd.copyWith(color: MyColors.secondary),
+            style: MyType.bodyMd.copyWith(color: esquema.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
           if (action != null) ...[

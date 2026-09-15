@@ -18,7 +18,8 @@ class DireccionesPage extends ConsumerWidget {
     final direcciones = ref.watch(direccionesProvider);
     final elegida = ref.watch(direccionElegidaProvider);
 
-    return MyPagina(
+    return MyPantallaClara(
+      child: MyPagina(
       volver: () => context.canPop() ? context.pop() : context.go('/cliente'),
       rotulo: 'Entrega',
       titulo: 'Mis direcciones',
@@ -44,7 +45,7 @@ class DireccionesPage extends ConsumerWidget {
                   ref.read(direccionElegidaProvider.notifier).elegir(d.id);
                   context.pop();
                 },
-                color: d.id == elegida ? MyColors.primaryFixed : MyColors.surfaceContainerLowest,
+                color: d.id == elegida ? MyColors.primaryFixed : null,
                 child: Row(
                   children: [
                     Icon(
@@ -67,7 +68,7 @@ class DireccionesPage extends ConsumerWidget {
                           ),
                           Text(d.calle, style: MyType.bodyMd),
                           if (d.referencia != null)
-                            Text(d.referencia!, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                            Text(d.referencia!, style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario)),
                         ],
                       ),
                     ),
@@ -110,6 +111,7 @@ class DireccionesPage extends ConsumerWidget {
         ),
       ),
       ],
+      ),
     );
   }
 

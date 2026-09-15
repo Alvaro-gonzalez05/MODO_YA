@@ -211,7 +211,7 @@ class MyImagen extends StatelessWidget {
     this.alto,
     this.radio = MyRadius.md,
     this.icono = Symbols.image,
-    this.fondo = MyColors.surfaceContainerHigh,
+    this.fondo,
   });
 
   final String? url;
@@ -219,16 +219,20 @@ class MyImagen extends StatelessWidget {
   final double? alto;
   final double radio;
   final IconData icono;
-  final Color fondo;
+
+  /// Color de fondo del respaldo. Si es null, toma `surfaceContainerHigh`
+  /// del tema ambiente.
+  final Color? fondo;
 
   @override
   Widget build(BuildContext context) {
+    final esquema = Theme.of(context).colorScheme;
     final respaldo = Container(
       width: ancho,
       height: alto,
-      color: fondo,
+      color: fondo ?? esquema.surfaceContainerHigh,
       alignment: Alignment.center,
-      child: Icon(icono, size: 28, color: MyColors.secondary),
+      child: Icon(icono, size: 28, color: esquema.onSurfaceVariant),
     );
 
     return ClipRRect(

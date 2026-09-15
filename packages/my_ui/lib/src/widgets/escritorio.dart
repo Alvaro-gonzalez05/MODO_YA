@@ -105,6 +105,7 @@ class MyEncabezado extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final movil = context.esMovil;
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
 
     final textos = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,16 +113,15 @@ class MyEncabezado extends StatelessWidget {
         if (rotulo != null) ...[
           Row(
             children: [
-              Container(
-                width: 7,
-                height: 7,
-                decoration: const BoxDecoration(color: MyColors.primaryContainer, shape: BoxShape.circle),
+              const DecoratedBox(
+                decoration: BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
+                child: SizedBox(width: 7, height: 7),
               ),
               const SizedBox(width: MySpacing.xs),
               Flexible(
                 child: Text(
                   rotulo!.toUpperCase(),
-                  style: MyType.labelSm.copyWith(color: MyColors.secondary),
+                  style: MyType.labelSm.copyWith(color: onSurfaceVariant),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -135,7 +135,7 @@ class MyEncabezado extends StatelessWidget {
         ),
         if (bajada != null) ...[
           const SizedBox(height: MySpacing.xxs),
-          Text(bajada!, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+          Text(bajada!, style: MyType.bodyMd.copyWith(color: onSurfaceVariant)),
         ],
       ],
     );
@@ -196,7 +196,7 @@ class MyBoton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (fondo, texto) = switch (tipo) {
-      MyBotonTipo.principal => (MyColors.primary, Colors.white),
+      MyBotonTipo.principal => (MyColors.primary, MyColors.onPrimary),
       MyBotonTipo.secundario => (MyColors.secondaryContainer, MyColors.onSurface),
       MyBotonTipo.oscuro => (MyColors.dock, Colors.white),
       MyBotonTipo.peligro => (MyColors.errorContainer, MyColors.onErrorContainer),

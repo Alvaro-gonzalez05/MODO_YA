@@ -13,6 +13,7 @@ export 'src/widgets/controls.dart';
 export 'src/widgets/escritorio.dart';
 export 'src/widgets/formularios.dart';
 export 'src/widgets/mapa.dart';
+export 'src/widgets/marca.dart';
 export 'src/widgets/navigation.dart';
 export 'src/widgets/responsive.dart';
 export 'src/widgets/route_timeline.dart';

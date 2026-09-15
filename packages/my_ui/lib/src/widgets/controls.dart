@@ -128,25 +128,28 @@ class MyCircleIconButton extends StatelessWidget {
     required this.icon,
     this.onTap,
     this.size = 44,
-    this.background = MyColors.surfaceContainerLowest,
-    this.foreground = MyColors.onSurface,
+    this.background,
+    this.foreground,
     this.shadows = MyShadows.control,
   });
 
   final IconData icon;
   final VoidCallback? onTap;
   final double size;
-  final Color background;
-  final Color foreground;
+
+  /// Si es null, toma `surfaceContainerLowest`/`onSurface` del tema ambiente.
+  final Color? background;
+  final Color? foreground;
   final List<BoxShadow> shadows;
 
   @override
   Widget build(BuildContext context) {
+    final esquema = Theme.of(context).colorScheme;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: background,
+        color: background ?? esquema.surfaceContainerLowest,
         shape: BoxShape.circle,
         boxShadow: shadows,
       ),
@@ -156,7 +159,7 @@ class MyCircleIconButton extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: Icon(icon, size: size * 0.45, color: foreground),
+          child: Icon(icon, size: size * 0.45, color: foreground ?? esquema.onSurface),
         ),
       ),
     );

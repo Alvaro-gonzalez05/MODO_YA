@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
+import 'marca.dart';
 
 /// Un destino del dock inferior.
 class MyDockItem {
@@ -211,20 +212,7 @@ class _BrandMark extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 30,
-          height: 30,
-          decoration: BoxDecoration(
-            color: MyColors.primary,
-            borderRadius: BorderRadius.circular(9),
-          ),
-          child: const Icon(
-            Symbols.bolt,
-            size: 19,
-            color: MyColors.onPrimary,
-            fill: 1,
-          ),
-        ),
+        const MyLogoMark(size: 30),
         const SizedBox(width: MySpacing.xs),
         Text(
           'MODO YA',

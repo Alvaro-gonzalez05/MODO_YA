@@ -79,6 +79,26 @@ abstract final class MyColors {
   /// repartidor), no reemplaza al amarillo como color de marca.
   static const success = Color(0xFF3DDC84);
   static const successContainer = Color(0xFF16301F);
+
+  // --- Variante clara (flujo de pedidos: carrito, direcciones, seguimiento) --
+  //
+  // Splash y home se quedan con el negro dramatico de arriba. El flujo de
+  // pedidos en si (carrito, checkout, seguimiento) usa esta variante clara,
+  // como en las capturas de referencia originales: mas facil de leer en un
+  // flujo largo de compra.
+  static const claroFondo = Color(0xFFFAFAFB);
+  static const claroSuperficie = Color(0xFFFFFFFF);
+  static const claroSuperficieAlt = Color(0xFFF1F1F4);
+  static const claroBorde = Color(0xFFE6E6EC);
+  static const claroTexto = Color(0xFF17171A);
+  static const claroTextoSecundario = Color(0xFF5B6472);
+
+  /// Amarillo de marca oscurecido para texto sobre blanco: el amarillo puro
+  /// no tiene contraste suficiente para leerse (precios, montos).
+  static const claroAcento = Color(0xFF8A6100);
+
+  /// Rojo de error oscurecido para texto sobre blanco, mismo motivo.
+  static const claroError = Color(0xFFC22C2C);
 }
 
 /// Escala de espaciado (rem del export -> px logicos).

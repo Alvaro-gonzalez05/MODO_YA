@@ -49,18 +49,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 shrinkWrap: true,
                 padding: const EdgeInsets.all(MySpacing.screenEdge),
                 children: [
-                  Center(
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: MyColors.dock,
-                        borderRadius: BorderRadius.circular(22),
-                        boxShadow: MyShadows.dock,
-                      ),
-                      child: const Icon(Symbols.sports_motorsports, size: 38, color: MyColors.primaryFixedDim),
-                    ),
-                  ),
+                  const Center(child: MyLogoMark(size: 96)),
                   const SizedBox(height: MySpacing.md),
                   Text('MODO YA Rider', style: MyType.displayLg, textAlign: TextAlign.center),
                   Text('Conectate y empeza a ganar',

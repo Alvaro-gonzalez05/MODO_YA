@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
+import 'marca.dart';
 import 'navigation.dart';
 import 'responsive.dart';
 
@@ -352,19 +353,7 @@ class _LogoMarca extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [MyColors.primaryContainer, MyColors.primary],
-        ),
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: const Icon(Symbols.bolt, size: 26, color: MyColors.onPrimary, fill: 1),
-    );
+    return const MyLogoMark(size: 44);
   }
 }
 

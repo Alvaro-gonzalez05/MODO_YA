@@ -52,11 +52,13 @@ class _PedidoSeguimientoPageState extends ConsumerState<PedidoSeguimientoPage> {
     final pedido = ref.watch(pedidoProvider(widget.pedidoId));
     final seg = ref.watch(_seguimientoProvider(widget.pedidoId)).value;
 
-    return MyAsync(
-      valor: pedido,
-      datos: (p) => p == null
-          ? const MyEmptyState(title: 'Pedido no encontrado', message: 'Puede que ya no exista.')
-          : _Contenido(pedido: p, seguimiento: seg),
+    return MyPantallaClara(
+      child: MyAsync(
+        valor: pedido,
+        datos: (p) => p == null
+            ? const MyEmptyState(title: 'Pedido no encontrado', message: 'Puede que ya no exista.')
+            : _Contenido(pedido: p, seguimiento: seg),
+      ),
     );
   }
 }
@@ -117,7 +119,7 @@ class _Contenido extends ConsumerWidget {
           children: [
             MyBadge(titulo, tone: e.esFinal && e != EstadoPedido.entregado ? MyBadgeTone.danger : MyBadgeTone.ember, dot: !e.esFinal),
             const Spacer(),
-            Text('Pedido ${pedido.codigo}', style: MyType.labelMd.copyWith(color: MyColors.secondary)),
+            Text('Pedido ${pedido.codigo}', style: MyType.labelMd.copyWith(color: MyColors.claroTextoSecundario)),
           ],
         ),
         const SizedBox(height: MySpacing.sm),
@@ -128,10 +130,10 @@ class _Contenido extends ConsumerWidget {
             children: [
               Text('~${s?.minutosEstimados ?? pedido.minutosEstimados}', style: MyType.displayLg),
               const SizedBox(width: MySpacing.xxs),
-              Text('min', style: MyType.headlineSm.copyWith(color: MyColors.primary)),
+              Text('min', style: MyType.headlineSm.copyWith(color: MyColors.claroAcento)),
             ],
           ),
-        Text(bajada, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+        Text(bajada, style: MyType.bodyMd.copyWith(color: MyColors.claroTextoSecundario)),
         const SizedBox(height: MySpacing.lg),
 
         if (!e.esFinal || e == EstadoPedido.entregado) ...[
@@ -158,11 +160,14 @@ class _Contenido extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: Text('Código de entrega', style: MyType.labelLg)),
+                          Expanded(
+                              child: Text('Código de entrega',
+                                  style: MyType.labelLg.copyWith(color: MyColors.onPrimaryFixed))),
                           Text(s!.codigoEntrega!, style: MyType.headlineLg.copyWith(color: MyColors.primary, letterSpacing: 4)),
                         ],
                       ),
-                      Text('Decile este código al rider cuando te entregue.', style: MyType.bodySm),
+                      Text('Decile este código al rider cuando te entregue.',
+                          style: MyType.bodySm.copyWith(color: MyColors.onPrimaryFixedVariant)),
                     ],
                   ),
                 ),
@@ -188,7 +193,7 @@ class _Contenido extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(s!.repartidorNombre!, style: MyType.headlineSm),
-                      Text(s.vehiculo?.label ?? '', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                      Text(s.vehiculo?.label ?? '', style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario)),
                     ],
                   ),
                 ),
@@ -208,7 +213,7 @@ class _Contenido extends ConsumerWidget {
               leading: const Icon(Symbols.receipt_long, color: MyColors.primary),
               title: Text('Detalle del pedido', style: MyType.labelLg),
               subtitle: Text('${pedido.cantidadProductos} productos · ${Formato.pesos(pedido.total)}',
-                  style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                  style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario)),
               childrenPadding: const EdgeInsets.fromLTRB(MySpacing.md, 0, MySpacing.md, MySpacing.md),
               children: [
                 for (final i in pedido.items)
@@ -223,7 +228,7 @@ class _Contenido extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(i.nombreProducto, style: MyType.bodyMd),
-                              for (final o in i.opciones) Text(o, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                              for (final o in i.opciones) Text(o, style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario)),
                             ],
                           ),
                         ),
@@ -260,7 +265,7 @@ class _Contenido extends ConsumerWidget {
                 if (context.mounted) mostrarError(context, err);
               }
             },
-            style: TextButton.styleFrom(foregroundColor: MyColors.error),
+            style: TextButton.styleFrom(foregroundColor: MyColors.claroError),
             icon: const Icon(Symbols.cancel, size: 18),
             label: const Text('Cancelar pedido'),
           ),
@@ -287,7 +292,7 @@ class _Pasos extends StatelessWidget {
     bool hecho(EstadoPedido p) => estado.index >= p.index;
 
     return MyCard(
-      color: MyColors.surfaceContainerLow,
+      color: MyColors.claroSuperficieAlt,
       shadows: const [],
       padding: const EdgeInsets.all(MySpacing.md),
       child: Row(
@@ -295,7 +300,7 @@ class _Pasos extends StatelessWidget {
           for (var i = 0; i < pasos.length; i++) ...[
             if (i > 0)
               Expanded(
-                child: Container(height: 2, color: hecho(pasos[i].$3) ? MyColors.primary : MyColors.surfaceContainerHighest),
+                child: Container(height: 2, color: hecho(pasos[i].$3) ? MyColors.primary : MyColors.claroBorde),
               ),
             Column(
               children: [
@@ -303,13 +308,13 @@ class _Pasos extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: hecho(pasos[i].$3) ? MyColors.primary : MyColors.surfaceContainerHigh,
+                    color: hecho(pasos[i].$3) ? MyColors.primary : MyColors.claroBorde,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(pasos[i].$2, size: 16, color: hecho(pasos[i].$3) ? Colors.white : MyColors.secondary),
+                  child: Icon(pasos[i].$2, size: 16, color: hecho(pasos[i].$3) ? MyColors.onPrimary : MyColors.claroTextoSecundario),
                 ),
                 const SizedBox(height: MySpacing.xxs),
-                Text(pasos[i].$1, style: MyType.labelSm.copyWith(color: hecho(pasos[i].$3) ? MyColors.primary : MyColors.secondary)),
+                Text(pasos[i].$1, style: MyType.labelSm.copyWith(color: hecho(pasos[i].$3) ? MyColors.claroAcento : MyColors.claroTextoSecundario)),
               ],
             ),
           ],
@@ -331,13 +336,13 @@ class _Linea extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: MySpacing.xxs),
         child: Row(
           children: [
-            Text(label, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+            Text(label, style: MyType.bodyMd.copyWith(color: MyColors.claroTextoSecundario)),
             const SizedBox(width: MySpacing.md),
             Expanded(
               child: Text(
                 valor,
                 textAlign: TextAlign.right,
-                style: destacado ? MyType.headlineSm.copyWith(color: MyColors.primary) : MyType.labelLg,
+                style: destacado ? MyType.headlineSm.copyWith(color: MyColors.claroAcento) : MyType.labelLg,
               ),
             ),
           ],

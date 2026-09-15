@@ -59,19 +59,21 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
         : context.go(carrito.comercio == null ? '/cliente' : '/cliente/local/${carrito.comercio!.id}');
 
     if (carrito.vacio) {
-      return MyPagina(
-        volver: () => context.go('/cliente'),
-        titulo: 'Tu pedido',
-        conDock: false,
-        children: const [
-          MyCard(
-            child: MyEmptyState(
-              icon: Symbols.shopping_bag,
-              title: 'Tu carrito está vacío',
-              message: 'Entrá a un local y agregá lo que quieras.',
+      return MyPantallaClara(
+        child: MyPagina(
+          volver: () => context.go('/cliente'),
+          titulo: 'Tu pedido',
+          conDock: false,
+          children: const [
+            MyCard(
+              child: MyEmptyState(
+                icon: Symbols.shopping_bag,
+                title: 'Tu carrito está vacío',
+                message: 'Entrá a un local y agregá lo que quieras.',
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
@@ -98,12 +100,12 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
                       children: [
                         Text(i.producto.nombre, style: MyType.labelLg),
                         if (i.elegidas.isNotEmpty)
-                          Text(i.elegidas.map((o) => o.nombre).join(', '), style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                          Text(i.elegidas.map((o) => o.nombre).join(', '), style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario)),
                         if (i.nota != null) Text('"${i.nota}"', style: MyType.bodySm.copyWith(fontStyle: FontStyle.italic)),
                         const SizedBox(height: MySpacing.xxs),
                         Container(
                           decoration: BoxDecoration(
-                            color: MyColors.surfaceContainerLow,
+                            color: MyColors.claroSuperficieAlt,
                             borderRadius: BorderRadius.circular(MyRadius.full),
                           ),
                           child: Row(
@@ -146,7 +148,7 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
                 const MyIconoCaja(Symbols.add_location, circular: true),
                 const SizedBox(width: MySpacing.sm),
                 Expanded(child: Text('Agregá tu dirección', style: MyType.labelLg)),
-                const Icon(Symbols.chevron_right, color: MyColors.secondary),
+                const Icon(Symbols.chevron_right, color: MyColors.claroTextoSecundario),
               ],
             ),
           )
@@ -165,7 +167,7 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
                 if (direccion.referencia != null)
                   Padding(
                     padding: const EdgeInsets.only(top: MySpacing.xxs, left: 28),
-                    child: Text('"${direccion.referencia}"', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                    child: Text('"${direccion.referencia}"', style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario)),
                   ),
                 const SizedBox(height: MySpacing.sm),
                 MyMapaVista(alto: 130, marcadores: [MyMarcador(punto: LatLng(direccion.lat, direccion.lng), icono: Symbols.home)]),
@@ -180,22 +182,22 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
       decoration: const InputDecoration(
         hintText: 'Nota para el local o el rider (opcional)',
         prefixIcon: Icon(Symbols.edit_note, size: 20),
-        fillColor: MyColors.surfaceContainerLowest,
+        fillColor: MyColors.claroSuperficieAlt,
       ),
     );
 
     final pago = MyCard(
-      color: MyColors.secondaryContainer,
+      color: MyColors.claroSuperficieAlt,
       shadows: const [],
       child: Row(
         children: [
-          const Icon(Symbols.payments, color: MyColors.onSecondaryFixedVariant),
+          const Icon(Symbols.payments, color: MyColors.claroTextoSecundario),
           const SizedBox(width: MySpacing.sm),
           Expanded(
             child: Text(
               'Te confirmamos cómo pagar apenas recibamos el pedido. '
               'El local empieza a prepararlo cuando el pago quede confirmado.',
-              style: MyType.bodySm.copyWith(color: MyColors.onSecondaryFixed),
+              style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario),
             ),
           ),
         ],
@@ -222,13 +224,13 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
             children: [
               Text('Total', style: MyType.headlineMd),
               const Spacer(),
-              Text(Formato.pesos(carrito.subtotal + (cot?.costoEnvio ?? 0)), style: MyType.priceHero.copyWith(color: MyColors.primary)),
+              Text(Formato.pesos(carrito.subtotal + (cot?.costoEnvio ?? 0)), style: MyType.priceHero.copyWith(color: MyColors.claroAcento)),
             ],
           ),
           if (cotAsync?.hasError ?? false)
             Padding(
               padding: const EdgeInsets.only(top: MySpacing.xs),
-              child: Text('${cotAsync!.error}', style: MyType.bodySm.copyWith(color: MyColors.error)),
+              child: Text('${cotAsync!.error}', style: MyType.bodySm.copyWith(color: MyColors.claroError)),
             ),
         ],
       ),
@@ -245,7 +247,7 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
         if (!(carrito.comercio?.abierto ?? true))
           Padding(
             padding: const EdgeInsets.only(top: MySpacing.xs),
-            child: Text('El local cerró. Probá más tarde.', style: MyType.bodySm.copyWith(color: MyColors.error), textAlign: TextAlign.center),
+            child: Text('El local cerró. Probá más tarde.', style: MyType.bodySm.copyWith(color: MyColors.claroError), textAlign: TextAlign.center),
           ),
       ],
     );
@@ -274,25 +276,27 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
       confirmar,
     ];
 
-    return MyPagina(
-      volver: volver,
-      rotulo: carrito.comercio!.nombre,
-      titulo: 'Tu pedido',
-      bajada: 'Revisá y confirmá',
-      anchoMaximo: 1180,
-      conDock: false,
-      children: context.esMovil
-          ? [...izquierda, espacio, ...derecha]
-          : [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(flex: 3, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: izquierda)),
-                  const SizedBox(width: MySpacing.lg),
-                  Expanded(flex: 2, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: derecha)),
-                ],
-              ),
-            ],
+    return MyPantallaClara(
+      child: MyPagina(
+        volver: volver,
+        rotulo: carrito.comercio!.nombre,
+        titulo: 'Tu pedido',
+        bajada: 'Revisá y confirmá',
+        anchoMaximo: 1180,
+        conDock: false,
+        children: context.esMovil
+            ? [...izquierda, espacio, ...derecha]
+            : [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 3, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: izquierda)),
+                    const SizedBox(width: MySpacing.lg),
+                    Expanded(flex: 2, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: derecha)),
+                  ],
+                ),
+              ],
+      ),
     );
   }
 }
@@ -308,7 +312,7 @@ class _Linea extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: MySpacing.xs),
         child: Row(
           children: [
-            Text(label, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+            Text(label, style: MyType.bodyMd.copyWith(color: MyColors.claroTextoSecundario)),
             const Spacer(),
             Text(valor, style: MyType.labelLg),
           ],
