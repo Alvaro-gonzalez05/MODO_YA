@@ -1,0 +1,20 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 375, "h": 812, "title": "1. Splash" },
+    { "file": "Home.dc.html", "x": 475, "y": 0, "w": 375, "h": 812, "title": "2. Home" },
+    { "file": "StoreDetail.dc.html", "x": 950, "y": 0, "w": 375, "h": 812, "title": "3. Detalle de local" },
+    { "file": "Cart.dc.html", "x": 1425, "y": 0, "w": 375, "h": 812, "title": "4. Carrito" },
+    { "file": "Checkout.dc.html", "x": 1900, "y": 0, "w": 375, "h": 812, "title": "5. Dirección y pago" },
+    { "file": "Confirmation.dc.html", "x": 2375, "y": 0, "w": 375, "h": 812, "title": "6. Confirmación" },
+    { "file": "Tracking.dc.html", "x": 2850, "y": 0, "w": 375, "h": 812, "title": "7. Seguimiento" },
+    { "file": "Rating.dc.html", "x": 3325, "y": 0, "w": 375, "h": 812, "title": "8. Entregado + calificación" },
+    { "file": "Flyer.dc.html", "x": 3800, "y": 0, "w": 375, "h": 812, "title": "9. Flyer promocional" },
+    { "file": "Logo.dc.html", "x": 0, "y": 962, "w": 300, "h": 220, "title": "Componente: Logo" },
+    { "file": "BottomNav.dc.html", "x": 380, "y": 962, "w": 375, "h": 140, "title": "Componente: Nav inferior" }
+  ],
+  "annotations": [
+    { "id": "flow-label", "x": 0, "y": -60, "w": 500, "text": "Flujo de usuario — MODO YA" },
+    { "id": "components-label", "x": 0, "y": 902, "w": 500, "text": "Componentes compartidos" }
+  ],
+  "launch": { "view": "canvas" }
+}

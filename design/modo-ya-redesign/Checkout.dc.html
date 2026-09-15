@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Manrope:wght@500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #FFC800; }
+    .cta { transition: filter .15s ease, transform .1s ease; }
+    .cta:hover { filter: brightness(1.06); }
+    .cta:active { filter: brightness(0.92); transform: translateY(1px); }
+    .payrow:hover { border-color: rgba(255,255,255,0.2); }
+  </style>
+</helmet>
+<div style="width:375px; height:812px; background:#0D0D0D; font-family:'Manrope',sans-serif; color:#fff; box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden;">
+
+  <div style="display:flex; align-items:center; gap:14px; padding:22px 20px 6px 20px;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:18px;">Dirección y pago</span>
+  </div>
+
+  <div style="flex:1; overflow:hidden; padding:16px 20px 0 20px; display:flex; flex-direction:column; gap:20px;">
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <span style="font-size:12.5px; font-weight:800; color:#75757D; text-transform:uppercase; letter-spacing:0.6px;">Dirección de entrega</span>
+      <div style="display:flex; align-items:center; gap:12px; padding:14px; border-radius:16px; background:#151517; border:1px solid rgba(255,255,255,0.06);">
+        <div style="width:38px; height:38px; border-radius:12px; background:rgba(255,200,0,0.12); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFC800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.5-7-11.5A7 7 0 0119 9.5C19 14.5 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:14px; font-weight:700;">Pública 14, casa 1161</div>
+          <div style="font-size:12.5px; color:#8C8C94; font-weight:500;">B° Mechenquil, Malargüe</div>
+        </div>
+        <a href="#" style="font-size:13px; font-weight:700; text-decoration:none;">Cambiar</a>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <span style="font-size:12.5px; font-weight:800; color:#75757D; text-transform:uppercase; letter-spacing:0.6px;">Método de pago</span>
+
+      <div class="payrow" style="display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:14px; background:#151517; border:1.5px solid #FFC800;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.2"/><path d="M3 10.5h18"/><path d="M7 15h4"/></svg>
+        <span style="flex:1; font-size:13.5px; font-weight:700;">Tarjeta de crédito o débito</span>
+        <div style="width:20px; height:20px; border-radius:50%; background:#FFC800; display:flex; align-items:center; justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#141208" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 6"/></svg></div>
+      </div>
+
+      <div class="payrow" style="display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:14px; background:#151517; border:1.5px solid transparent;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B9B9C2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l8-5 8 5"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/></svg>
+        <span style="flex:1; font-size:13.5px; font-weight:700; color:#D6D6DA;">Mercado Pago</span>
+        <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid rgba(255,255,255,0.22);"></div>
+      </div>
+
+      <div class="payrow" style="display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:14px; background:#151517; border:1.5px solid transparent;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B9B9C2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H4M4 12l5-5M4 12l5 5"/></svg>
+        <span style="flex:1; font-size:13.5px; font-weight:700; color:#D6D6DA;">Transferencia</span>
+        <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid rgba(255,255,255,0.22);"></div>
+      </div>
+
+      <div class="payrow" style="display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:14px; background:#151517; border:1.5px solid transparent;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B9B9C2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5A2.5 2.5 0 016.5 5H18a2 2 0 012 2v2"/><rect x="3" y="8.5" width="18" height="11" rx="2.3"/><circle cx="16.5" cy="14" r="1.1" fill="#B9B9C2" stroke="none"/></svg>
+        <span style="flex:1; font-size:13.5px; font-weight:700; color:#D6D6DA;">Saldo en la app <span style="color:#6B6B74; font-weight:600;">$0</span></span>
+        <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid rgba(255,255,255,0.22);"></div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:9px;">
+      <span style="font-size:12.5px; font-weight:800; color:#75757D; text-transform:uppercase; letter-spacing:0.6px;">Resumen del pedido</span>
+      <div style="display:flex; justify-content:space-between; font-size:13.5px; color:#8C8C94; font-weight:600;"><span>Productos</span><span style="color:#D6D6DA;">$13.500</span></div>
+      <div style="display:flex; justify-content:space-between; font-size:13.5px; color:#8C8C94; font-weight:600;"><span>Envío</span><span style="color:#D6D6DA;">$3.000</span></div>
+      <div style="height:1px; background:rgba(255,255,255,0.08); margin:2px 0;"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:16.5px;">Total</span><span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:19px; color:#FFC800;">$16.500</span></div>
+    </div>
+  </div>
+
+  <div style="padding:16px 20px 26px 20px;">
+    <button class="cta" style="width:100%; height:56px; border:none; border-radius:28px; background:#FFC800; box-shadow:0 10px 24px rgba(255,200,0,0.25); font-family:'Baloo 2',sans-serif; font-weight:700; font-size:16.5px; color:#141208; cursor:pointer;">Confirmar pedido</button>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

@@ -261,7 +261,7 @@ class _RequiereAtencion extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'Todo en orden. Si pasa algo que necesite tu intervención, aparece acá.',
-                      style: MyType.bodyMd.copyWith(color: const Color(0xFF0C5138)),
+                      style: MyType.bodyMd.copyWith(color: MyColors.success),
                     ),
                   ),
                 ],

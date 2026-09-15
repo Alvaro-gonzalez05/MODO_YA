@@ -56,7 +56,7 @@ class AppModoYa extends ConsumerWidget {
     return MaterialApp.router(
       title: 'MODO YA',
       debugShowCheckedModeBanner: false,
-      theme: MyTheme.light,
+      theme: MyTheme.dark,
       routerConfig: ref.watch(routerProvider),
       // Aviso de version nueva, encima de todas las pantallas.
       builder: (context, child) => MyAvisoActualizacion(
@@ -85,7 +85,7 @@ class _ErrorDeArranque extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: MyTheme.light,
+      theme: MyTheme.dark,
       home: Scaffold(
         body: MyEmptyState(
           title: 'La app no esta configurada',

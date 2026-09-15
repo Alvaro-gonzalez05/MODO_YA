@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Manrope:wght@500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; }
+    .addbtn { transition: filter .15s ease, transform .1s ease; }
+    .addbtn:hover { filter: brightness(1.08); }
+    .addbtn:active { filter: brightness(0.9); transform: scale(0.94); }
+  </style>
+</helmet>
+<div style="width:375px; height:812px; background:#0D0D0D; font-family:'Manrope',sans-serif; color:#fff; box-sizing:border-box; overflow:hidden; display:flex; flex-direction:column;">
+
+  <!-- header image -->
+  <div style="position:relative; height:196px; flex-shrink:0;">
+    <svg width="375" height="196" viewBox="0 0 375 196" style="position:absolute; inset:0;">
+      <rect width="375" height="196" fill="#1E1E22"/>
+      <ellipse cx="190" cy="150" rx="180" ry="46" fill="#19191C"/>
+      <ellipse cx="182" cy="128" rx="90" ry="42" fill="#D9A15A"/>
+      <g fill="#B97F3E" opacity="0.5"><circle cx="150" cy="118" r="3.4"/><circle cx="168" cy="140" r="3"/><circle cx="200" cy="112" r="3.2"/><circle cx="216" cy="136" r="3"/><circle cx="182" cy="104" r="2.8"/></g>
+      <g fill="#F2C230"><rect x="242" y="86" width="13" height="46" rx="6"/><rect x="260" y="98" width="13" height="38" rx="6"/><rect x="278" y="86" width="13" height="48" rx="6"/></g>
+      <circle cx="112" cy="98" r="20" fill="#fff"/><circle cx="116" cy="94" r="10" fill="#F5B324"/>
+      <rect width="375" height="196" fill="url(#fade)"/>
+      <defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stop-color="#0D0D0D" stop-opacity="0"/><stop offset="1" stop-color="#0D0D0D" stop-opacity="0.9"/></linearGradient></defs>
+    </svg>
+    <div style="position:absolute; top:18px; left:18px; width:38px; height:38px; border-radius:12px; background:rgba(13,13,13,0.55); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </div>
+    <div style="position:absolute; top:18px; right:18px; width:38px; height:38px; border-radius:12px; background:rgba(13,13,13,0.55); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.1);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-9.6-9A5.3 5.3 0 0112 5.6 5.3 5.3 0 0121.6 11c-2.1 4.4-9.6 9-9.6 9z"/></svg>
+    </div>
+  </div>
+
+  <div style="flex:1; overflow:hidden; padding:16px 20px 0 20px; display:flex; flex-direction:column; gap:14px;">
+
+    <!-- store info -->
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:22px;">Family Food</span>
+      <span style="font-size:12.5px; color:#8C8C94; font-weight:600;">Rotisería · Milanesas · Comida casera</span>
+      <div style="display:flex; align-items:center; gap:10px; margin-top:2px;">
+        <span style="display:flex; align-items:center; gap:4px; font-size:13px; font-weight:700;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFC800"><path d="M12 2.5l2.9 6 6.6.7-4.9 4.6 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.6 6.6-.7z"/></svg>
+          4.8 <span style="color:#75757D; font-weight:600;">(120)</span>
+        </span>
+        <span style="display:flex; align-items:center; gap:4px; font-size:13px; color:#8C8C94; font-weight:600;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8C8C94" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>30-45 min
+        </span>
+        <span style="font-size:13px; color:#FFC800; font-weight:700;">Envío $3.000</span>
+      </div>
+    </div>
+
+    <!-- secondary tabs -->
+    <div style="display:flex; gap:20px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+      <span style="font-size:13.5px; font-weight:700; color:#fff;">Menú</span>
+      <span style="font-size:13.5px; font-weight:700; color:#6B6B74;">Opiniones</span>
+      <span style="font-size:13.5px; font-weight:700; color:#6B6B74;">Información</span>
+    </div>
+
+    <!-- menu category chips -->
+    <div style="display:flex; gap:8px;">
+      <div style="padding:8px 16px; border-radius:999px; background:#FFC800;"><span style="font-size:12.5px; font-weight:700; color:#141208;">Milanesas</span></div>
+      <div style="padding:8px 16px; border-radius:999px; border:1px solid rgba(255,255,255,0.14);"><span style="font-size:12.5px; font-weight:700; color:#B9B9C2;">Pastas</span></div>
+      <div style="padding:8px 14px; border-radius:999px; border:1px solid rgba(255,255,255,0.14);"><span style="font-size:12.5px; font-weight:700; color:#B9B9C2;">Platos del día</span></div>
+      <div style="padding:8px 14px; border-radius:999px; border:1px solid rgba(255,255,255,0.14);"><span style="font-size:12.5px; font-weight:700; color:#B9B9C2;">Hamburguesas</span></div>
+    </div>
+
+    <!-- products -->
+    <div style="display:flex; flex-direction:column; gap:12px;">
+
+      <div style="display:flex; gap:14px; align-items:center;">
+        <svg width="64" height="64" viewBox="0 0 80 80" style="border-radius:16px; flex-shrink:0;">
+          <rect width="80" height="80" rx="16" fill="#1E1E22"/>
+          <ellipse cx="40" cy="52" rx="26" ry="11" fill="#2A2A2F"/>
+          <ellipse cx="38" cy="47" rx="21" ry="10.5" fill="#D9A15A"/>
+          <g fill="#B97F3E" opacity="0.5"><circle cx="30" cy="45" r="1.2"/><circle cx="44" cy="43" r="1.1"/><circle cx="47" cy="49" r="1"/></g>
+          <circle cx="22" cy="35" r="6" fill="#fff"/><circle cx="23" cy="34" r="2.9" fill="#F5B324"/>
+        </svg>
+        <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+          <span style="font-size:14.5px; font-weight:700;">Milanesa a caballo</span>
+          <span style="font-size:12px; color:#75757D; font-weight:500;">Milanesa de carne, huevo frito y papas</span>
+          <span style="font-size:14.5px; font-weight:800; color:#FFC800; margin-top:2px;">$7.000</span>
+        </div>
+        <div class="addbtn" style="width:32px; height:32px; border-radius:50%; background:#FFC800; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141208" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:14px; align-items:center;">
+        <svg width="64" height="64" viewBox="0 0 80 80" style="border-radius:16px; flex-shrink:0;">
+          <rect width="80" height="80" rx="16" fill="#1E1E22"/>
+          <ellipse cx="40" cy="52" rx="26" ry="11" fill="#2A2A2F"/>
+          <ellipse cx="38" cy="47" rx="21" ry="10.5" fill="#E0AE66"/>
+          <g fill="#B97F3E" opacity="0.5"><circle cx="30" cy="45" r="1.2"/><circle cx="44" cy="43" r="1.1"/></g>
+          <g stroke="#F2C230" stroke-width="2.2" stroke-linecap="round"><path d="M52 40c4 3 4 9 0 12"/><path d="M56 37c6 4.5 6 13.5 0 18"/></g>
+        </svg>
+        <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+          <span style="font-size:14.5px; font-weight:700;">Milanesa de pollo con fideos</span>
+          <span style="font-size:12px; color:#75757D; font-weight:500;">Milanesa de pollo con fideos al pesto</span>
+          <span style="font-size:14.5px; font-weight:800; color:#FFC800; margin-top:2px;">$7.000</span>
+        </div>
+        <div class="addbtn" style="width:32px; height:32px; border-radius:50%; background:#FFC800; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141208" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:14px; align-items:center;">
+        <svg width="64" height="64" viewBox="0 0 80 80" style="border-radius:16px; flex-shrink:0;">
+          <rect width="80" height="80" rx="16" fill="#1E1E22"/>
+          <ellipse cx="40" cy="52" rx="26" ry="11" fill="#2A2A2F"/>
+          <ellipse cx="36" cy="47" rx="17" ry="9.5" fill="#8B4A2E"/>
+          <g stroke="#6B3620" stroke-width="1.6"><path d="M27 43l6 6"/><path d="M33 42l6 6"/><path d="M39 43l5 5"/></g>
+          <path d="M50 50c5-2 9 1 9 5s-4 6-9 4c-4-2-3-7 0-9z" fill="#EDE6D8"/>
+        </svg>
+        <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+          <span style="font-size:14.5px; font-weight:700;">Bife a la criolla con puré</span>
+          <span style="font-size:12px; color:#75757D; font-weight:500;">Bife de carne a la criolla con puré casero</span>
+          <span style="font-size:14.5px; font-weight:800; color:#FFC800; margin-top:2px;">$7.000</span>
+        </div>
+        <div class="addbtn" style="width:32px; height:32px; border-radius:50%; background:#FFC800; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141208" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:14px; align-items:center;">
+        <svg width="64" height="64" viewBox="0 0 80 80" style="border-radius:16px; flex-shrink:0;">
+          <rect width="80" height="80" rx="16" fill="#1E1E22"/>
+          <ellipse cx="40" cy="52" rx="26" ry="11" fill="#2A2A2F"/>
+          <ellipse cx="34" cy="47" rx="16" ry="9" fill="#7A3E28"/>
+          <g fill="#D9A15A"><rect x="52" y="42" width="6" height="12" rx="2" transform="rotate(-12 55 48)"/><rect x="58" y="45" width="6" height="11" rx="2" transform="rotate(8 61 50)"/><rect x="47" y="48" width="6" height="11" rx="2" transform="rotate(-4 50 53)"/></g>
+          <path d="M22 40c2-3 6-2 6 1s-3 5-6 3z" fill="#4E7A3E"/>
+        </svg>
+        <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+          <span style="font-size:14.5px; font-weight:700;">Lomo al plato con papas</span>
+          <span style="font-size:12px; color:#75757D; font-weight:500;">Lomo de carne al plato con papas doradas</span>
+          <span style="font-size:14.5px; font-weight:800; color:#FFC800; margin-top:2px;">$7.000</span>
+        </div>
+        <div class="addbtn" style="width:32px; height:32px; border-radius:50%; background:#FFC800; display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141208" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

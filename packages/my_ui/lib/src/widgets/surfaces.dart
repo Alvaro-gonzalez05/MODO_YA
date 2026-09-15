@@ -48,10 +48,12 @@ class MyCard extends StatelessWidget {
   }
 }
 
-/// Tarjeta hero: fondo ember con degrade y brillo propio.
+/// Tarjeta hero: fondo oscuro con tinte ambar y brillo amarillo propio.
 ///
 /// Es el bloque de maxima jerarquia de cada pantalla (el "Pedir Cadete
 /// Express" del inicio del comercio, el resumen de ganancia del cadete).
+/// El texto que va adentro es blanco: por eso el fondo se mantiene oscuro
+/// (el amarillo de marca queda solo como brillo/acento, no como relleno).
 class MyHeroCard extends StatelessWidget {
   const MyHeroCard({
     super.key,
@@ -69,7 +71,7 @@ class MyHeroCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [MyColors.primaryContainer, MyColors.primary],
+          colors: [MyColors.primaryContainer, MyColors.surfaceContainerHigh],
         ),
         borderRadius: BorderRadius.circular(MyRadius.hero),
         boxShadow: MyShadows.hero,

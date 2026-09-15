@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Manrope:wght@500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #FFC800; }
+    .cta { transition: filter .15s ease, transform .1s ease; }
+    .cta:hover { filter: brightness(1.06); }
+    .cta:active { filter: brightness(0.92); transform: translateY(1px); }
+    .cta-outline:hover { background: rgba(255,255,255,0.06); }
+  </style>
+</helmet>
+<div style="width:375px; height:812px; background:#0D0D0D; font-family:'Manrope',sans-serif; color:#fff; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; overflow:hidden; padding:0 24px;">
+
+  <div style="flex:1;"></div>
+
+  <div style="position:relative; width:130px; height:130px; display:flex; align-items:center; justify-content:center; margin-bottom:28px;">
+    <div style="position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle, rgba(255,200,0,0.25) 0%, rgba(255,200,0,0) 70%);"></div>
+    <div style="width:96px; height:96px; border-radius:50%; background:#FFC800; display:flex; align-items:center; justify-content:center; box-shadow:0 12px 30px rgba(255,200,0,0.3);">
+      <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#141208" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 6"/></svg>
+    </div>
+  </div>
+
+  <span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:23px; text-align:center;">¡Pedido confirmado!</span>
+  <span style="font-size:14px; color:#9A9AA4; font-weight:600; text-align:center; margin-top:8px; max-width:260px; line-height:1.4;">Tu pedido ya fue enviado al restaurante.</span>
+
+  <div style="width:100%; margin-top:28px; display:flex; align-items:center; gap:14px; padding:16px; border-radius:18px; background:#151517; border:1px solid rgba(255,255,255,0.06);">
+    <svg width="46" height="46" viewBox="0 0 80 80" style="border-radius:13px; flex-shrink:0;">
+      <rect width="80" height="80" rx="16" fill="#1E1E22"/>
+      <ellipse cx="40" cy="52" rx="26" ry="11" fill="#2A2A2F"/>
+      <ellipse cx="38" cy="47" rx="21" ry="10.5" fill="#D9A15A"/>
+      <circle cx="22" cy="35" r="6" fill="#fff"/><circle cx="23" cy="34" r="2.9" fill="#F5B324"/>
+    </svg>
+    <div style="flex:1;">
+      <div style="font-size:14.5px; font-weight:700;">Family Food</div>
+      <div style="font-size:12px; color:#75757D; font-weight:600; margin-top:2px;">N° de pedido: #1258 · Total: $16.500</div>
+    </div>
+  </div>
+  <a href="#" style="align-self:flex-start; font-size:13px; font-weight:700; text-decoration:none; margin-top:10px;">Ver detalle &gt;</a>
+
+  <div style="flex:1;"></div>
+
+  <div style="width:100%; display:flex; flex-direction:column; gap:12px; margin-bottom:36px;">
+    <button class="cta" style="width:100%; height:56px; border:none; border-radius:28px; background:#FFC800; box-shadow:0 10px 24px rgba(255,200,0,0.25); font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15.5px; color:#141208; cursor:pointer;">Ver seguimiento</button>
+    <button class="cta-outline" style="width:100%; height:56px; border-radius:28px; background:transparent; border:1.5px solid rgba(255,255,255,0.24); font-family:'Baloo 2',sans-serif; font-weight:700; font-size:15.5px; color:#fff; cursor:pointer;">Volver al inicio</button>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

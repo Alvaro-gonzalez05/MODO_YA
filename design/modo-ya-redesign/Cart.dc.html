@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Manrope:wght@500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; }
+    .cta { transition: filter .15s ease, transform .1s ease; }
+    .cta:hover { filter: brightness(1.06); }
+    .cta:active { filter: brightness(0.92); transform: translateY(1px); }
+    .step { transition: background .15s ease; }
+    .step:hover { background: rgba(255,255,255,0.12); }
+  </style>
+</helmet>
+<div style="width:375px; height:812px; background:#0D0D0D; font-family:'Manrope',sans-serif; color:#fff; box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden;">
+
+  <div style="display:flex; align-items:center; gap:14px; padding:22px 20px 6px 20px;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    <span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:18px;">Tu pedido</span>
+  </div>
+
+  <div style="flex:1; overflow:hidden; padding:14px 20px 0 20px; display:flex; flex-direction:column; gap:16px;">
+
+    <div style="display:flex; flex-direction:column; gap:14px;">
+
+      <div style="display:flex; gap:12px; align-items:center;">
+        <svg width="52" height="52" viewBox="0 0 80 80" style="border-radius:14px; flex-shrink:0;">
+          <rect width="80" height="80" rx="16" fill="#1E1E22"/>
+          <ellipse cx="40" cy="52" rx="26" ry="11" fill="#2A2A2F"/>
+          <ellipse cx="38" cy="47" rx="21" ry="10.5" fill="#D9A15A"/>
+          <circle cx="22" cy="35" r="6" fill="#fff"/><circle cx="23" cy="34" r="2.9" fill="#F5B324"/>
+        </svg>
+        <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+          <span style="font-size:14.5px; font-weight:700;">Milanesa a caballo</span>
+          <span style="font-size:14px; font-weight:800; color:#FFC800;">$7.000</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; background:#17171A; border-radius:999px; padding:5px 6px; border:1px solid rgba(255,255,255,0.07);">
+          <div class="step" style="width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg></div>
+          <span style="font-size:13.5px; font-weight:700; width:12px; text-align:center;">1</span>
+          <div class="step" style="width:24px; height:24px; border-radius:50%; background:#FFC800; display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#141208" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; align-items:center;">
+        <svg width="52" height="52" viewBox="0 0 80 80" style="border-radius:14px; flex-shrink:0;">
+          <rect width="80" height="80" rx="16" fill="#1E1E22"/>
+          <path d="M34 14 h12 v10 c4 3 6 7 6 12 v34 a4 4 0 01-4 4 H32 a4 4 0 01-4-4 V36 c0-5 2-9 6-12 Z" fill="#2E2E33"/>
+          <path d="M32 40 h16 v30 a2 2 0 01-2 2 H34 a2 2 0 01-2-2 Z" fill="#4A2A1C"/>
+          <rect x="33" y="12" width="14" height="6" rx="2" fill="#55555C"/>
+          <rect x="30" y="48" width="20" height="9" rx="2" fill="#F4F4F6" opacity="0.92"/>
+        </svg>
+        <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+          <span style="font-size:14.5px; font-weight:700;">Gaseosa Cola 1.5 L</span>
+          <span style="font-size:14px; font-weight:800; color:#FFC800;">$3.000</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; background:#17171A; border-radius:999px; padding:5px 6px; border:1px solid rgba(255,255,255,0.07);">
+          <div class="step" style="width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg></div>
+          <span style="font-size:13.5px; font-weight:700; width:12px; text-align:center;">1</span>
+          <div class="step" style="width:24px; height:24px; border-radius:50%; background:#FFC800; display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#141208" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; align-items:center;">
+        <svg width="52" height="52" viewBox="0 0 80 80" style="border-radius:14px; flex-shrink:0;">
+          <rect width="80" height="80" rx="16" fill="#1E1E22"/>
+          <path d="M18 58 L40 20 L62 58 Z" fill="#B98657"/>
+          <path d="M18 58 L40 20 L62 58 L59 62 L21 62 Z" fill="#9C6B41"/>
+          <path d="M26 58 L40 33 L54 58 Z" fill="#5C3A24" opacity="0.9"/>
+          <path d="M31 58 L40 42 L49 58 Z" fill="#3E2818" opacity="0.85"/>
+          <rect x="15" y="62" width="50" height="5" rx="2.5" fill="#2A2A2F"/>
+        </svg>
+        <div style="flex:1; display:flex; flex-direction:column; gap:2px;">
+          <span style="font-size:14.5px; font-weight:700;">Porción de chocotorta</span>
+          <span style="font-size:14px; font-weight:800; color:#FFC800;">$3.500</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; background:#17171A; border-radius:999px; padding:5px 6px; border:1px solid rgba(255,255,255,0.07);">
+          <div class="step" style="width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg></div>
+          <span style="font-size:13.5px; font-weight:700; width:12px; text-align:center;">1</span>
+          <div class="step" style="width:24px; height:24px; border-radius:50%; background:#FFC800; display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#141208" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="display:flex; align-items:center; gap:10px; height:48px; padding:0 16px; border-radius:14px; background:#17171A; border:1px solid rgba(255,255,255,0.06);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8C8C94" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16 5l3 3L8 19l-4 1z"/></svg>
+      <span style="font-size:13px; color:#75757D; font-weight:500;">Agregar una nota (ej. sin cebolla, bien cocido...)</span>
+    </div>
+
+    <div style="height:1px; background:rgba(255,255,255,0.08);"></div>
+
+    <div style="display:flex; flex-direction:column; gap:9px;">
+      <div style="display:flex; justify-content:space-between; font-size:13.5px; color:#8C8C94; font-weight:600;"><span>Subtotal</span><span style="color:#D6D6DA;">$13.500</span></div>
+      <div style="display:flex; justify-content:space-between; font-size:13.5px; color:#8C8C94; font-weight:600;"><span>Envío</span><span style="color:#D6D6DA;">$3.000</span></div>
+      <div style="height:1px; background:rgba(255,255,255,0.08); margin:2px 0;"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-family:'Baloo 2',sans-serif; font-weight:700; font-size:16.5px;">Total</span><span style="font-family:'Baloo 2',sans-serif; font-weight:800; font-size:19px; color:#FFC800;">$16.500</span></div>
+    </div>
+  </div>
+
+  <div style="padding:16px 20px 26px 20px;">
+    <button class="cta" style="width:100%; height:56px; border:none; border-radius:28px; background:#FFC800; box-shadow:0 10px 24px rgba(255,200,0,0.25); font-family:'Baloo 2',sans-serif; font-weight:700; font-size:16.5px; color:#141208; cursor:pointer;">Continuar</button>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

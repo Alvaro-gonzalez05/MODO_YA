@@ -53,7 +53,7 @@ class AppRepartidor extends ConsumerWidget {
     return MaterialApp.router(
       title: 'MODO YA Rider',
       debugShowCheckedModeBanner: false,
-      theme: MyTheme.light,
+      theme: MyTheme.dark,
       routerConfig: ref.watch(routerProvider),
       // Aviso de version nueva, encima de todas las pantallas.
       builder: (context, child) => MyAvisoActualizacion(

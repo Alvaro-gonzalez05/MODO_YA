@@ -562,7 +562,7 @@ class _BarraPedido extends StatelessWidget {
               CircleAvatar(
                 radius: 16,
                 backgroundColor: Colors.white,
-                child: Text('${carrito.cantidad}', style: MyType.labelLg.copyWith(color: MyColors.primary)),
+                child: Text('${carrito.cantidad}', style: MyType.labelLg.copyWith(color: MyColors.inverseOnSurface)),
               ),
               const SizedBox(width: MySpacing.sm),
               Text('Ver pedido', style: MyType.headlineSm.copyWith(color: Colors.white)),

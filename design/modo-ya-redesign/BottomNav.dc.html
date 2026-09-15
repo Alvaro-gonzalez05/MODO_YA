@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; }
+    .navlabel { font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.1px; }
+  </style>
+</helmet>
+<div style="width:375px; height:88px; background:#141416; border-top:1px solid rgba(255,255,255,0.07); display:flex; align-items:stretch; box-sizing:border-box; font-family:'Manrope',sans-serif;">
+  <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding-top:6px;">
+    <div style="width:44px; height:30px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:{{bgInicio}};">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{cInicio}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 11.5L12 4l8 7.5"/>
+        <path d="M6 10v9h5v-5h2v5h5v-9"/>
+      </svg>
+    </div>
+    <div class="navlabel" style="color:{{cInicio}};">Inicio</div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding-top:6px;">
+    <div style="width:44px; height:30px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:{{bgPedidos}};">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{cPedidos}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/>
+        <path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>
+      </svg>
+    </div>
+    <div class="navlabel" style="color:{{cPedidos}};">Pedidos</div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding-top:6px;">
+    <div style="width:44px; height:30px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:{{bgFavoritos}};">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{cFavoritos}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20s-7.5-4.6-9.6-9A5.3 5.3 0 0112 5.6 5.3 5.3 0 0121.6 11c-2.1 4.4-9.6 9-9.6 9z"/>
+      </svg>
+    </div>
+    <div class="navlabel" style="color:{{cFavoritos}};">Favoritos</div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding-top:6px;">
+    <div style="width:44px; height:30px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:{{bgPerfil}};">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{cPerfil}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="3.4"/>
+        <path d="M5 20c0-4 3-6.5 7-6.5s7 2.5 7 6.5"/>
+      </svg>
+    </div>
+    <div class="navlabel" style="color:{{cPerfil}};">Perfil</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"active":{"editor":"enum","default":"inicio","options":["inicio","pedidos","favoritos","perfil"]}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active ?? 'inicio';
+    const c = (k) => active === k ? '#FFC800' : '#7C7C86';
+    const bg = (k) => active === k ? 'rgba(255,200,0,0.14)' : 'transparent';
+    return {
+      cInicio: c('inicio'), cPedidos: c('pedidos'), cFavoritos: c('favoritos'), cPerfil: c('perfil'),
+      bgInicio: bg('inicio'), bgPedidos: bg('pedidos'), bgFavoritos: bg('favoritos'), bgPerfil: bg('perfil')
+    };
+  }
+}
+</script>
+</body>
+</html>

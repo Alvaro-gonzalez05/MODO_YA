@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap">
+  <style>body { margin: 0; }</style>
+</helmet>
+<div style="display:flex; flex-direction:{{layoutDir}}; align-items:center; gap:{{gapPx}}px;">
+  <svg width="{{iconW}}" height="{{iconH}}" viewBox="0 0 100 120" fill="none">
+    <path d="M50 6C29.6 6 13 22.6 13 43c0 27 32 63 35.6 66.9a2 2 0 002.8 0C55 106 87 70 87 43 87 22.6 70.4 6 50 6z"
+      stroke="#FFC800" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+    <g fill="#FFC800" transform="translate(21,15) scale(0.62)">
+      <circle cx="16" cy="36" r="5.4"/>
+      <circle cx="44" cy="36" r="5.4"/>
+      <rect x="15" y="32.5" width="30" height="4.4" rx="2.2"/>
+      <rect x="30" y="13" width="13" height="10.5" rx="3"/>
+      <path d="M22 33 L30.5 19 L37 19 L33.5 33 Z"/>
+      <circle cx="24" cy="13" r="4.6"/>
+      <rect x="17.5" y="17" width="10.5" height="12.5" rx="4.2" transform="rotate(-22 22.75 23.25)"/>
+    </g>
+  </svg>
+  <div style="display:flex; align-items:baseline; gap:{{wordGap}}px; font-family:'Baloo 2',sans-serif; font-weight:800; font-size:{{wordSize}}px; line-height:1; white-space:nowrap;">
+    <span style="color:#fff;">MODO</span><span style="color:#FFC800;">YA</span>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"size":{"editor":"range","default":88,"min":40,"max":220,"step":4,"unit":"px"},"layout":{"editor":"enum","default":"column","options":["column","row"]}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const size = this.props.size ?? 88;
+    const layout = this.props.layout ?? 'column';
+    return {
+      iconW: Math.round(size),
+      iconH: Math.round(size * 1.2),
+      layoutDir: layout,
+      gapPx: layout === 'column' ? Math.round(size * 0.12) : Math.round(size * 0.16),
+      wordGap: Math.max(4, Math.round(size * 0.045)),
+      wordSize: Math.round(size * 0.4)
+    };
+  }
+}
+</script>
+</body>
+</html>

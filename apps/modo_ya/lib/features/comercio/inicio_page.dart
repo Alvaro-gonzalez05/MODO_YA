@@ -145,7 +145,7 @@ class _Cadeteria extends ConsumerWidget {
               onPressed: puede ? () => context.go('/local/envios/nuevo') : null,
               style: FilledButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: MyColors.primary,
+                foregroundColor: MyColors.inverseOnSurface,
                 disabledBackgroundColor: Colors.white24,
               ),
               icon: const Text('Pedir ahora'),

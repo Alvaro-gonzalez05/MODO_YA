@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Manrope:wght@500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; }
+    .btn-primary { transition: filter .15s ease, transform .1s ease; }
+    .btn-primary:hover { filter: brightness(1.06); }
+    .btn-primary:active { filter: brightness(0.92); transform: translateY(1px); }
+    .btn-outline { transition: background .15s ease, border-color .15s ease; }
+    .btn-outline:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.4); }
+    .btn-outline:active { background: rgba(255,255,255,0.1); }
+  </style>
+</helmet>
+<div style="width:375px; height:812px; position:relative; overflow:hidden; background:#0B0B0D; font-family:'Manrope',sans-serif; box-sizing:border-box;">
+
+  <!-- ambient glow -->
+  <div style="position:absolute; top:70px; left:50%; transform:translateX(-50%); width:420px; height:420px; border-radius:50%; background:radial-gradient(circle, rgba(255,200,0,0.16) 0%, rgba(255,200,0,0) 68%); filter:blur(2px);"></div>
+
+  <!-- skyline / mountains -->
+  <svg width="375" height="380" viewBox="0 0 375 380" style="position:absolute; bottom:0; left:0;">
+    <polygon points="0,220 60,120 130,190 190,90 260,180 320,110 375,200 375,380 0,380" fill="#18181D"/>
+    <polygon points="0,290 90,200 160,250 230,175 300,240 375,210 375,380 0,380" fill="#101013"/>
+    <polygon points="0,340 50,300 100,330 150,295 210,335 270,300 320,332 375,305 375,380 0,380" fill="#0A0A0C"/>
+    <!-- city window lights -->
+    <g fill="#FFC800" opacity="0.55">
+      <circle cx="46" cy="322" r="1.6"/><circle cx="64" cy="330" r="1.6"/><circle cx="112" cy="316" r="1.6"/>
+      <circle cx="138" cy="336" r="1.6"/><circle cx="176" cy="312" r="1.6"/><circle cx="228" cy="330" r="1.6"/>
+      <circle cx="256" cy="314" r="1.6"/><circle cx="298" cy="334" r="1.6"/><circle cx="330" cy="318" r="1.6"/>
+    </g>
+    <g fill="#F4F4F6" opacity="0.35">
+      <circle cx="84" cy="326" r="1.3"/><circle cx="158" cy="322" r="1.3"/><circle cx="204" cy="332" r="1.3"/>
+      <circle cx="278" cy="322" r="1.3"/><circle cx="352" cy="330" r="1.3"/>
+    </g>
+    <!-- road -->
+    <rect x="0" y="358" width="375" height="22" fill="#0D0D0F"/>
+    <line x1="0" y1="369" x2="375" y2="369" stroke="#242429" stroke-width="2" stroke-dasharray="14 12"/>
+    <!-- motion light streaks -->
+    <g opacity="0.8">
+      <ellipse cx="118" cy="352" rx="46" ry="4" fill="#FFC800" opacity="0.35"/>
+      <ellipse cx="130" cy="352" rx="26" ry="3" fill="#FFE49A" opacity="0.55"/>
+      <ellipse cx="118" cy="360" rx="34" ry="3" fill="#FFC800" opacity="0.2"/>
+    </g>
+    <!-- scooter silhouette -->
+    <g fill="#FFC800" transform="translate(150,338) scale(1.05)">
+      <circle cx="16" cy="20" r="5"/>
+      <circle cx="44" cy="20" r="5"/>
+      <rect x="15" y="17" width="30" height="4" rx="2"/>
+      <rect x="30" y="0" width="12.5" height="9.5" rx="2.6"/>
+      <path d="M22 17 L30 5 L36.3 5 L33 17 Z"/>
+      <circle cx="23.5" cy="-1" r="4.2"/>
+    </g>
+  </svg>
+
+  <!-- foreground content -->
+  <div style="position:relative; height:100%; display:flex; flex-direction:column; align-items:center; box-sizing:border-box; padding:0 24px;">
+
+    <div style="height:96px;"></div>
+
+    <dc-import name="Logo" size="108" layout="column" hint-size="220,180"></dc-import>
+
+    <div style="margin-top:18px; font-family:'Manrope',sans-serif; font-weight:600; font-size:14.5px; color:#B9B9C2; text-align:center; letter-spacing:0.1px;">
+      Delivery rápido, simple y local
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div style="width:100%; display:flex; flex-direction:column; align-items:center; gap:18px; margin-bottom:34px;">
+
+      <div style="display:flex; align-items:center; gap:6px; padding:8px 16px; border-radius:999px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFC800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 21s-7-6.5-7-11.5A7 7 0 0119 9.5C19 14.5 12 21 12 21z"/>
+          <circle cx="12" cy="9.5" r="2.3"/>
+        </svg>
+        <span style="font-family:'Manrope',sans-serif; font-weight:700; font-size:13.5px; color:#fff;">Malargüe</span>
+      </div>
+
+      <div style="width:327px; display:flex; flex-direction:column; gap:12px;">
+        <button class="btn-primary" style="width:100%; height:56px; border:none; border-radius:28px; background:#FFC800; box-shadow:0 10px 26px rgba(255,200,0,0.28); font-family:'Baloo 2',sans-serif; font-weight:700; font-size:16.5px; color:#141208; cursor:pointer;">Comenzar</button>
+        <button class="btn-outline" style="width:100%; height:56px; border-radius:28px; background:transparent; border:1.5px solid rgba(255,255,255,0.28); font-family:'Baloo 2',sans-serif; font-weight:700; font-size:16.5px; color:#fff; cursor:pointer;">Iniciar sesión</button>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:6px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#FFC800"><path d="M12 20s-7.5-4.6-9.6-9A5.3 5.3 0 0112 5.6 5.3 5.3 0 0121.6 11c-2.1 4.4-9.6 9-9.6 9z"/></svg>
+        <span style="font-family:'Manrope',sans-serif; font-weight:600; font-size:12.5px; color:#9A9AA4;">Apoyemos lo local</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

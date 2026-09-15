@@ -7,7 +7,7 @@ import 'typography.dart';
 /// Tema Material 3 armado sobre los tokens de MODO YA.
 abstract final class MyTheme {
   static const ColorScheme colorScheme = ColorScheme(
-    brightness: Brightness.light,
+    brightness: Brightness.dark,
     primary: MyColors.primary,
     onPrimary: MyColors.onPrimary,
     primaryContainer: MyColors.primaryContainer,
@@ -56,7 +56,7 @@ abstract final class MyTheme {
     scrim: Color(0xFF000000),
   );
 
-  static ThemeData get light => ThemeData(
+  static ThemeData get dark => ThemeData(
         useMaterial3: true,
         colorScheme: colorScheme,
         scaffoldBackgroundColor: MyColors.surface,
@@ -71,7 +71,7 @@ abstract final class MyTheme {
           scrolledUnderElevation: 0,
           centerTitle: false,
           titleTextStyle: MyType.headlineSm,
-          systemOverlayStyle: SystemUiOverlayStyle.dark,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
         ),
 
         // El CTA del sistema: pastilla completa, 54 de alto.
