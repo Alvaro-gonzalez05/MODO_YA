@@ -127,7 +127,7 @@ class _Contenido extends ConsumerWidget {
                 const SizedBox(height: MySpacing.xs),
                 SelectableText(
                   envio.codigoEntrega!.split('').join('  '),
-                  style: MyType.displayLg.copyWith(color: MyColors.primary),
+                  style: MyType.displayLg.copyWith(color: MyColors.tertiary),
                 ),
                 Text(
                   'Pasáselo a quien recibe (por mensaje o llamada). Se lo dicta al rider al recibir.',
@@ -268,7 +268,7 @@ class _Fila extends StatelessWidget {
           children: [
             Text(label, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
             const Spacer(),
-            Text(valor, style: destacado ? MyType.headlineSm.copyWith(color: MyColors.primary) : MyType.labelLg),
+            Text(valor, style: destacado ? MyType.headlineSm.copyWith(color: MyColors.tertiary) : MyType.labelLg),
           ],
         ),
       );

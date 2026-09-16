@@ -6,7 +6,8 @@ import 'package:my_ui/my_ui.dart';
 
 import 'marca.dart';
 
-/// Pantalla de espera mientras se resuelve la sesion. Si la carga falla (sin
+/// Splash: pantalla negra de marca (la unica negra de la app, como en la
+/// referencia) mientras se resuelve la sesion. Si la carga falla (sin
 /// internet, por ejemplo), muestra el error con opcion de reintentar o salir.
 class CargandoPage extends ConsumerWidget {
   const CargandoPage({super.key});
@@ -16,6 +17,7 @@ class CargandoPage extends ConsumerWidget {
     final sesion = ref.watch(sesionActualProvider);
 
     return Scaffold(
+      backgroundColor: MyColors.dock,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -24,26 +26,36 @@ class CargandoPage extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const MarcaGrande(),
+                const MarcaGrande(oscura: true, tamano: 220),
                 const SizedBox(height: MySpacing.xxl),
-                if (sesion.hasError) ...[
-                  MyEmptyState(
-                    icon: Symbols.cloud_off,
-                    title: 'No pudimos conectarnos',
-                    message: '${sesion.error}',
-                  ),
-                  FilledButton.icon(
-                    onPressed: () => ref.invalidate(sesionActualProvider),
-                    icon: const Icon(Symbols.refresh, size: 20),
-                    label: const Text('Reintentar'),
-                  ),
-                  const SizedBox(height: MySpacing.sm),
-                  TextButton(
-                    onPressed: () => ref.read(authRepositoryProvider).salir(),
-                    child: const Text('Cerrar sesión'),
-                  ),
-                ] else
-                  const CircularProgressIndicator(),
+                if (sesion.hasError)
+                  MyApareceEn(
+                    child: Column(
+                      children: [
+                        Text('No pudimos conectarnos', style: MyType.headlineSm.copyWith(color: MyColors.inverseOnSurface)),
+                        const SizedBox(height: MySpacing.xs),
+                        Text(
+                          '${sesion.error}',
+                          textAlign: TextAlign.center,
+                          style: MyType.bodySm.copyWith(color: MyColors.inverseOnSurface.withValues(alpha: 0.7)),
+                        ),
+                        const SizedBox(height: MySpacing.lg),
+                        FilledButton.icon(
+                          onPressed: () => ref.invalidate(sesionActualProvider),
+                          icon: const Icon(Symbols.refresh, size: 20),
+                          label: const Text('Reintentar'),
+                        ),
+                        const SizedBox(height: MySpacing.sm),
+                        TextButton(
+                          onPressed: () => ref.read(authRepositoryProvider).salir(),
+                          style: TextButton.styleFrom(foregroundColor: MyColors.inverseOnSurface),
+                          child: const Text('Cerrar sesión'),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  const MyCargando(size: 36, padding: EdgeInsets.zero, colorPunto: MyColors.inverseOnSurface),
               ],
             ),
           ),

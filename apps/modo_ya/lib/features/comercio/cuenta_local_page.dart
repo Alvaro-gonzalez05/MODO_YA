@@ -136,7 +136,7 @@ class _Perfil extends ConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.all(5),
                       decoration: const BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
-                      child: const Icon(Symbols.photo_camera, size: 15, color: Colors.white),
+                      child: const Icon(Symbols.photo_camera, size: 15, color: MyColors.onPrimary, fill: 1),
                     ),
                   ),
                 ],

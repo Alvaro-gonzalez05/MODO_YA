@@ -87,19 +87,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               Container(
                 padding: const EdgeInsets.all(MySpacing.md),
                 decoration: BoxDecoration(
-                  color: MyColors.secondaryContainer,
+                  color: MyColors.primaryFixed,
                   borderRadius: BorderRadius.circular(MyRadius.lg),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Symbols.storefront, size: 20, color: MyColors.secondary),
+                    const Icon(Symbols.storefront, size: 20, color: MyColors.onPrimaryFixed),
                     const SizedBox(width: MySpacing.sm),
                     Expanded(
                       child: Text(
                         'Tenés un local o sos rider? Tu cuenta te la da la administración '
                         'de MODO YA. Los riders usan la app MODO YA Rider.',
-                        style: MyType.bodySm.copyWith(color: MyColors.onSecondaryFixed),
+                        style: MyType.bodySm.copyWith(color: MyColors.onPrimaryFixed),
                       ),
                     ),
                   ],

@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
+import 'animaciones.dart';
 import 'controls.dart';
 import 'surfaces.dart';
 
@@ -114,71 +115,54 @@ class _MyBotonAccionState extends State<MyBotonAccion> {
   @override
   Widget build(BuildContext context) {
     final habilitado = widget.onPressed != null && !_cargando;
-    final hijo = _cargando
-        ? SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              color: widget.secundario ? MyColors.primary : MyColors.onPrimary,
-            ),
-          )
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (widget.icon != null) ...[
-                Icon(widget.icon, size: 22),
-                const SizedBox(width: MySpacing.xs),
+    final hijo = MyCambio(
+      child: _cargando
+          ? SizedBox(
+              key: const ValueKey('cargando'),
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: widget.secundario ? MyColors.onSurface : MyColors.onPrimary,
+              ),
+            )
+          : Row(
+              key: const ValueKey('texto'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.icon != null) ...[
+                  Icon(widget.icon, size: 22),
+                  const SizedBox(width: MySpacing.xs),
+                ],
+                Flexible(child: Text(widget.label, overflow: TextOverflow.ellipsis)),
               ],
-              Flexible(child: Text(widget.label, overflow: TextOverflow.ellipsis)),
-            ],
-          );
+            ),
+    );
 
-    return widget.secundario
-        ? OutlinedButton(onPressed: habilitado ? _tocar : null, child: hijo)
-        : FilledButton(onPressed: habilitado ? _tocar : null, child: hijo);
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: widget.onPressed == null ? 0.6 : 1,
+      child: widget.secundario
+          ? OutlinedButton(onPressed: habilitado ? _tocar : null, child: hijo)
+          : FilledButton(onPressed: habilitado ? _tocar : null, child: hijo),
+    );
   }
 }
 
-/// Muestra un error del backend como snackbar.
+/// Muestra un error del backend como aviso flotante rojo (entra desde arriba
+/// con rebote y se va solo).
 void mostrarError(BuildContext context, Object error) {
-  final messenger = ScaffoldMessenger.maybeOf(context);
-  messenger?.hideCurrentSnackBar();
-  messenger?.showSnackBar(
-    SnackBar(
-      content: Row(
-        children: [
-          const Icon(Symbols.error, color: Colors.white, size: 20),
-          const SizedBox(width: MySpacing.sm),
-          Expanded(child: Text('$error', style: const TextStyle(color: Colors.white))),
-        ],
-      ),
-      backgroundColor: MyColors.error,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.md)),
-      elevation: 6,
-    ),
-  );
+  mostrarAvisoFlotante(context, '$error', tipo: MyAvisoTipo.error, duracion: const Duration(milliseconds: 3600));
 }
 
-void mostrarAviso(BuildContext context, String texto) {
-  final messenger = ScaffoldMessenger.maybeOf(context);
-  messenger?.hideCurrentSnackBar();
-  messenger?.showSnackBar(
-    SnackBar(
-      content: Row(
-        children: [
-          const Icon(Symbols.check_circle, color: Colors.white, size: 20, fill: 1),
-          const SizedBox(width: MySpacing.sm),
-          Expanded(child: Text(texto, style: const TextStyle(color: Colors.white))),
-        ],
-      ),
-      backgroundColor: MyColors.dock,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.md)),
-      elevation: 6,
-    ),
-  );
+/// Aviso de "listo": amarillo de marca con tilde animado.
+void mostrarAviso(BuildContext context, String texto, {String? accion, VoidCallback? onAccion}) {
+  mostrarAvisoFlotante(context, texto, tipo: MyAvisoTipo.exito, accion: accion, onAccion: onAccion);
+}
+
+/// Aviso informativo (negro): algo paso pero no es ni exito ni error.
+void mostrarInfo(BuildContext context, String texto, {String? accion, VoidCallback? onAccion}) {
+  mostrarAvisoFlotante(context, texto, tipo: MyAvisoTipo.info, accion: accion, onAccion: onAccion);
 }
 
 /// Dibuja un AsyncValue con cargando / error / datos de forma pareja en toda la
@@ -201,26 +185,24 @@ class MyAsync<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     // Si ya habia datos y esta recargando, se siguen mostrando: parpadear a un
     // spinner en cada refresco es peor que mostrar lo de hace un segundo.
-    if (valor.hasValue) return datos(valor.value as T);
+    if (valor.hasValue) return MyApareceEn(child: datos(valor.value as T));
     if (valor.hasError) {
-      return MyEmptyState(
-        icon: Symbols.cloud_off,
-        title: 'No pudimos cargar esto',
-        message: '${valor.error}',
-        action: onReintentar == null
-            ? null
-            : OutlinedButton.icon(
-                onPressed: onReintentar,
-                icon: const Icon(Symbols.refresh, size: 20),
-                label: const Text('Reintentar'),
-              ),
+      return MyApareceEn(
+        child: MyEmptyState(
+          icon: Symbols.cloud_off,
+          title: 'No pudimos cargar esto',
+          message: '${valor.error}',
+          action: onReintentar == null
+              ? null
+              : OutlinedButton.icon(
+                  onPressed: onReintentar,
+                  icon: const Icon(Symbols.refresh, size: 20),
+                  label: const Text('Reintentar'),
+                ),
+        ),
       );
     }
-    return cargando ??
-        const Padding(
-          padding: EdgeInsets.all(MySpacing.xxl),
-          child: Center(child: CircularProgressIndicator()),
-        );
+    return cargando ?? const MyCargando();
   }
 }
 
@@ -281,16 +263,38 @@ Future<bool> confirmar(
   String aceptar = 'Confirmar',
   bool peligroso = false,
 }) async {
-  final r = await showDialog<bool>(
-    context: context,
+  final r = await mostrarDialogoAnimado<bool>(
+    context,
     builder: (c) => AlertDialog(
-      title: Text(titulo),
-      content: Text(mensaje, style: MyType.bodyMd),
+      icon: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: peligroso ? MyColors.errorContainer : MyColors.primaryFixed,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          peligroso ? Symbols.warning : Symbols.help,
+          color: peligroso ? MyColors.error : MyColors.onPrimaryFixed,
+          fill: 1,
+        ),
+      ),
+      title: Text(titulo, textAlign: TextAlign.center),
+      content: Text(mensaje, style: MyType.bodyMd, textAlign: TextAlign.center),
+      actionsAlignment: MainAxisAlignment.center,
       actions: [
-        TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Volver')),
+        OutlinedButton(
+          onPressed: () => Navigator.pop(c, false),
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
+          child: const Text('Volver'),
+        ),
         FilledButton(
           onPressed: () => Navigator.pop(c, true),
-          style: peligroso ? FilledButton.styleFrom(backgroundColor: MyColors.error) : null,
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(0, 44),
+            backgroundColor: peligroso ? MyColors.error : null,
+            foregroundColor: peligroso ? MyColors.onError : null,
+          ),
           child: Text(aceptar),
         ),
       ],
@@ -308,8 +312,8 @@ Future<String?> pedirTexto(
   String? inicial,
 }) async {
   final ctrl = TextEditingController(text: inicial);
-  final r = await showDialog<String>(
-    context: context,
+  final r = await mostrarDialogoAnimado<String>(
+    context,
     builder: (c) => AlertDialog(
       title: Text(titulo),
       content: TextField(
@@ -319,12 +323,17 @@ Future<String?> pedirTexto(
         decoration: InputDecoration(hintText: label),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(c), child: const Text('Volver')),
+        OutlinedButton(
+          onPressed: () => Navigator.pop(c),
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
+          child: const Text('Volver'),
+        ),
         FilledButton(
           onPressed: () {
             final t = ctrl.text.trim();
             if (t.isNotEmpty) Navigator.pop(c, t);
           },
+          style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
           child: Text(aceptar),
         ),
       ],

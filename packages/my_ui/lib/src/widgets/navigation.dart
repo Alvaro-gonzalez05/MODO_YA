@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
+import 'animaciones.dart';
 import 'marca.dart';
 
 /// Un destino del dock inferior.
@@ -16,12 +17,13 @@ class MyDockItem {
   final int contador;
 }
 
-/// Dock de navegacion flotante: capsula navy suspendida sobre el contenido,
-/// con un pozo circular ember marcando la pestana activa.
+/// Dock de navegacion flotante: capsula blanca suspendida sobre el contenido,
+/// con una pastilla amarilla marcando la pestana activa (como la barra
+/// inferior de la referencia).
 ///
 /// Va dentro de un `Stack` alineado abajo, no como `bottomNavigationBar`,
 /// porque flota por encima del scroll (por eso [MySpacing.dockClearance]
-/// al final de cada lista).
+/// al final de cada lista). Entra deslizandose desde abajo al montarse.
 class MyDock extends StatelessWidget {
   const MyDock({
     super.key,
@@ -42,24 +44,29 @@ class MyDock extends StatelessWidget {
         right: MySpacing.screenEdge,
         bottom: MySpacing.dockOffset + MediaQuery.paddingOf(context).bottom,
       ),
-      child: Container(
-        height: 68,
-        padding: const EdgeInsets.symmetric(horizontal: MySpacing.xs),
-        decoration: BoxDecoration(
-          color: MyColors.dock,
-          borderRadius: BorderRadius.circular(MyRadius.full),
-          boxShadow: MyShadows.dock,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            for (var i = 0; i < items.length; i++)
-              _DockSlot(
-                item: items[i],
-                active: i == currentIndex,
-                onTap: () => onSelect(i),
-              ),
-          ],
+      child: MyApareceEn(
+        desplazamiento: 32,
+        duracion: const Duration(milliseconds: 460),
+        child: Container(
+          height: 68,
+          padding: const EdgeInsets.symmetric(horizontal: MySpacing.xs),
+          decoration: BoxDecoration(
+            color: MyColors.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(MyRadius.full),
+            border: Border.all(color: MyColors.outlineVariant),
+            boxShadow: MyShadows.dock,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              for (var i = 0; i < items.length; i++)
+                _DockSlot(
+                  item: items[i],
+                  active: i == currentIndex,
+                  onTap: () => onSelect(i),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -89,13 +96,14 @@ class _DockSlot extends StatelessWidget {
           customBorder: const StadiumBorder(),
           child: Center(
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutBack,
               height: 52,
               padding: EdgeInsets.symmetric(horizontal: active ? 12 : 8),
               decoration: BoxDecoration(
                 color: active ? MyColors.primary : Colors.transparent,
                 borderRadius: BorderRadius.circular(MyRadius.full),
+                boxShadow: active ? MyShadows.glow : null,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -104,14 +112,18 @@ class _DockSlot extends StatelessWidget {
                   Badge(
                     isLabelVisible: item.contador > 0,
                     label: Text('${item.contador}'),
-                    backgroundColor: active ? MyColors.dock : MyColors.primaryContainer,
-                    child: Icon(
-                      item.icon,
-                      size: 22,
-                      color: active
-                          ? MyColors.onPrimary
-                          : const Color(0xFF94A3B8),
-                      fill: active ? 1 : 0,
+                    backgroundColor: active ? MyColors.dock : MyColors.error,
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: active ? 1 : 0),
+                      duration: const Duration(milliseconds: 380),
+                      curve: Curves.elasticOut,
+                      builder: (context, t, hijo) => Transform.scale(scale: 1 + 0.12 * t, child: hijo),
+                      child: Icon(
+                        item.icon,
+                        size: 22,
+                        color: active ? MyColors.onPrimary : MyColors.secondary,
+                        fill: active ? 1 : 0,
+                      ),
                     ),
                   ),
                   if (active) ...[
@@ -244,6 +256,7 @@ class _ZonaPill extends StatelessWidget {
         decoration: BoxDecoration(
           color: MyColors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(MyRadius.full),
+          border: Border.all(color: MyColors.outlineVariant),
           boxShadow: MyShadows.subtle,
         ),
         child: Row(

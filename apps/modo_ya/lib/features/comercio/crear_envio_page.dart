@@ -80,6 +80,13 @@ class _CrearEnvioPageState extends ConsumerState<CrearEnvioPage> {
             indicaciones: _indicaciones.text,
             paga: _paga,
           );
+      if (!mounted) return;
+      await mostrarExito(
+        context,
+        titulo: '¡Envío creado!',
+        mensaje: 'Ya estamos buscando un rider.',
+        icono: Symbols.sports_motorsports,
+      );
       if (mounted) context.go('/local/envios/$id');
     } catch (e) {
       if (mounted) mostrarError(context, e);
@@ -187,7 +194,7 @@ class _CrearEnvioPageState extends ConsumerState<CrearEnvioPage> {
     final Widget cotizacion;
     if (_cotizando) {
       cotizacion = const MyCard(
-        child: Padding(padding: EdgeInsets.all(MySpacing.lg), child: Center(child: CircularProgressIndicator())),
+        child: Padding(padding: EdgeInsets.all(MySpacing.lg), child: MyCargando()),
       );
     } else if (c == null) {
       cotizacion = MyCard(
@@ -222,7 +229,7 @@ class _CrearEnvioPageState extends ConsumerState<CrearEnvioPage> {
               children: [
                 Text('Total', style: MyType.headlineSm),
                 const Spacer(),
-                Text(Formato.pesos(c.total), style: MyType.priceHero.copyWith(color: MyColors.primary)),
+                Text(Formato.pesos(c.total), style: MyType.priceHero.copyWith(color: MyColors.tertiary)),
               ],
             ),
           ],

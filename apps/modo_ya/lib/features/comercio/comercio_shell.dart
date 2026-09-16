@@ -27,13 +27,11 @@ class ComercioShell extends ConsumerWidget {
       if (previos == null) return;
       final recienLlegados = nuevos.where((p) => !previos.contains(p.id)).toList();
       if (recienLlegados.isEmpty) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: MyColors.primary,
-          content: Text('Nuevo pedido ${recienLlegados.first.codigo} · ${Formato.pesos(recienLlegados.first.total)}'),
-          action: SnackBarAction(label: 'Ver', textColor: Colors.white, onPressed: () => navigationShell.goBranch(1)),
-        ),
+      mostrarAviso(
+        context,
+        'Nuevo pedido ${recienLlegados.first.codigo} · ${Formato.pesos(recienLlegados.first.total)}',
+        accion: 'Ver',
+        onAccion: () => navigationShell.goBranch(1),
       );
     });
 

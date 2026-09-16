@@ -60,7 +60,7 @@ class ServiciosPage extends ConsumerWidget {
                               ),
                             ),
                             Text(Formato.pesos(e.cotizacion.gananciaRepartidor),
-                                style: MyType.headlineSm.copyWith(color: MyColors.primary)),
+                                style: MyType.headlineSm.copyWith(color: MyColors.tertiary)),
                           ],
                         ),
                       );

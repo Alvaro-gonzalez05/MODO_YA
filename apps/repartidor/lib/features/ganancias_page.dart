@@ -91,7 +91,7 @@ class GananciasPage extends ConsumerWidget {
                                 ],
                               ),
                             ),
-                            Text(Formato.pesos(e.cotizacion.gananciaRepartidor), style: MyType.headlineSm.copyWith(color: MyColors.primary)),
+                            Text(Formato.pesos(e.cotizacion.gananciaRepartidor), style: MyType.headlineSm.copyWith(color: MyColors.tertiary)),
                           ],
                         ),
                       ),

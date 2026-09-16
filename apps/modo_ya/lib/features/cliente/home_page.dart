@@ -6,9 +6,10 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import 'carrito.dart';
+import 'comidas.dart';
 import 'iconos_rubro.dart';
 
-/// Home del cliente (D1): dirección, rubros y locales.
+/// Home del cliente (D1): dirección, comidas y locales.
 ///
 /// Del diseño quedaron afuera a propósito los puntos "Club MODO YA", los
 /// cupones y las estrellas de los locales: la base no tiene esos datos y el
@@ -22,7 +23,7 @@ class HomeClientePage extends ConsumerStatefulWidget {
 }
 
 class _HomeClientePageState extends ConsumerState<HomeClientePage> {
-  String? _rubroId;
+  Comida? _comida;
   var _texto = '';
 
   @override
@@ -30,7 +31,7 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
     final sesion = ref.watch(sesionProvider);
     final direccion = ref.watch(direccionActualProvider);
     final rubros = ref.watch(rubrosProvider).value ?? const <Rubro>[];
-    final locales = ref.watch(vidrieraProvider(_rubroId));
+    final locales = ref.watch(vidrieraProvider(null));
     final carrito = ref.watch(carritoProvider);
     final q = _texto.trim().toLowerCase();
     final nombre = sesion.nombre.trim().split(' ').first;
@@ -60,7 +61,7 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
     );
 
     final buscador = MyBuscador(
-      hint: 'Buscar pizzas, empanadas, farmacias…',
+      hint: '¿Qué se te antoja hoy?',
       onChanged: (t) => setState(() => _texto = t),
     );
 
@@ -69,7 +70,7 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
       titulo: nombre.isEmpty ? '¿Qué pedimos hoy?' : 'Hola, $nombre',
       bajada: nombre.isEmpty ? null : '¿Qué pedimos hoy?',
       onRefresh: () async {
-        ref.invalidate(vidrieraProvider(_rubroId));
+        ref.invalidate(vidrieraProvider(null));
         ref.invalidate(direccionesProvider);
       },
       children: [
@@ -85,64 +86,59 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
               Expanded(flex: 2, child: direccionCard),
             ],
           ),
-        if (!carrito.vacio) ...[
-          const SizedBox(height: MySpacing.md),
-          MyHeroCard(
-            padding: const EdgeInsets.symmetric(horizontal: MySpacing.md, vertical: MySpacing.sm),
-            child: InkWell(
-              onTap: () => context.go('/cliente/carrito'),
-              child: Row(
-                children: [
-                  const Icon(Symbols.shopping_bag, color: Colors.white),
-                  const SizedBox(width: MySpacing.sm),
-                  Expanded(
-                    child: Text(
-                      'Tu pedido en ${carrito.comercio!.nombre} (${carrito.cantidad})',
-                      style: MyType.labelLg.copyWith(color: Colors.white),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Text(Formato.pesos(carrito.subtotal), style: MyType.headlineSm.copyWith(color: Colors.white)),
-                  const Icon(Symbols.chevron_right, color: Colors.white),
-                ],
-              ),
-            ),
-          ),
-        ],
+        const SizedBox(height: MySpacing.md),
+        MyCambio(
+          child: carrito.vacio
+              ? const _BannerMarca(key: ValueKey('banner'))
+              : _BannerCarrito(key: const ValueKey('carrito'), carrito: carrito),
+        ),
         const SizedBox(height: MySpacing.lg),
+        const MySectionHeader(title: '¿Qué comemos?'),
+        const SizedBox(height: MySpacing.sm),
         SizedBox(
-          height: 96,
+          height: 104,
           child: ListView(
             scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
             children: [
               MyApareceEn(
-                child: _Rubro(nombre: 'Todos', icono: Symbols.apps, activo: _rubroId == null, onTap: () => setState(() => _rubroId = null)),
+                child: _BotonComida(
+                  nombre: 'Todo',
+                  icono: Symbols.apps,
+                  activo: _comida == null,
+                  onTap: () => setState(() => _comida = null),
+                ),
               ),
-              for (final (i, r) in rubros.indexed)
+              for (final (i, c) in comidas.indexed)
                 MyApareceEn(
-                  retraso: Duration(milliseconds: 30 * (i + 1)),
-                  child: _Rubro(
-                    nombre: r.nombre,
-                    icono: iconoDeRubro(r.icono),
-                    imagen: imagenDeRubro(nombre: r.nombre, icono: r.icono),
-                    activo: _rubroId == r.id,
-                    onTap: () => setState(() => _rubroId = _rubroId == r.id ? null : r.id),
+                  retraso: Duration(milliseconds: 35 * (i + 1)),
+                  child: _BotonComida(
+                    nombre: c.nombre,
+                    imagen: c.asset,
+                    activo: _comida == c,
+                    onTap: () => setState(() => _comida = _comida == c ? null : c),
                   ),
                 ),
             ],
           ),
         ),
         const SizedBox(height: MySpacing.md),
-        const MySectionHeader(title: 'Locales en Malargüe', subtitle: 'Abiertos primero'),
+        MySectionHeader(
+          title: _comida == null ? 'Locales en Malargüe' : _comida!.nombre,
+          subtitle: _comida == null ? 'Abiertos primero' : 'Locales con ${_comida!.nombre.toLowerCase()}',
+          actionLabel: _comida == null ? null : 'Ver todos',
+          onAction: _comida == null ? null : () => setState(() => _comida = null),
+        ),
         const SizedBox(height: MySpacing.md),
         MyAsync(
           valor: locales,
-          onReintentar: () => ref.invalidate(vidrieraProvider(_rubroId)),
+          onReintentar: () => ref.invalidate(vidrieraProvider(null)),
           datos: (lista) {
-            final visibles = q.isEmpty
-                ? lista
-                : lista.where((c) => c.nombre.toLowerCase().contains(q) || c.rubro.toLowerCase().contains(q)).toList();
+            var visibles = lista;
+            if (_comida != null) visibles = visibles.where((c) => _comida!.coincideCon(c, rubros)).toList();
+            if (q.isNotEmpty) {
+              visibles = visibles.where((c) => c.nombre.toLowerCase().contains(q) || c.rubro.toLowerCase().contains(q)).toList();
+            }
             if (visibles.isEmpty) {
               return MyCard(
                 child: MyEmptyState(
@@ -150,7 +146,19 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
                   title: lista.isEmpty ? 'Todavía no hay locales' : 'No encontramos nada',
                   message: lista.isEmpty
                       ? 'Muy pronto vas a poder pedir a los locales de Malargüe.'
-                      : 'Probá con otra palabra o con otro rubro.',
+                      : _comida == null
+                          ? 'Probá con otra palabra.'
+                          : 'Todavía no hay locales de ${_comida!.nombre.toLowerCase()} en MODO YA. Probá con otra comida.',
+                  action: _comida == null && q.isEmpty
+                      ? null
+                      : MyBoton(
+                          label: 'Ver todos los locales',
+                          tipo: MyBotonTipo.secundario,
+                          onPressed: () => setState(() {
+                            _comida = null;
+                            _texto = '';
+                          }),
+                        ),
                 ),
               );
             }
@@ -158,7 +166,14 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
               anchoMinimo: 290,
               maxColumnas: 4,
               espacio: MySpacing.md,
-              children: [for (final c in visibles) _TarjetaLocal(comercio: c, direccionId: direccion?.id)],
+              children: [
+                for (final (i, c) in visibles.indexed)
+                  MyApareceEn(
+                    key: ValueKey(c.id),
+                    retraso: Duration(milliseconds: 40 * (i.clamp(0, 8))),
+                    child: _TarjetaLocal(comercio: c, direccionId: direccion?.id),
+                  ),
+              ],
             );
           },
         ),
@@ -167,12 +182,104 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
   }
 }
 
-class _Rubro extends StatelessWidget {
-  const _Rubro({required this.nombre, required this.icono, required this.activo, required this.onTap, this.imagen});
+/// Banner negro de marca del home (como "El mejor sabor en tu casa" de la
+/// referencia): se muestra mientras el carrito está vacío.
+class _BannerMarca extends StatelessWidget {
+  const _BannerMarca({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MyHeroCard(
+      padding: const EdgeInsets.fromLTRB(MySpacing.lg, MySpacing.md, MySpacing.md, MySpacing.md),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'El mejor sabor,\nen tu casa',
+                  style: MyType.headlineMd.copyWith(color: MyColors.inverseOnSurface, height: 1.15),
+                ),
+                const SizedBox(height: MySpacing.xs),
+                Text(
+                  'Delivery rápido, simple y local',
+                  style: MyType.labelMd.copyWith(color: MyColors.primary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: MySpacing.sm),
+          const MyLogoMark(size: 84),
+        ],
+      ),
+    );
+  }
+}
+
+class _BannerCarrito extends StatelessWidget {
+  const _BannerCarrito({super.key, required this.carrito});
+
+  final Carrito carrito;
+
+  @override
+  Widget build(BuildContext context) {
+    return MyPressable(
+      escala: 0.98,
+      onTap: () => context.go('/cliente/carrito'),
+      child: MyHeroCard(
+        padding: const EdgeInsets.symmetric(horizontal: MySpacing.md, vertical: MySpacing.sm),
+        child: Row(
+          children: [
+            MyPop(
+              disparador: carrito.cantidad,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
+                child: const Icon(Symbols.shopping_bag, color: MyColors.onPrimary, fill: 1),
+              ),
+            ),
+            const SizedBox(width: MySpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tu pedido en ${carrito.comercio!.nombre}',
+                    style: MyType.labelLg.copyWith(color: MyColors.inverseOnSurface),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    '${carrito.cantidad} ${carrito.cantidad == 1 ? 'producto' : 'productos'}',
+                    style: MyType.bodySm.copyWith(color: MyColors.primary),
+                  ),
+                ],
+              ),
+            ),
+            MyNumeroAnimado(
+              valor: carrito.subtotal,
+              formato: Formato.pesos,
+              style: MyType.headlineSm.copyWith(color: MyColors.inverseOnSurface),
+            ),
+            const Icon(Symbols.chevron_right, color: MyColors.primary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Botoncito de comida: la foto recortada en alta resolución dentro de un
+/// círculo amarillo pálido; al elegirlo el círculo pasa a amarillo de marca
+/// con brillo y la foto crece apenas.
+class _BotonComida extends StatelessWidget {
+  const _BotonComida({required this.nombre, required this.activo, required this.onTap, this.imagen, this.icono});
 
   final String nombre;
-  final IconData icono;
   final String? imagen;
+  final IconData? icono;
   final bool activo;
   final VoidCallback onTap;
 
@@ -185,43 +292,38 @@ class _Rubro extends StatelessWidget {
         child: MyPressable(
           onTap: onTap,
           child: SizedBox(
-            width: 76,
+            width: 74,
             child: Column(
               children: [
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: 62,
-                  height: 62,
+                  duration: const Duration(milliseconds: 240),
+                  curve: Curves.easeOutBack,
+                  width: 66,
+                  height: 66,
+                  padding: EdgeInsets.all(activo ? 5 : 8),
                   decoration: BoxDecoration(
-                    color: imagen != null
-                        ? MyColors.surfaceContainerLowest
-                        : (activo ? MyColors.primary : MyColors.surfaceContainerLowest),
+                    color: activo ? MyColors.primary : MyColors.primaryFixed,
                     shape: BoxShape.circle,
-                    boxShadow: activo ? MyShadows.control : MyShadows.subtle,
-                    border: Border.all(color: activo ? MyColors.primary : MyColors.outlineVariant, width: activo ? 2.5 : 1),
+                    border: Border.all(color: activo ? MyColors.onPrimary : Colors.transparent, width: activo ? 2 : 0),
+                    boxShadow: activo ? MyShadows.glow : MyShadows.subtle,
                   ),
                   child: imagen == null
-                      ? Icon(icono, size: 26, color: activo ? Colors.white : MyColors.primary)
-                      : ClipOval(
-                          child: Transform.scale(
-                            // Las fotos vienen recortadas de una grilla: un pelin
-                            // de zoom saca cualquier resto de borde/otra celda.
-                            scale: 1.18,
-                            child: Image.asset(
-                              imagen!,
-                              package: 'my_ui',
-                              fit: BoxFit.cover,
-                              filterQuality: FilterQuality.high,
-                            ),
-                          ),
+                      ? Icon(icono, size: 28, color: activo ? MyColors.onPrimary : MyColors.onPrimaryFixed, fill: 1)
+                      : Image.asset(
+                          imagen!,
+                          package: 'my_ui',
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
                         ),
                 ),
-                const SizedBox(height: MySpacing.xxs),
-                Text(
-                  nombre,
-                  style: MyType.labelMd.copyWith(color: activo ? MyColors.primary : MyColors.onSurface),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                const SizedBox(height: MySpacing.xs),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: MyType.labelMd.copyWith(
+                    color: activo ? MyColors.onSurface : MyColors.onSurfaceVariant,
+                    fontWeight: activo ? FontWeight.w700 : FontWeight.w600,
+                  ),
+                  child: Text(nombre, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
                 ),
               ],
             ),
@@ -283,12 +385,12 @@ class _TarjetaLocal extends ConsumerWidget {
                   const SizedBox(height: MySpacing.xs),
                   Row(
                     children: [
-                      const Icon(Symbols.sports_motorsports, size: 16, color: MyColors.secondary),
+                      const Icon(Symbols.sports_motorsports, size: 16, color: MyColors.tertiary),
                       const SizedBox(width: MySpacing.xxs),
                       Flexible(
                         child: Text(
                           cot == null ? 'Envío según tu dirección' : 'Envío ${Formato.pesos(cot.costoEnvio)}',
-                          style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                          style: MyType.bodySm.copyWith(color: cot == null ? MyColors.secondary : MyColors.tertiary, fontWeight: FontWeight.w600),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

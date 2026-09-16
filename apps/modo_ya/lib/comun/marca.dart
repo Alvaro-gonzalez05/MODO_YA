@@ -1,23 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:my_ui/my_ui.dart';
 
-/// Logo + nombre, para las pantallas de acceso.
+/// Logo grande de la marca (el archivo ya incluye el nombre "MODO YA") con la
+/// bajada debajo, para las pantallas de acceso y el splash. Entra con un
+/// fundido + escala suave.
 class MarcaGrande extends StatelessWidget {
-  const MarcaGrande({super.key, this.bajada = 'Tu ciudad en movimiento'});
+  const MarcaGrande({
+    super.key,
+    this.bajada = 'Delivery rápido, simple y local',
+    this.tamano = 168,
+    this.oscura = false,
+  });
 
   final String bajada;
+  final double tamano;
+
+  /// Sobre fondo negro (splash): la bajada va en blanco.
+  final bool oscura;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const MyLogoMark(size: 96),
-        const SizedBox(height: MySpacing.md),
-        Text('MODO YA', style: MyType.displayLg),
-        const SizedBox(height: MySpacing.xxs),
-        Text(bajada, style: MyType.bodyLg.copyWith(color: MyColors.secondary)),
-      ],
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOutBack,
+      builder: (context, t, hijo) => Opacity(
+        opacity: t.clamp(0, 1),
+        child: Transform.scale(scale: 0.85 + 0.15 * t, child: hijo),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MyLogoMark(size: tamano),
+          const SizedBox(height: MySpacing.sm),
+          Text(
+            bajada.toUpperCase(),
+            textAlign: TextAlign.center,
+            style: MyType.labelMd.copyWith(
+              color: oscura ? MyColors.inverseOnSurface.withValues(alpha: 0.85) : MyColors.onSurfaceVariant,
+              letterSpacing: 1.6,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -39,7 +64,7 @@ class FormularioCentrado extends StatelessWidget {
           child: ListView(
             shrinkWrap: true,
             padding: const EdgeInsets.all(MySpacing.screenEdge),
-            children: children,
+            children: [MyEntradaEscalonada(paso: const Duration(milliseconds: 60), children: children)],
           ),
         ),
       ),

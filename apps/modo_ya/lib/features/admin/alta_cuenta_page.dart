@@ -213,14 +213,14 @@ class _AltaCuentaPageState extends ConsumerState<AltaCuentaPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Symbols.install_mobile, color: MyColors.primaryFixedDim, size: 32),
+                const Icon(Symbols.install_mobile, color: MyColors.primary, size: 32),
                 const SizedBox(height: MySpacing.sm),
                 Text('App MODO YA Rider', style: MyType.headlineSm.copyWith(color: Colors.white)),
                 const SizedBox(height: MySpacing.xs),
                 Text(
                   'El rider entra con el usuario y la contraseña que se generan acá. '
                   'Desde su perfil puede cambiar la contraseña.',
-                  style: MyType.bodyMd.copyWith(color: const Color(0xFFCBD5E1)),
+                  style: MyType.bodyMd.copyWith(color: const Color(0xFFB8B8C0)),
                 ),
               ],
             ),

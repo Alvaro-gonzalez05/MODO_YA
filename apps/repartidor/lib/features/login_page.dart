@@ -49,11 +49,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 shrinkWrap: true,
                 padding: const EdgeInsets.all(MySpacing.screenEdge),
                 children: [
-                  const Center(child: MyLogoMark(size: 96, variant: MyLogoVariant.riders)),
-                  const SizedBox(height: MySpacing.md),
-                  Text('MODO YA Rider', style: MyType.displayLg, textAlign: TextAlign.center),
-                  Text('Conectate y empeza a ganar',
-                      style: MyType.bodyLg.copyWith(color: MyColors.secondary), textAlign: TextAlign.center),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 700),
+                    curve: Curves.easeOutBack,
+                    builder: (context, t, hijo) => Opacity(
+                      opacity: t.clamp(0, 1),
+                      child: Transform.scale(scale: 0.85 + 0.15 * t, child: hijo),
+                    ),
+                    child: const Center(child: MyLogoMark(size: 180, variant: MyLogoVariant.riders)),
+                  ),
+                  const SizedBox(height: MySpacing.sm),
+                  Text(
+                    'CONECTATE Y EMPEZÁ A GANAR',
+                    style: MyType.labelMd.copyWith(color: MyColors.onSurfaceVariant, letterSpacing: 1.6),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: MySpacing.xl),
                   if (noEsRider) ...[
                     MyCard(

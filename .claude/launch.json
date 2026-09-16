@@ -3,14 +3,14 @@
   "configurations": [
     {
       "name": "modo-ya-web",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5051", "--directory", "apps/modo_ya/build/web"],
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["tools/servir.mjs", "apps/modo_ya/build/web", "5051"],
       "port": 5051
     },
     {
       "name": "repartidor-web",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5052", "--directory", "apps/repartidor/build/web"],
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["tools/servir.mjs", "apps/repartidor/build/web", "5052"],
       "port": 5052
     }
   ]

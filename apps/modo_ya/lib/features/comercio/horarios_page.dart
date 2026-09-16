@@ -97,7 +97,7 @@ class _HorariosPageState extends ConsumerState<HorariosPage> {
                       if (dias[d].isEmpty) Text('Cerrado', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
                       IconButton(
                         tooltip: 'Agregar turno',
-                        icon: const Icon(Symbols.add_circle, color: MyColors.primary),
+                        icon: const Icon(Symbols.add_circle, color: MyColors.onSurface, fill: 1),
                         onPressed: () => setState(() => dias[d].add(
                               dias[d].isEmpty
                                   ? _Turno(const TimeOfDay(hour: 11, minute: 0), const TimeOfDay(hour: 15, minute: 0))

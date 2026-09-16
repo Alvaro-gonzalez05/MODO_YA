@@ -201,9 +201,9 @@ class MyBoton extends StatelessWidget {
     final (fondo, texto) = switch (tipo) {
       MyBotonTipo.principal => (MyColors.primary, MyColors.onPrimary),
       MyBotonTipo.secundario => (MyColors.secondaryContainer, MyColors.onSurface),
-      MyBotonTipo.oscuro => (MyColors.dock, Colors.white),
+      MyBotonTipo.oscuro => (MyColors.dock, MyColors.inverseOnSurface),
       MyBotonTipo.peligro => (MyColors.errorContainer, MyColors.onErrorContainer),
-      MyBotonTipo.texto => (Colors.transparent, MyColors.primary),
+      MyBotonTipo.texto => (Colors.transparent, MyColors.onSurface),
     };
     final style = FilledButton.styleFrom(
       backgroundColor: fondo,
@@ -324,10 +324,10 @@ class MyKpi extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: destacado ? Colors.white.withValues(alpha: 0.18) : MyColors.primaryFixed,
+                color: destacado ? MyColors.primary : MyColors.primaryFixed,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icono, size: 20, color: destacado ? Colors.white : MyColors.primary),
+              child: Icon(icono, size: 20, color: destacado ? MyColors.onPrimary : MyColors.onPrimaryFixed, fill: 1),
             ),
           ],
         ),
@@ -342,12 +342,12 @@ class MyKpi extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: MySpacing.xs, vertical: 3),
                 decoration: BoxDecoration(
-                  color: destacado ? Colors.white.withValues(alpha: 0.2) : MyColors.secondaryContainer,
+                  color: destacado ? MyColors.primary : MyColors.secondaryContainer,
                   borderRadius: BorderRadius.circular(MyRadius.full),
                 ),
                 child: Text(
                   pastilla!,
-                  style: MyType.labelMd.copyWith(color: destacado ? Colors.white : MyColors.onSecondaryFixedVariant),
+                  style: MyType.labelMd.copyWith(color: destacado ? MyColors.onPrimary : MyColors.onSecondaryFixedVariant),
                 ),
               ),
           ],
@@ -364,7 +364,7 @@ class MyKpi extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progreso!.clamp(0, 1),
               minHeight: 6,
-              color: destacado ? Colors.white : MyColors.primary,
+              color: MyColors.primary,
               backgroundColor: destacado ? Colors.white24 : MyColors.surfaceContainerHigh,
             ),
           ),
@@ -569,8 +569,8 @@ class MyIconoCaja extends StatelessWidget {
     this.icono, {
     super.key,
     this.tamano = 42,
-    this.fondo = MyColors.primaryFixed,
-    this.color = MyColors.primary,
+    this.fondo = MyColors.primary,
+    this.color = MyColors.onPrimary,
     this.circular = false,
   });
 
@@ -590,7 +590,7 @@ class MyIconoCaja extends StatelessWidget {
         shape: circular ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: circular ? null : BorderRadius.circular(tamano * 0.3),
       ),
-      child: Icon(icono, size: tamano * 0.5, color: color),
+      child: Icon(icono, size: tamano * 0.5, color: color, fill: 1),
     );
   }
 }
@@ -701,12 +701,13 @@ class MyPastillaEstado extends StatelessWidget {
       decoration: BoxDecoration(
         color: MyColors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(MyRadius.full),
+        border: Border.all(color: MyColors.outlineVariant),
         boxShadow: MyShadows.subtle,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 9, height: 9, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          MyPulso(color: color, size: 9),
           const SizedBox(width: MySpacing.xs),
           Flexible(
             child: Text.rich(
@@ -716,7 +717,7 @@ class MyPastillaEstado extends StatelessWidget {
                   if (detalle != null)
                     TextSpan(
                       text: '  ·  $detalle',
-                      style: MyType.labelMd.copyWith(color: MyColors.primary),
+                      style: MyType.labelMd.copyWith(color: MyColors.tertiary),
                     ),
                 ],
               ),

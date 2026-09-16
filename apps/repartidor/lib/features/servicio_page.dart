@@ -48,10 +48,13 @@ class _Contenido extends ConsumerWidget {
       };
 
   Future<void> _confirmarEntrega(BuildContext context, WidgetRef ref) async {
-    final codigo = await showDialog<String>(context: context, builder: (_) => const _DialogoCodigo());
+    final codigo = await mostrarDialogoAnimado<String>(context, builder: (_) => const _DialogoCodigo());
     if (codigo == null) return;
     try {
       await ref.read(enviosRepositoryProvider).confirmarEntrega(envio.id, codigo);
+      if (context.mounted) {
+        await mostrarExito(context, titulo: '¡Entregado!', mensaje: 'Buen trabajo. Ya podés tomar el próximo.');
+      }
     } catch (e) {
       if (context.mounted) mostrarError(context, e);
     }
@@ -157,7 +160,7 @@ class _Contenido extends ConsumerWidget {
                         width: 46,
                         height: 46,
                         decoration: const BoxDecoration(color: MyColors.secondaryContainer, shape: BoxShape.circle),
-                        child: const Icon(Symbols.person, color: MyColors.primary),
+                        child: const Icon(Symbols.person, color: MyColors.onSurface, fill: 1),
                       ),
                       const SizedBox(width: MySpacing.sm),
                       Expanded(
@@ -178,7 +181,7 @@ class _Contenido extends ConsumerWidget {
                           await Clipboard.setData(ClipboardData(text: envio.cliente.telefono));
                           if (context.mounted) mostrarAviso(context, 'Teléfono copiado');
                         },
-                        icon: const Icon(Symbols.content_copy, color: MyColors.primary),
+                        icon: const Icon(Symbols.content_copy, color: MyColors.onSurface),
                       ),
                     ],
                   ),

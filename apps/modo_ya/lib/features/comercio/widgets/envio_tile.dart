@@ -24,8 +24,8 @@ class EnvioTile extends StatelessWidget {
           MyIconoCaja(
             iconoEnvio(envio.estado),
             tamano: 46,
-            fondo: activo ? MyColors.primaryFixed : MyColors.secondaryContainer,
-            color: activo ? MyColors.primary : MyColors.onSecondaryFixedVariant,
+            fondo: activo ? MyColors.primary : MyColors.secondaryContainer,
+            color: activo ? MyColors.onPrimary : MyColors.onSecondaryFixedVariant,
           ),
           const SizedBox(width: MySpacing.sm),
           Expanded(

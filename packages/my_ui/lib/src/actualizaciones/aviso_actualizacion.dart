@@ -129,7 +129,7 @@ class _MyAvisoActualizacionState extends State<MyAvisoActualizacion> {
     return Stack(
       children: [
         widget.child,
-        if (v.obligatoria) const ModalBarrier(color: Color(0x991E293B), dismissible: false),
+        if (v.obligatoria) const ModalBarrier(color: Color(0x99141416), dismissible: false),
         if (v.obligatoria)
           Center(child: Padding(padding: const EdgeInsets.all(MySpacing.lg), child: tarjeta))
         else
@@ -173,7 +173,7 @@ class _Tarjeta extends StatelessWidget {
     return Material(
       color: MyColors.surfaceContainerLowest,
       elevation: 12,
-      shadowColor: const Color(0x401E293B),
+      shadowColor: const Color(0x40141416),
       borderRadius: BorderRadius.circular(MyRadius.card),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 400),
@@ -188,8 +188,8 @@ class _Tarjeta extends StatelessWidget {
                   Container(
                     width: 44,
                     height: 44,
-                    decoration: const BoxDecoration(color: MyColors.primaryFixed, shape: BoxShape.circle),
-                    child: const Icon(Symbols.system_update, color: MyColors.primary),
+                    decoration: const BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
+                    child: const Icon(Symbols.system_update, color: MyColors.onPrimary),
                   ),
                   const SizedBox(width: MySpacing.sm),
                   Expanded(

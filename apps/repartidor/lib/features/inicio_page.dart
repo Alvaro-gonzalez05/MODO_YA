@@ -35,7 +35,14 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
     if (respuesta == RespuestaOferta.vencio) return;
     try {
       await ref.read(enviosRepositoryProvider).responderOferta(oferta.id, acepta: respuesta == RespuestaOferta.acepta);
-      if (respuesta == RespuestaOferta.acepta && mounted) context.push('/servicio/${oferta.envio.id}');
+      if (respuesta != RespuestaOferta.acepta || !mounted) return;
+      await mostrarExito(
+        context,
+        titulo: '¡Servicio tuyo!',
+        mensaje: 'Andá a buscarlo a ${oferta.envio.comercioNombre}.',
+        icono: Symbols.sports_motorsports,
+      );
+      if (mounted) context.push('/servicio/${oferta.envio.id}');
     } catch (e) {
       if (mounted) mostrarError(context, e);
     }
@@ -130,7 +137,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                   color: MyColors.primaryFixed,
                   child: Row(
                     children: [
-                      const Icon(Symbols.local_shipping, color: MyColors.primary, size: 28),
+                      const Icon(Symbols.local_shipping, color: MyColors.onPrimaryFixed, size: 28, fill: 1),
                       const SizedBox(width: MySpacing.sm),
                       Expanded(
                         child: Column(
@@ -142,7 +149,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                           ],
                         ),
                       ),
-                      const Icon(Symbols.chevron_right, color: MyColors.primary),
+                      const Icon(Symbols.chevron_right, color: MyColors.onSurface),
                     ],
                   ),
                 ),
@@ -162,7 +169,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                 MyCard(
                   child: Column(
                     children: [
-                      const SizedBox(width: 44, height: 44, child: CircularProgressIndicator(strokeWidth: 3)),
+                      const MyCargando(size: 44, padding: EdgeInsets.zero),
                       const SizedBox(height: MySpacing.md),
                       Text('Esperando pedidos', style: MyType.headlineSm),
                       Text(

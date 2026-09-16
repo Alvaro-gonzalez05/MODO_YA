@@ -2,13 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
+import 'animaciones.dart';
 
 /// Tono semantico de las pastillas de estado.
+///
+/// - [ember]: amarillo de marca con texto negro (estado activo / en curso).
+/// - [info]: gris claro con texto oscuro (dato neutro: alias, categoria).
+/// - [success]: verde claro (entregado, conectado).
+/// - [danger]: rojo claro (rechazado, cancelado).
+/// - [neutral]: blanco con sombra (sobre fotos).
+/// - [dark]: negro con texto blanco (cerrado, inactivo).
 enum MyBadgeTone { ember, info, success, danger, neutral, dark }
 
 extension on MyBadgeTone {
   Color get background => switch (this) {
-        MyBadgeTone.ember => MyColors.primaryFixed,
+        MyBadgeTone.ember => MyColors.primary,
         MyBadgeTone.info => MyColors.secondaryContainer,
         MyBadgeTone.success => MyColors.successContainer,
         MyBadgeTone.danger => MyColors.errorContainer,
@@ -17,9 +25,9 @@ extension on MyBadgeTone {
       };
 
   Color get foreground => switch (this) {
-        MyBadgeTone.ember => MyColors.onPrimaryFixedVariant,
+        MyBadgeTone.ember => MyColors.onPrimary,
         MyBadgeTone.info => MyColors.onSecondaryContainer,
-        MyBadgeTone.success => const Color(0xFF0C5138),
+        MyBadgeTone.success => MyColors.onSuccessContainer,
         MyBadgeTone.danger => MyColors.onErrorContainer,
         MyBadgeTone.neutral => MyColors.onSurface,
         MyBadgeTone.dark => MyColors.inverseOnSurface,
@@ -28,7 +36,8 @@ extension on MyBadgeTone {
 
 /// Pastilla de estado: "En camino", "Buscando cadete", "20% OFF".
 ///
-/// Con [dot] en true dibuja el puntito de estado en vez de un icono.
+/// Con [dot] en true dibuja el puntito de estado en vez de un icono. Cuando
+/// cambia el texto o el tono, la pastilla hace una transicion animada.
 class MyBadge extends StatelessWidget {
   const MyBadge(
     this.label, {
@@ -45,7 +54,9 @@ class MyBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
       padding: const EdgeInsets.symmetric(
         horizontal: MySpacing.sm,
         vertical: MySpacing.xxs + 2,
@@ -55,34 +66,38 @@ class MyBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(MyRadius.full),
         boxShadow: tone == MyBadgeTone.neutral ? MyShadows.subtle : null,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (dot) ...[
-            Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: tone.foreground,
-                shape: BoxShape.circle,
+      child: MyCambio(
+        child: Row(
+          key: ValueKey('$label/$tone'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (dot) ...[
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: tone.foreground,
+                  shape: BoxShape.circle,
+                ),
               ),
+              const SizedBox(width: MySpacing.xs),
+            ] else if (icon != null) ...[
+              Icon(icon, size: 14, color: tone.foreground),
+              const SizedBox(width: MySpacing.xxs + 2),
+            ],
+            Text(
+              label,
+              style: MyType.labelMd.copyWith(color: tone.foreground),
             ),
-            const SizedBox(width: MySpacing.xs),
-          ] else if (icon != null) ...[
-            Icon(icon, size: 14, color: tone.foreground),
-            const SizedBox(width: MySpacing.xxs + 2),
           ],
-          Text(
-            label,
-            style: MyType.labelMd.copyWith(color: tone.foreground),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Chip de categoria o filtro. Activo: navy solido. Inactivo: blanco.
+/// Chip de categoria o filtro. Activo: amarillo con texto negro. Inactivo:
+/// blanco con borde suave. El cambio de estado esta animado.
 class MyChip extends StatelessWidget {
   const MyChip(
     this.label, {
@@ -97,24 +112,28 @@ class MyChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: selected ? MyColors.dock : MyColors.surfaceContainerLowest,
-      shape: const StadiumBorder(),
-      elevation: 0,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const StadiumBorder(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: MySpacing.lg,
-            vertical: MySpacing.sm,
+    return MyPressable(
+      onTap: onTap,
+      escala: 0.96,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(
+          horizontal: MySpacing.lg,
+          vertical: MySpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? MyColors.primary : MyColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(MyRadius.full),
+          border: Border.all(color: selected ? MyColors.primary : MyColors.outlineVariant),
+          boxShadow: selected ? MyShadows.glow : null,
+        ),
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 220),
+          style: MyType.labelLg.copyWith(
+            color: selected ? MyColors.onPrimary : MyColors.onSurfaceVariant,
           ),
-          child: Text(
-            label,
-            style: MyType.labelLg.copyWith(
-              color: selected ? MyColors.inverseOnSurface : MyColors.secondary,
-            ),
-          ),
+          child: Text(label),
         ),
       ),
     );

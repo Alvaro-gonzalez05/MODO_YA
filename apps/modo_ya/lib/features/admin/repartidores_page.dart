@@ -254,8 +254,8 @@ class _FichaRider extends ConsumerWidget {
             MyIconoCaja(
               Symbols.sports_motorsports,
               tamano: 64,
-              fondo: r.conectado ? MyColors.successContainer : MyColors.primaryFixed,
-              color: r.conectado ? MyColors.success : MyColors.primary,
+              fondo: r.conectado ? MyColors.successContainer : MyColors.primary,
+              color: r.conectado ? MyColors.success : MyColors.onPrimary,
             ),
             const SizedBox(width: MySpacing.sm),
             Expanded(

@@ -279,7 +279,7 @@ class _BarraLateral extends StatelessWidget {
                               Flexible(
                                 child: Text(
                                   seccion.toUpperCase(),
-                                  style: MyType.labelSm.copyWith(color: const Color(0xFF94A3B8)),
+                                  style: MyType.labelSm.copyWith(color: MyColors.primary),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -287,7 +287,7 @@ class _BarraLateral extends StatelessWidget {
                           ),
                           Text(
                             subtitulo,
-                            style: MyType.bodySm.copyWith(color: const Color(0xFFCBD5E1)),
+                            style: MyType.bodySm.copyWith(color: const Color(0xFFB8B8C0)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -319,7 +319,7 @@ class _BarraLateral extends StatelessWidget {
                     ? Text(
                         'v$version',
                         textAlign: TextAlign.center,
-                        style: MyType.labelSm.copyWith(color: const Color(0xFF64748B)),
+                        style: MyType.labelSm.copyWith(color: const Color(0xFF7A7A85)),
                       )
                     : Container(
                         padding: const EdgeInsets.symmetric(horizontal: MySpacing.sm, vertical: MySpacing.sm),
@@ -329,12 +329,12 @@ class _BarraLateral extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Symbols.verified, size: 18, color: MyColors.primaryFixedDim),
+                            const Icon(Symbols.verified, size: 18, color: MyColors.primary),
                             const SizedBox(width: MySpacing.xs),
                             Expanded(
                               child: Text(
                                 'Versión $version',
-                                style: MyType.labelMd.copyWith(color: const Color(0xFFCBD5E1)),
+                                style: MyType.labelMd.copyWith(color: const Color(0xFFB8B8C0)),
                               ),
                             ),
                           ],
@@ -381,7 +381,7 @@ class _ItemLateralState extends State<_ItemLateral> {
   Widget build(BuildContext context) {
     final d = widget.destino;
     final activo = widget.activo;
-    final colorTexto = activo ? Colors.white : const Color(0xFFCBD5E1);
+    final colorTexto = activo ? MyColors.onPrimary : const Color(0xFFD0D0D6);
 
     final contenido = AnimatedContainer(
       duration: const Duration(milliseconds: 160),
@@ -393,7 +393,7 @@ class _ItemLateralState extends State<_ItemLateral> {
             : (_encima ? Colors.white.withValues(alpha: 0.07) : Colors.transparent),
         borderRadius: BorderRadius.circular(MyRadius.md),
         boxShadow: activo
-            ? const [BoxShadow(color: Color(0x66A33900), blurRadius: 16, offset: Offset(0, 6), spreadRadius: -6)]
+            ? MyShadows.glow
             : null,
       ),
       child: Row(
@@ -402,7 +402,7 @@ class _ItemLateralState extends State<_ItemLateral> {
           Badge(
             isLabelVisible: widget.compacta && d.contador > 0,
             label: Text('${d.contador}'),
-            child: Icon(d.icon, size: 22, color: activo ? Colors.white : const Color(0xFF94A3B8), fill: activo ? 1 : 0),
+            child: Icon(d.icon, size: 22, color: activo ? MyColors.onPrimary : const Color(0xFF9A9AA3), fill: activo ? 1 : 0),
           ),
           if (!widget.compacta) ...[
             const SizedBox(width: MySpacing.sm),
@@ -419,13 +419,13 @@ class _ItemLateralState extends State<_ItemLateral> {
                 constraints: const BoxConstraints(minWidth: 22),
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: activo ? Colors.white : MyColors.primaryContainer,
+                  color: activo ? MyColors.onPrimary : MyColors.primary,
                   borderRadius: BorderRadius.circular(MyRadius.full),
                 ),
                 child: Text(
                   '${d.contador}',
                   textAlign: TextAlign.center,
-                  style: MyType.labelMd.copyWith(color: activo ? MyColors.primary : Colors.white),
+                  style: MyType.labelMd.copyWith(color: activo ? MyColors.primary : MyColors.onPrimary),
                 ),
               ),
           ],
@@ -570,8 +570,8 @@ class _Avatar extends StatelessWidget {
       alignment: Alignment.center,
       decoration: const BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
       child: iniciales.isEmpty
-          ? const Icon(Symbols.person, size: 20, color: Colors.white, fill: 1)
-          : Text(iniciales, style: MyType.labelLg.copyWith(color: Colors.white)),
+          ? const Icon(Symbols.person, size: 20, color: MyColors.onPrimary, fill: 1)
+          : Text(iniciales, style: MyType.labelLg.copyWith(color: MyColors.onPrimary)),
     );
   }
 }
@@ -595,7 +595,7 @@ class _ItemHoja extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = peligrosa ? MyColors.error : (activo ? MyColors.primary : MyColors.onSurface);
+    final color = peligrosa ? MyColors.error : (activo ? MyColors.onPrimaryFixed : MyColors.onSurface);
     return Material(
       color: activo ? MyColors.primaryFixed : Colors.transparent,
       borderRadius: BorderRadius.circular(MyRadius.md),
@@ -606,11 +606,11 @@ class _ItemHoja extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: MySpacing.sm, vertical: MySpacing.sm),
           child: Row(
             children: [
-              Icon(icon, size: 22, color: peligrosa ? MyColors.error : (activo ? MyColors.primary : MyColors.secondary)),
+              Icon(icon, size: 22, color: peligrosa ? MyColors.error : (activo ? MyColors.onPrimaryFixed : MyColors.secondary), fill: activo ? 1 : 0),
               const SizedBox(width: MySpacing.sm),
               Expanded(child: Text(label, style: MyType.labelLg.copyWith(color: color, fontSize: 15))),
               if (contador > 0)
-                Badge(label: Text('$contador'), backgroundColor: MyColors.primaryContainer),
+                Badge(label: Text('$contador'), backgroundColor: MyColors.error),
             ],
           ),
         ),

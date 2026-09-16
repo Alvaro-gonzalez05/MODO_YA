@@ -61,7 +61,7 @@ class _AdminEnviosPageState extends ConsumerState<AdminEnviosPage> {
                         children: [
                           Row(
                             children: [
-                              Text(e.codigo, style: MyType.labelLg.copyWith(color: MyColors.primary)),
+                              Text(e.codigo, style: MyType.labelLg.copyWith(color: MyColors.tertiary)),
                               const SizedBox(width: MySpacing.xs),
                               Text(Formato.haceCuanto(e.creadoEn), style: MyType.bodySm.copyWith(color: MyColors.secondary)),
                               const Spacer(),
@@ -245,7 +245,7 @@ class _Linea extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: Text(label, style: fuerte ? MyType.labelLg : MyType.bodyMd)),
-          Text(valor, style: fuerte ? MyType.headlineSm.copyWith(color: MyColors.primary) : MyType.labelLg),
+          Text(valor, style: fuerte ? MyType.headlineSm.copyWith(color: MyColors.tertiary) : MyType.labelLg),
         ],
       ),
     );

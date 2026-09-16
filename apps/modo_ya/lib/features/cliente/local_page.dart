@@ -118,7 +118,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Symbols.sports_motorsports, size: 20, color: MyColors.primary),
+                                  const Icon(Symbols.sports_motorsports, size: 20, color: MyColors.tertiary),
                                   const SizedBox(width: MySpacing.xs),
                                   Text(
                                     cot == null
@@ -142,7 +142,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                     ),
                   ),
                   ...menuAsync.when(
-                    loading: () => [const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()))],
+                    loading: () => [const SliverToBoxAdapter(child: MyCargando())],
                     error: (e, _) => [SliverToBoxAdapter(child: MyEmptyState(title: 'No pudimos cargar el menú', message: '$e'))],
                     data: (menu) => _slivers(comercio, menu),
                   ),
@@ -213,7 +213,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
     );
 
     final Widget menu = menuAsync.when(
-      loading: () => const Padding(padding: EdgeInsets.all(MySpacing.xxl), child: Center(child: CircularProgressIndicator())),
+      loading: () => const MyCargando(),
       error: (e, _) => MyEmptyState(title: 'No pudimos cargar el menú', message: '$e'),
       data: (m) {
         if (m.productos.isEmpty) {
@@ -266,7 +266,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
         children: [
           Row(
             children: [
-              const Icon(Symbols.shopping_bag, color: MyColors.primary),
+              const Icon(Symbols.shopping_bag, color: MyColors.onSurface, fill: 1),
               const SizedBox(width: MySpacing.xs),
               Text('Tu pedido', style: MyType.headlineSm),
             ],
@@ -286,7 +286,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(width: 30, child: Text('${i.cantidad}×', style: MyType.labelLg.copyWith(color: MyColors.primary))),
+                    SizedBox(width: 30, child: Text('${i.cantidad}×', style: MyType.labelLg.copyWith(color: MyColors.tertiary))),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,7 +454,7 @@ class _TarjetaProducto extends StatelessWidget {
                 const SizedBox(height: MySpacing.sm),
                 Row(
                   children: [
-                    Text(Formato.pesos(producto.precio), style: MyType.headlineMd.copyWith(color: MyColors.primary)),
+                    Text(Formato.pesos(producto.precio), style: MyType.headlineMd.copyWith(color: MyColors.onSurface)),
                     const Spacer(),
                     if (habilitado)
                       MyCircleIconButton(
@@ -518,7 +518,7 @@ class _TarjetaProductoAncha extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(Formato.pesos(p.precio), style: MyType.headlineMd.copyWith(color: MyColors.primary)),
+                      Text(Formato.pesos(p.precio), style: MyType.headlineMd.copyWith(color: MyColors.onSurface)),
                       if (p.tienePersonalizacion) Text('Personalizable', style: MyType.labelSm.copyWith(color: MyColors.secondary)),
                     ],
                   ),
@@ -547,29 +547,40 @@ class _BarraPedido extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: MyColors.primaryContainer,
-      shape: const StadiumBorder(),
-      elevation: 8,
-      shadowColor: MyColors.primary.withValues(alpha: 0.4),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
+    return MyApareceEn(
+      desplazamiento: 40,
+      duracion: const Duration(milliseconds: 420),
+      child: MyPressable(
+        escala: 0.97,
         onTap: () => context.go('/cliente/carrito'),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: MySpacing.md, vertical: MySpacing.sm),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: Colors.white,
-                child: Text('${carrito.cantidad}', style: MyType.labelLg.copyWith(color: MyColors.inverseOnSurface)),
-              ),
-              const SizedBox(width: MySpacing.sm),
-              Text('Ver pedido', style: MyType.headlineSm.copyWith(color: Colors.white)),
-              const Spacer(),
-              Text(Formato.pesos(carrito.subtotal), style: MyType.headlineSm.copyWith(color: Colors.white)),
-              const Icon(Symbols.chevron_right, color: Colors.white),
-            ],
+        child: Material(
+          color: MyColors.dock,
+          shape: const StadiumBorder(),
+          elevation: 10,
+          shadowColor: MyColors.primary.withValues(alpha: 0.45),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: MySpacing.md, vertical: MySpacing.sm),
+            child: Row(
+              children: [
+                MyPop(
+                  disparador: carrito.cantidad,
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: MyColors.primary,
+                    child: Text('${carrito.cantidad}', style: MyType.labelLg.copyWith(color: MyColors.onPrimary)),
+                  ),
+                ),
+                const SizedBox(width: MySpacing.sm),
+                Text('Ver pedido', style: MyType.headlineSm.copyWith(color: MyColors.inverseOnSurface)),
+                const Spacer(),
+                MyNumeroAnimado(
+                  valor: carrito.subtotal,
+                  formato: Formato.pesos,
+                  style: MyType.headlineSm.copyWith(color: MyColors.primary),
+                ),
+                const Icon(Symbols.chevron_right, color: MyColors.primary),
+              ],
+            ),
           ),
         ),
       ),

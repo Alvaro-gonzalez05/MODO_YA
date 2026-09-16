@@ -213,7 +213,7 @@ class _TarjetaProducto extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(Formato.pesos(p.precio), style: MyType.headlineSm.copyWith(color: MyColors.primary)),
+                        Text(Formato.pesos(p.precio), style: MyType.headlineSm.copyWith(color: MyColors.tertiary)),
                         if (_detalle(p).isNotEmpty) Text(_detalle(p), style: MyType.bodySm.copyWith(color: MyColors.secondary)),
                       ],
                     ),
@@ -251,7 +251,7 @@ class _FilaProducto extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(p.nombre, style: MyType.labelLg, maxLines: 2, overflow: TextOverflow.ellipsis),
-                  Text(Formato.pesos(p.precio), style: MyType.headlineSm.copyWith(color: MyColors.primary)),
+                  Text(Formato.pesos(p.precio), style: MyType.headlineSm.copyWith(color: MyColors.tertiary)),
                   if (_detalle(p).isNotEmpty) Text(_detalle(p), style: MyType.bodySm.copyWith(color: MyColors.secondary)),
                 ],
               ),

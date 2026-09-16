@@ -104,7 +104,7 @@ class _ProductoSheetState extends State<ProductoSheet> {
                 if (p.descripcion != null)
                   Text(p.descripcion!, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
                 const SizedBox(height: MySpacing.xs),
-                Text(Formato.pesos(p.precio), style: MyType.headlineMd.copyWith(color: MyColors.primary)),
+                Text(Formato.pesos(p.precio), style: MyType.headlineMd.copyWith(color: MyColors.tertiary)),
                 for (var g = 0; g < p.opciones.length; g++) ...[
                   const SizedBox(height: MySpacing.lg),
                   Row(
@@ -157,7 +157,7 @@ class _ProductoSheetState extends State<ProductoSheet> {
                         Text('$_cantidad', style: MyType.headlineSm),
                         IconButton(
                           onPressed: _cantidad < 50 ? () => setState(() => _cantidad++) : null,
-                          icon: const Icon(Symbols.add, color: MyColors.primary),
+                          icon: const Icon(Symbols.add, color: MyColors.onSurface),
                         ),
                       ],
                     ),

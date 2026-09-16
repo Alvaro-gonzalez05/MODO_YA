@@ -307,8 +307,8 @@ class _Alerta extends StatelessWidget {
         children: [
           MyIconoCaja(
             icono,
-            fondo: urgente ? Colors.white : MyColors.primaryFixed,
-            color: urgente ? MyColors.error : MyColors.primary,
+            fondo: urgente ? MyColors.surfaceContainerLowest : MyColors.primary,
+            color: urgente ? MyColors.error : MyColors.onPrimary,
           ),
           const SizedBox(width: MySpacing.sm),
           Expanded(
@@ -364,7 +364,7 @@ class _EnviosEnCurso extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(e.codigo, style: MyType.labelLg.copyWith(color: MyColors.primary)),
+                      Text(e.codigo, style: MyType.labelLg.copyWith(color: MyColors.tertiary)),
                       const Spacer(),
                       MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true),
                     ],
@@ -401,7 +401,7 @@ class _EnviosEnCurso extends StatelessWidget {
           MyFila(
             onTap: () => context.go('/admin/envios'),
             celdas: [
-              Text(e.codigo, style: MyType.labelLg.copyWith(color: MyColors.primary)),
+              Text(e.codigo, style: MyType.labelLg.copyWith(color: MyColors.tertiary)),
               Text(Formato.hora(e.creadoEn), style: MyType.bodyMd),
               Text(e.comercioNombre, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
               Text(

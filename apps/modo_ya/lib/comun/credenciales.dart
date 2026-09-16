@@ -65,7 +65,7 @@ Future<void> mostrarCredenciales(
                   const SizedBox(height: 2),
                   SelectableText(
                     alta.passwordTemporal ?? '',
-                    style: MyType.headlineMd.copyWith(color: MyColors.primary, letterSpacing: 1.5),
+                    style: MyType.headlineMd.copyWith(color: MyColors.tertiary, letterSpacing: 1.5),
                   ),
                 ],
               ),

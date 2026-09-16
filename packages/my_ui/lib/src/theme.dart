@@ -4,7 +4,10 @@ import 'package:flutter/services.dart';
 import 'tokens.dart';
 import 'typography.dart';
 
-/// Tema Material 3 armado sobre los tokens de MODO YA.
+/// Tema Material 3 armado sobre los tokens de MODO YA: blanco, amarillo y
+/// negro en todos los widgets estandar (botones, campos, dialogos, chips,
+/// selectores, snackbars) para que cualquier pantalla, incluso las que usan
+/// widgets de Material sin estilo propio, salga con la identidad de marca.
 abstract final class MyTheme {
   static const ColorScheme colorScheme = ColorScheme(
     brightness: Brightness.light,
@@ -56,12 +59,39 @@ abstract final class MyTheme {
     scrim: Color(0xFF000000),
   );
 
+  static OutlineInputBorder _borde(Color color, {double ancho = 1}) => OutlineInputBorder(
+        borderRadius: BorderRadius.circular(MyRadius.lg),
+        borderSide: BorderSide(color: color, width: ancho),
+      );
+
+  /// El tema de toda la app. El nombre `dark` quedo de la primera version
+  /// (negra); hoy es el tema blanco de marca y es el unico que hay.
   static ThemeData get dark => ThemeData(
         useMaterial3: true,
         colorScheme: colorScheme,
         scaffoldBackgroundColor: MyColors.surface,
+        canvasColor: MyColors.surface,
         textTheme: MyType.textTheme,
         splashFactory: InkSparkle.splashFactory,
+        splashColor: MyColors.primary.withValues(alpha: 0.18),
+        highlightColor: MyColors.primary.withValues(alpha: 0.08),
+        hoverColor: MyColors.primary.withValues(alpha: 0.06),
+        focusColor: MyColors.primary.withValues(alpha: 0.14),
+        dividerColor: MyColors.outlineVariant,
+        iconTheme: const IconThemeData(color: MyColors.onSurface),
+
+        // Transiciones entre pantallas: fundido + deslizamiento corto en todas
+        // las plataformas, en vez del zoom de Android o el corte seco de la PC.
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: _TransicionModoYa(),
+            TargetPlatform.iOS: _TransicionModoYa(),
+            TargetPlatform.windows: _TransicionModoYa(),
+            TargetPlatform.macOS: _TransicionModoYa(),
+            TargetPlatform.linux: _TransicionModoYa(),
+            TargetPlatform.fuchsia: _TransicionModoYa(),
+          },
+        ),
 
         appBarTheme: AppBarTheme(
           backgroundColor: MyColors.surface,
@@ -74,37 +104,67 @@ abstract final class MyTheme {
           systemOverlayStyle: SystemUiOverlayStyle.dark,
         ),
 
-        // El CTA del sistema: pastilla completa, 54 de alto.
+        // El CTA del sistema: pastilla amarilla completa, 54 de alto.
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             backgroundColor: MyColors.primary,
             foregroundColor: MyColors.onPrimary,
+            disabledBackgroundColor: MyColors.surfaceContainerHigh,
+            disabledForegroundColor: MyColors.outline,
             minimumSize: const Size.fromHeight(54),
             padding: const EdgeInsets.symmetric(horizontal: MySpacing.xl),
+            shape: const StadiumBorder(),
+            textStyle: MyType.headlineSm,
+            elevation: 0,
+          ).copyWith(
+            overlayColor: WidgetStatePropertyAll(MyColors.onPrimary.withValues(alpha: 0.08)),
+          ),
+        ),
+
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: MyColors.primary,
+            foregroundColor: MyColors.onPrimary,
+            minimumSize: const Size.fromHeight(54),
             shape: const StadiumBorder(),
             textStyle: MyType.headlineSm,
             elevation: 0,
           ),
         ),
 
-        // Accion secundaria: misma silueta, relleno azul suave.
+        // Accion secundaria: misma silueta, blanca con borde negro fino.
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: MyColors.onSurface,
-            backgroundColor: MyColors.secondaryContainer,
+            backgroundColor: MyColors.surfaceContainerLowest,
             minimumSize: const Size.fromHeight(54),
             padding: const EdgeInsets.symmetric(horizontal: MySpacing.xl),
             shape: const StadiumBorder(),
-            side: BorderSide.none,
+            side: const BorderSide(color: MyColors.onSurface, width: 1.4),
             textStyle: MyType.headlineSm,
           ),
         ),
 
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            foregroundColor: MyColors.primary,
+            foregroundColor: MyColors.onSurface,
             textStyle: MyType.labelLg,
+            shape: const StadiumBorder(),
           ),
+        ),
+
+        iconButtonTheme: IconButtonThemeData(
+          style: IconButton.styleFrom(
+            foregroundColor: MyColors.onSurface,
+            highlightColor: MyColors.primary.withValues(alpha: 0.18),
+          ),
+        ),
+
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: MyColors.primary,
+          foregroundColor: MyColors.onPrimary,
+          elevation: 4,
+          shape: StadiumBorder(),
         ),
 
         cardTheme: CardThemeData(
@@ -118,8 +178,8 @@ abstract final class MyTheme {
           ),
         ),
 
-        // Relleno celeste con borde suave: los campos van casi siempre sobre
-        // tarjetas blancas, y blanco sobre blanco no se ve donde escribir.
+        // Campos: relleno gris muy claro con borde suave; al enfocar, borde
+        // amarillo como en la referencia.
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: MyColors.surfaceContainerLow,
@@ -129,29 +189,25 @@ abstract final class MyTheme {
           ),
           hintStyle: MyType.bodyMd.copyWith(color: MyColors.secondary),
           labelStyle: MyType.labelMd.copyWith(color: MyColors.secondary),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(MyRadius.lg),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(MyRadius.lg),
-            borderSide: const BorderSide(color: MyColors.surfaceContainerHigh),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(MyRadius.lg),
-            borderSide: const BorderSide(color: MyColors.primary, width: 1.5),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(MyRadius.lg),
-            borderSide: const BorderSide(color: MyColors.error, width: 1.5),
-          ),
+          floatingLabelStyle: MyType.labelMd.copyWith(color: MyColors.onPrimaryFixedVariant),
+          prefixIconColor: MyColors.secondary,
+          suffixIconColor: MyColors.secondary,
+          border: _borde(MyColors.outlineVariant),
+          enabledBorder: _borde(MyColors.outlineVariant),
+          focusedBorder: _borde(MyColors.primary, ancho: 2),
+          errorBorder: _borde(MyColors.error, ancho: 1.5),
+          focusedErrorBorder: _borde(MyColors.error, ancho: 2),
+          disabledBorder: _borde(MyColors.surfaceContainerHigh),
         ),
 
         chipTheme: ChipThemeData(
           backgroundColor: MyColors.surfaceContainerLowest,
-          selectedColor: MyColors.dock,
+          selectedColor: MyColors.primary,
+          secondarySelectedColor: MyColors.primary,
+          checkmarkColor: MyColors.onPrimary,
           labelStyle: MyType.labelLg,
-          side: BorderSide.none,
+          secondaryLabelStyle: MyType.labelLg.copyWith(color: MyColors.onPrimary),
+          side: const BorderSide(color: MyColors.outlineVariant),
           shape: const StadiumBorder(),
           padding: const EdgeInsets.symmetric(
             horizontal: MySpacing.md,
@@ -160,19 +216,87 @@ abstract final class MyTheme {
         ),
 
         dividerTheme: const DividerThemeData(
-          color: MyColors.surfaceContainerHigh,
+          color: MyColors.outlineVariant,
           thickness: 1,
           space: 1,
+        ),
+
+        listTileTheme: ListTileThemeData(
+          iconColor: MyColors.onSurfaceVariant,
+          textColor: MyColors.onSurface,
+          selectedColor: MyColors.onPrimaryFixed,
+          selectedTileColor: MyColors.primaryFixed,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.md)),
         ),
 
         bottomSheetTheme: const BottomSheetThemeData(
           backgroundColor: MyColors.surfaceContainerLowest,
           surfaceTintColor: Colors.transparent,
+          modalBackgroundColor: MyColors.surfaceContainerLowest,
+          dragHandleColor: MyColors.surfaceContainerHighest,
+          showDragHandle: false,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(
               top: Radius.circular(MyRadius.hero),
             ),
           ),
+        ),
+
+        dialogTheme: DialogThemeData(
+          backgroundColor: MyColors.surfaceContainerLowest,
+          surfaceTintColor: Colors.transparent,
+          elevation: 12,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.hero)),
+          titleTextStyle: MyType.headlineMd.copyWith(color: MyColors.onSurface),
+          contentTextStyle: MyType.bodyMd.copyWith(color: MyColors.onSurfaceVariant),
+          actionsPadding: const EdgeInsets.fromLTRB(MySpacing.lg, 0, MySpacing.lg, MySpacing.lg),
+        ),
+
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: MyColors.inverseSurface,
+          contentTextStyle: MyType.bodyMd.copyWith(color: MyColors.inverseOnSurface),
+          actionTextColor: MyColors.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.lg)),
+          elevation: 6,
+        ),
+
+        popupMenuTheme: PopupMenuThemeData(
+          color: MyColors.surfaceContainerLowest,
+          surfaceTintColor: Colors.transparent,
+          elevation: 8,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.lg)),
+          textStyle: MyType.labelLg,
+        ),
+
+        menuTheme: MenuThemeData(
+          style: MenuStyle(
+            backgroundColor: const WidgetStatePropertyAll(MyColors.surfaceContainerLowest),
+            surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+            elevation: const WidgetStatePropertyAll(8),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.lg)),
+            ),
+          ),
+        ),
+
+        dropdownMenuTheme: DropdownMenuThemeData(
+          textStyle: MyType.bodyMd,
+          menuStyle: MenuStyle(
+            backgroundColor: const WidgetStatePropertyAll(MyColors.surfaceContainerLowest),
+            surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.lg)),
+            ),
+          ),
+        ),
+
+        tooltipTheme: TooltipThemeData(
+          decoration: BoxDecoration(
+            color: MyColors.inverseSurface,
+            borderRadius: BorderRadius.circular(MyRadius.md),
+          ),
+          textStyle: MyType.bodySm.copyWith(color: MyColors.inverseOnSurface),
         ),
 
         progressIndicatorTheme: const ProgressIndicatorThemeData(
@@ -194,200 +318,145 @@ abstract final class MyTheme {
           ),
           trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
         ),
-      );
 
-  // --- Variante clara: flujo de pedidos (carrito, direcciones, seguimiento) -
-  static const ColorScheme colorSchemeClaro = ColorScheme(
-    brightness: Brightness.light,
-    primary: MyColors.primary,
-    onPrimary: MyColors.onPrimary,
-    primaryContainer: Color(0xFFFFF3D1),
-    onPrimaryContainer: Color(0xFF4A3800),
-    primaryFixed: MyColors.primaryFixed,
-    primaryFixedDim: MyColors.primaryFixedDim,
-    onPrimaryFixed: MyColors.onPrimaryFixed,
-    onPrimaryFixedVariant: MyColors.onPrimaryFixedVariant,
-    secondary: Color(0xFF545F73),
-    onSecondary: Color(0xFFFFFFFF),
-    secondaryContainer: Color(0xFFE9EDF5),
-    onSecondaryContainer: Color(0xFF313B4C),
-    secondaryFixed: MyColors.secondaryFixed,
-    secondaryFixedDim: MyColors.secondaryFixedDim,
-    onSecondaryFixed: MyColors.onSecondaryFixed,
-    onSecondaryFixedVariant: MyColors.onSecondaryFixedVariant,
-    tertiary: Color(0xFF8A5300),
-    onTertiary: Color(0xFFFFFFFF),
-    tertiaryContainer: Color(0xFFFFE4B8),
-    onTertiaryContainer: Color(0xFF4A2E00),
-    tertiaryFixed: MyColors.tertiaryFixed,
-    tertiaryFixedDim: MyColors.tertiaryFixedDim,
-    onTertiaryFixed: MyColors.onTertiaryFixed,
-    onTertiaryFixedVariant: MyColors.onTertiaryFixedVariant,
-    error: MyColors.claroError,
-    onError: Color(0xFFFFFFFF),
-    errorContainer: Color(0xFFFFDAD6),
-    onErrorContainer: Color(0xFF410002),
-    surface: MyColors.claroFondo,
-    onSurface: MyColors.claroTexto,
-    surfaceDim: Color(0xFFE2E2E6),
-    surfaceBright: MyColors.claroSuperficie,
-    surfaceContainerLowest: MyColors.claroSuperficie,
-    surfaceContainerLow: MyColors.claroSuperficieAlt,
-    surfaceContainer: Color(0xFFECECEF),
-    surfaceContainerHigh: Color(0xFFE3E3E8),
-    surfaceContainerHighest: Color(0xFFD8D8DE),
-    onSurfaceVariant: MyColors.claroTextoSecundario,
-    outline: Color(0xFF9A9AA3),
-    outlineVariant: MyColors.claroBorde,
-    inverseSurface: Color(0xFF1A1A1D),
-    onInverseSurface: Color(0xFFFFFFFF),
-    inversePrimary: MyColors.inversePrimary,
-    surfaceTint: MyColors.surfaceTint,
-    shadow: Color(0xFF000000),
-    scrim: Color(0xFF000000),
-  );
-
-  /// Tema claro para el flujo de pedidos (carrito, direcciones, seguimiento).
-  /// [dark] (el tema por defecto de toda la app) ya usa los mismos tonos
-  /// blancos -- ver [tokens.dart] -- asi que esta variante quedo casi
-  /// idéntica; se mantiene separada porque esas pantallas la referencian
-  /// explicitamente por nombre (`claroFondo`, `claroTexto`, etc).
-  static ThemeData get claro => ThemeData(
-        useMaterial3: true,
-        colorScheme: colorSchemeClaro,
-        scaffoldBackgroundColor: MyColors.claroFondo,
-        textTheme: MyType.textTheme,
-        splashFactory: InkSparkle.splashFactory,
-
-        appBarTheme: AppBarTheme(
-          backgroundColor: MyColors.claroFondo,
-          surfaceTintColor: Colors.transparent,
-          foregroundColor: MyColors.claroTexto,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          centerTitle: false,
-          titleTextStyle: MyType.headlineSm,
-          systemOverlayStyle: SystemUiOverlayStyle.dark,
+        checkboxTheme: CheckboxThemeData(
+          fillColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected) ? MyColors.primary : Colors.transparent,
+          ),
+          checkColor: const WidgetStatePropertyAll(MyColors.onPrimary),
+          side: const BorderSide(color: MyColors.outline, width: 1.6),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
 
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: MyColors.primary,
-            foregroundColor: MyColors.onPrimary,
-            minimumSize: const Size.fromHeight(54),
-            padding: const EdgeInsets.symmetric(horizontal: MySpacing.xl),
-            shape: const StadiumBorder(),
-            textStyle: MyType.headlineSm,
-            elevation: 0,
+        radioTheme: RadioThemeData(
+          fillColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected) ? MyColors.primary : MyColors.outline,
           ),
         ),
 
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: MyColors.claroTexto,
-            backgroundColor: MyColors.claroSuperficieAlt,
-            minimumSize: const Size.fromHeight(54),
-            padding: const EdgeInsets.symmetric(horizontal: MySpacing.xl),
-            shape: const StadiumBorder(),
-            side: BorderSide.none,
-            textStyle: MyType.headlineSm,
-          ),
+        sliderTheme: const SliderThemeData(
+          activeTrackColor: MyColors.primary,
+          inactiveTrackColor: MyColors.surfaceContainerHigh,
+          thumbColor: MyColors.primary,
+          overlayColor: Color(0x29FFC800),
         ),
 
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: MyColors.claroAcento,
+        segmentedButtonTheme: SegmentedButtonThemeData(
+          style: SegmentedButton.styleFrom(
+            backgroundColor: MyColors.surfaceContainerLowest,
+            foregroundColor: MyColors.onSurfaceVariant,
+            selectedBackgroundColor: MyColors.primary,
+            selectedForegroundColor: MyColors.onPrimary,
+            side: const BorderSide(color: MyColors.outlineVariant),
             textStyle: MyType.labelLg,
           ),
         ),
 
-        cardTheme: CardThemeData(
-          color: MyColors.claroSuperficie,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(MyRadius.card),
-            side: const BorderSide(color: MyColors.claroBorde),
-          ),
-        ),
-
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: MyColors.claroSuperficieAlt,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: MySpacing.md,
-            vertical: MySpacing.md,
-          ),
-          hintStyle: MyType.bodyMd.copyWith(color: MyColors.claroTextoSecundario),
-          labelStyle: MyType.labelMd.copyWith(color: MyColors.claroTextoSecundario),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(MyRadius.lg),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(MyRadius.lg),
-            borderSide: const BorderSide(color: MyColors.claroBorde),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(MyRadius.lg),
-            borderSide: const BorderSide(color: MyColors.primary, width: 1.5),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(MyRadius.lg),
-            borderSide: const BorderSide(color: MyColors.claroError, width: 1.5),
-          ),
-        ),
-
-        chipTheme: ChipThemeData(
-          backgroundColor: MyColors.claroSuperficieAlt,
-          selectedColor: MyColors.primary,
+        tabBarTheme: TabBarThemeData(
+          labelColor: MyColors.onSurface,
+          unselectedLabelColor: MyColors.secondary,
+          indicatorColor: MyColors.primary,
+          indicatorSize: TabBarIndicatorSize.label,
+          dividerColor: MyColors.outlineVariant,
           labelStyle: MyType.labelLg,
-          side: BorderSide.none,
-          shape: const StadiumBorder(),
-          padding: const EdgeInsets.symmetric(
-            horizontal: MySpacing.md,
-            vertical: MySpacing.sm,
-          ),
+          unselectedLabelStyle: MyType.labelLg,
         ),
 
-        dividerTheme: const DividerThemeData(
-          color: MyColors.claroBorde,
-          thickness: 1,
-          space: 1,
-        ),
-
-        bottomSheetTheme: const BottomSheetThemeData(
-          backgroundColor: MyColors.claroSuperficie,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(MyRadius.hero),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: MyColors.surfaceContainerLowest,
+          indicatorColor: MyColors.primary,
+          iconTheme: WidgetStateProperty.resolveWith(
+            (states) => IconThemeData(
+              color: states.contains(WidgetState.selected) ? MyColors.onPrimary : MyColors.secondary,
             ),
           ),
+          labelTextStyle: WidgetStatePropertyAll(MyType.labelMd),
         ),
 
-        progressIndicatorTheme: const ProgressIndicatorThemeData(
-          color: MyColors.primary,
-          linearTrackColor: MyColors.claroBorde,
-          circularTrackColor: MyColors.claroBorde,
+        datePickerTheme: DatePickerThemeData(
+          backgroundColor: MyColors.surfaceContainerLowest,
+          surfaceTintColor: Colors.transparent,
+          headerBackgroundColor: MyColors.dock,
+          headerForegroundColor: MyColors.inverseOnSurface,
+          dayBackgroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected) ? MyColors.primary : null,
+          ),
+          dayForegroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected) ? MyColors.onPrimary : MyColors.onSurface,
+          ),
+          todayBorder: const BorderSide(color: MyColors.primary),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.hero)),
         ),
 
-        switchTheme: SwitchThemeData(
-          thumbColor: WidgetStateProperty.resolveWith(
-            (states) => states.contains(WidgetState.selected) ? MyColors.onPrimary : MyColors.claroSuperficie,
+        timePickerTheme: TimePickerThemeData(
+          backgroundColor: MyColors.surfaceContainerLowest,
+          dialBackgroundColor: MyColors.surfaceContainerLow,
+          dialHandColor: MyColors.primary,
+          hourMinuteColor: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected) ? MyColors.primaryFixed : MyColors.surfaceContainerLow,
           ),
-          trackColor: WidgetStateProperty.resolveWith(
-            (states) => states.contains(WidgetState.selected) ? MyColors.primary : Color(0xFFD8D8DE),
+          hourMinuteTextColor: MyColors.onSurface,
+          dayPeriodColor: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected) ? MyColors.primary : MyColors.surfaceContainerLow,
           ),
-          trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.hero)),
+        ),
+
+        badgeTheme: const BadgeThemeData(
+          backgroundColor: MyColors.error,
+          textColor: MyColors.onError,
+        ),
+
+        textSelectionTheme: TextSelectionThemeData(
+          cursorColor: MyColors.onSurface,
+          selectionColor: MyColors.primary.withValues(alpha: 0.35),
+          selectionHandleColor: MyColors.primary,
+        ),
+
+        scrollbarTheme: ScrollbarThemeData(
+          thumbColor: WidgetStatePropertyAll(MyColors.onSurface.withValues(alpha: 0.25)),
+          radius: const Radius.circular(MyRadius.full),
         ),
       );
+
+  /// Alias historico del flujo de pedidos (carrito, direcciones, seguimiento).
+  /// Es el mismo tema: toda la app es blanca.
+  static ThemeData get claro => dark;
+
+  static const ColorScheme colorSchemeClaro = colorScheme;
+}
+
+/// Transicion de pantalla de MODO YA: la nueva pantalla entra con un fundido
+/// y un deslizamiento corto desde abajo; la anterior se atenua apenas.
+class _TransicionModoYa extends PageTransitionsBuilder {
+  const _TransicionModoYa();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final entrada = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+    final salida = CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeOut);
+    return FadeTransition(
+      opacity: entrada,
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(entrada),
+        child: FadeTransition(
+          opacity: Tween<double>(begin: 1, end: 0.85).animate(salida),
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
 /// Envuelve una pantalla del flujo de pedidos (carrito, direcciones,
-/// seguimiento) en el tema claro. Hoy es el mismo blanco que el resto de la
-/// app por defecto; queda igual por si ese flujo necesita volver a divergir.
+/// seguimiento). Quedo de cuando ese flujo tenia un tema distinto; hoy es el
+/// mismo blanco que el resto de la app y solo garantiza el fondo.
 class MyPantallaClara extends StatelessWidget {
   const MyPantallaClara({super.key, required this.child});
 
@@ -395,9 +464,6 @@ class MyPantallaClara extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: MyColors.claroFondo,
-      child: Theme(data: MyTheme.claro, child: child),
-    );
+    return ColoredBox(color: MyColors.surface, child: child);
   }
 }

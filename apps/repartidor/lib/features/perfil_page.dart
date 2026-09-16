@@ -28,8 +28,8 @@ class PerfilPage extends ConsumerWidget {
                     Container(
                       width: 64,
                       height: 64,
-                      decoration: const BoxDecoration(color: MyColors.primaryFixed, shape: BoxShape.circle),
-                      child: const Icon(Symbols.sports_motorsports, size: 32, color: MyColors.primary),
+                      decoration: const BoxDecoration(color: MyColors.primary, shape: BoxShape.circle, boxShadow: MyShadows.glow),
+                      child: const Icon(Symbols.sports_motorsports, size: 32, color: MyColors.onPrimary, fill: 1),
                     ),
                     const SizedBox(width: MySpacing.md),
                     Expanded(
@@ -57,12 +57,12 @@ class PerfilPage extends ConsumerWidget {
                 child: Column(
                   children: [
                     ListTile(
-                      leading: const Icon(Symbols.two_wheeler, color: MyColors.primary),
+                      leading: const Icon(Symbols.two_wheeler, color: MyColors.onSurface),
                       title: Text('Vehículo', style: MyType.labelLg),
                       subtitle: Text(rider?.vehiculo.label ?? '-', style: MyType.bodySm),
                     ),
                     ListTile(
-                      leading: const Icon(Symbols.lock, color: MyColors.primary),
+                      leading: const Icon(Symbols.lock, color: MyColors.onSurface),
                       title: Text('Cambiar contraseña', style: MyType.labelLg),
                       trailing: const Icon(Symbols.chevron_right),
                       onTap: () => _cambiarPassword(context, ref),

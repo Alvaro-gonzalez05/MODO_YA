@@ -161,7 +161,7 @@ class _Columna extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(MySpacing.xs, MySpacing.xs, MySpacing.xs, MySpacing.sm),
             child: Row(
               children: [
-                Icon(icono, size: 20, color: MyColors.primary),
+                Icon(icono, size: 20, color: MyColors.onSurface, fill: 1),
                 const SizedBox(width: MySpacing.xs),
                 Expanded(child: Text(titulo, style: MyType.headlineSm)),
                 MyBadge('${pedidos.length}', tone: pedidos.isEmpty ? MyBadgeTone.neutral : MyBadgeTone.dark),
@@ -234,7 +234,7 @@ class _TarjetaPedido extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(width: 30, child: Text('${item.cantidad}×', style: MyType.labelLg.copyWith(color: MyColors.primary))),
+                  SizedBox(width: 30, child: Text('${item.cantidad}×', style: MyType.labelLg.copyWith(color: MyColors.tertiary))),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,7 +264,7 @@ class _TarjetaPedido extends ConsumerWidget {
             children: [
               Text('Productos', style: MyType.labelLg),
               const Spacer(),
-              Text(Formato.pesos(pedido.subtotal), style: MyType.headlineSm.copyWith(color: MyColors.primary)),
+              Text(Formato.pesos(pedido.subtotal), style: MyType.headlineSm.copyWith(color: MyColors.tertiary)),
             ],
           ),
           Text(

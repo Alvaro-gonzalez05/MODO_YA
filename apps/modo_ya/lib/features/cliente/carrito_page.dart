@@ -42,6 +42,12 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
             nota: _nota.text,
           );
       ref.read(carritoProvider.notifier).vaciar();
+      if (!mounted) return;
+      await mostrarExito(
+        context,
+        titulo: '¡Pedido confirmado!',
+        mensaje: 'Ya lo enviamos a ${carrito.comercio!.nombre}.',
+      );
       if (mounted) context.go('/cliente/pedidos/$id');
     } catch (e) {
       if (mounted) mostrarError(context, e);
@@ -122,7 +128,7 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
                                 visualDensity: VisualDensity.compact,
                                 tooltip: 'Uno más',
                                 onPressed: () => notifier.cambiarCantidad(i.clave, i.cantidad + 1),
-                                icon: const Icon(Symbols.add, size: 18, color: MyColors.primary),
+                                icon: const Icon(Symbols.add, size: 18, color: MyColors.onSurface),
                               ),
                             ],
                           ),
@@ -187,17 +193,17 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
     );
 
     final pago = MyCard(
-      color: MyColors.claroSuperficieAlt,
+      color: MyColors.primaryFixed,
       shadows: const [],
       child: Row(
         children: [
-          const Icon(Symbols.payments, color: MyColors.claroTextoSecundario),
+          const Icon(Symbols.payments, color: MyColors.onPrimaryFixed),
           const SizedBox(width: MySpacing.sm),
           Expanded(
             child: Text(
               'Te confirmamos cómo pagar apenas recibamos el pedido. '
               'El local empieza a prepararlo cuando el pago quede confirmado.',
-              style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario),
+              style: MyType.bodySm.copyWith(color: MyColors.onPrimaryFixed),
             ),
           ),
         ],
@@ -224,7 +230,7 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
             children: [
               Text('Total', style: MyType.headlineMd),
               const Spacer(),
-              Text(Formato.pesos(carrito.subtotal + (cot?.costoEnvio ?? 0)), style: MyType.priceHero.copyWith(color: MyColors.claroAcento)),
+              MyNumeroAnimado(valor: carrito.subtotal + (cot?.costoEnvio ?? 0), formato: Formato.pesos, style: MyType.priceHero.copyWith(color: MyColors.onSurface)),
             ],
           ),
           if (cotAsync?.hasError ?? false)

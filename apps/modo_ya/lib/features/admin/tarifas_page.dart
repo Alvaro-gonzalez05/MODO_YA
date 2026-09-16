@@ -258,7 +258,7 @@ class _CampoNumero extends StatelessWidget {
           ),
           ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 92),
-            child: Text(texto, style: MyType.headlineSm.copyWith(color: MyColors.primary), textAlign: TextAlign.center),
+            child: Text(texto, style: MyType.headlineSm.copyWith(color: MyColors.tertiary), textAlign: TextAlign.center),
           ),
           IconButton(
             onPressed: () => onChanged(valor + paso),

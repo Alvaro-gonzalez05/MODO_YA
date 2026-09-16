@@ -256,16 +256,28 @@ class _Pin extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 2),
             child: MyBadge(marcador.etiqueta!, tone: MyBadgeTone.dark),
           ),
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: marcador.color,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: MyShadows.control,
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 520),
+          curve: Curves.elasticOut,
+          builder: (context, t, hijo) => Transform.scale(scale: t, alignment: Alignment.bottomCenter, child: hijo),
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: marcador.color,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: MyShadows.control,
+            ),
+            // Sobre el amarillo de marca el icono va negro; sobre negro/verde, blanco.
+            child: Icon(
+              marcador.icono,
+              size: 18,
+              color: marcador.color.computeLuminance() > 0.5 ? MyColors.onPrimary : Colors.white,
+              fill: 1,
+            ),
           ),
-          child: Icon(marcador.icono, size: 18, color: Colors.white, fill: 1),
         ),
       ],
     );
