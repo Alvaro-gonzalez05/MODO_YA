@@ -300,18 +300,23 @@ class _Pasos extends StatelessWidget {
           for (var i = 0; i < pasos.length; i++) ...[
             if (i > 0)
               Expanded(
-                child: Container(height: 2, color: hecho(pasos[i].$3) ? MyColors.primary : MyColors.claroBorde),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 260),
+                  height: 2,
+                  color: hecho(pasos[i].$3) ? MyColors.primary : MyColors.claroBorde,
+                ),
               ),
             Column(
               children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: hecho(pasos[i].$3) ? MyColors.primary : MyColors.claroBorde,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(pasos[i].$2, size: 16, color: hecho(pasos[i].$3) ? MyColors.onPrimary : MyColors.claroTextoSecundario),
+                MyPasoCirculo(
+                  activo: hecho(pasos[i].$3),
+                  icon: pasos[i].$2,
+                  size: 32,
+                  iconSize: 16,
+                  colorActivo: MyColors.primary,
+                  colorInactivo: MyColors.claroBorde,
+                  iconoActivo: MyColors.onPrimary,
+                  iconoInactivo: MyColors.claroTextoSecundario,
                 ),
                 const SizedBox(height: MySpacing.xxs),
                 Text(pasos[i].$1, style: MyType.labelSm.copyWith(color: hecho(pasos[i].$3) ? MyColors.claroAcento : MyColors.claroTextoSecundario)),

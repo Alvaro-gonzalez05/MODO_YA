@@ -7,7 +7,7 @@ import 'typography.dart';
 /// Tema Material 3 armado sobre los tokens de MODO YA.
 abstract final class MyTheme {
   static const ColorScheme colorScheme = ColorScheme(
-    brightness: Brightness.dark,
+    brightness: Brightness.light,
     primary: MyColors.primary,
     onPrimary: MyColors.onPrimary,
     primaryContainer: MyColors.primaryContainer,
@@ -71,7 +71,7 @@ abstract final class MyTheme {
           scrolledUnderElevation: 0,
           centerTitle: false,
           titleTextStyle: MyType.headlineSm,
-          systemOverlayStyle: SystemUiOverlayStyle.light,
+          systemOverlayStyle: SystemUiOverlayStyle.dark,
         ),
 
         // El CTA del sistema: pastilla completa, 54 de alto.
@@ -114,6 +114,7 @@ abstract final class MyTheme {
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(MyRadius.card),
+            side: const BorderSide(color: MyColors.outlineVariant),
           ),
         ),
 
@@ -247,7 +248,10 @@ abstract final class MyTheme {
   );
 
   /// Tema claro para el flujo de pedidos (carrito, direcciones, seguimiento).
-  /// Splash y home usan [dark]; ver [tokens.dart] para el porque.
+  /// [dark] (el tema por defecto de toda la app) ya usa los mismos tonos
+  /// blancos -- ver [tokens.dart] -- asi que esta variante quedo casi
+  /// idéntica; se mantiene separada porque esas pantallas la referencian
+  /// explicitamente por nombre (`claroFondo`, `claroTexto`, etc).
   static ThemeData get claro => ThemeData(
         useMaterial3: true,
         colorScheme: colorSchemeClaro,
@@ -382,8 +386,8 @@ abstract final class MyTheme {
 }
 
 /// Envuelve una pantalla del flujo de pedidos (carrito, direcciones,
-/// seguimiento) en el tema claro, mientras el resto de la app (splash, home)
-/// se queda con el negro dramatico de marca.
+/// seguimiento) en el tema claro. Hoy es el mismo blanco que el resto de la
+/// app por defecto; queda igual por si ese flujo necesita volver a divergir.
 class MyPantallaClara extends StatelessWidget {
   const MyPantallaClara({super.key, required this.child});
 

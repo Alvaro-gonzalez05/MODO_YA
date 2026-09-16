@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
+import 'animaciones.dart';
 import 'controls.dart';
 import 'responsive.dart';
 import 'surfaces.dart';
@@ -59,19 +60,21 @@ class MyPagina extends StatelessWidget {
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: anchoMaximo),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                MyEncabezado(
-                  titulo: titulo,
-                  rotulo: rotulo,
-                  bajada: bajada,
-                  acciones: acciones,
-                  volver: volver,
-                ),
-                SizedBox(height: movil ? MySpacing.lg : MySpacing.xl),
-                ...children,
-              ],
+            child: MyApareceEn(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  MyEncabezado(
+                    titulo: titulo,
+                    rotulo: rotulo,
+                    bajada: bajada,
+                    acciones: acciones,
+                    volver: volver,
+                  ),
+                  SizedBox(height: movil ? MySpacing.lg : MySpacing.xl),
+                  ...children,
+                ],
+              ),
             ),
           ),
         ),

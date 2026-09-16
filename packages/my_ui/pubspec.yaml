@@ -25,3 +25,6 @@ dev_dependencies:
 flutter:
   assets:
     - assets/branding/logo.png
+    - assets/branding/logo_modo_ya.png
+    - assets/branding/logo_riders.png
+    - assets/rubros/

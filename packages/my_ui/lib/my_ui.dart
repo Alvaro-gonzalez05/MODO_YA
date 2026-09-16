@@ -6,6 +6,7 @@ library;
 
 export 'src/actualizaciones/aviso_actualizacion.dart';
 export 'src/theme.dart';
+export 'src/widgets/animaciones.dart';
 export 'src/tokens.dart';
 export 'src/typography.dart';
 export 'src/widgets/app_shell.dart';

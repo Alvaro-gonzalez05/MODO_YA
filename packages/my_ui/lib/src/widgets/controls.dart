@@ -18,7 +18,7 @@ extension on MyBadgeTone {
 
   Color get foreground => switch (this) {
         MyBadgeTone.ember => MyColors.onPrimaryFixedVariant,
-        MyBadgeTone.info => MyColors.onSecondaryFixedVariant,
+        MyBadgeTone.info => MyColors.onSecondaryContainer,
         MyBadgeTone.success => const Color(0xFF0C5138),
         MyBadgeTone.danger => MyColors.onErrorContainer,
         MyBadgeTone.neutral => MyColors.onSurface,

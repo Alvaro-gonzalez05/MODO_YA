@@ -116,13 +116,19 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
-              _Rubro(nombre: 'Todos', icono: Symbols.apps, activo: _rubroId == null, onTap: () => setState(() => _rubroId = null)),
-              for (final r in rubros)
-                _Rubro(
-                  nombre: r.nombre,
-                  icono: iconoDeRubro(r.icono),
-                  activo: _rubroId == r.id,
-                  onTap: () => setState(() => _rubroId = _rubroId == r.id ? null : r.id),
+              MyApareceEn(
+                child: _Rubro(nombre: 'Todos', icono: Symbols.apps, activo: _rubroId == null, onTap: () => setState(() => _rubroId = null)),
+              ),
+              for (final (i, r) in rubros.indexed)
+                MyApareceEn(
+                  retraso: Duration(milliseconds: 30 * (i + 1)),
+                  child: _Rubro(
+                    nombre: r.nombre,
+                    icono: iconoDeRubro(r.icono),
+                    imagen: imagenDeRubro(nombre: r.nombre, icono: r.icono),
+                    activo: _rubroId == r.id,
+                    onTap: () => setState(() => _rubroId = _rubroId == r.id ? null : r.id),
+                  ),
                 ),
             ],
           ),
@@ -162,10 +168,11 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
 }
 
 class _Rubro extends StatelessWidget {
-  const _Rubro({required this.nombre, required this.icono, required this.activo, required this.onTap});
+  const _Rubro({required this.nombre, required this.icono, required this.activo, required this.onTap, this.imagen});
 
   final String nombre;
   final IconData icono;
+  final String? imagen;
   final bool activo;
   final VoidCallback onTap;
 
@@ -175,7 +182,7 @@ class _Rubro extends StatelessWidget {
       padding: const EdgeInsets.only(right: MySpacing.sm),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
-        child: GestureDetector(
+        child: MyPressable(
           onTap: onTap,
           child: SizedBox(
             width: 76,
@@ -186,11 +193,28 @@ class _Rubro extends StatelessWidget {
                   width: 62,
                   height: 62,
                   decoration: BoxDecoration(
-                    color: activo ? MyColors.primary : MyColors.surfaceContainerLowest,
+                    color: imagen != null
+                        ? MyColors.surfaceContainerLowest
+                        : (activo ? MyColors.primary : MyColors.surfaceContainerLowest),
                     shape: BoxShape.circle,
-                    boxShadow: MyShadows.subtle,
+                    boxShadow: activo ? MyShadows.control : MyShadows.subtle,
+                    border: Border.all(color: activo ? MyColors.primary : MyColors.outlineVariant, width: activo ? 2.5 : 1),
                   ),
-                  child: Icon(icono, size: 26, color: activo ? Colors.white : MyColors.primary),
+                  child: imagen == null
+                      ? Icon(icono, size: 26, color: activo ? Colors.white : MyColors.primary)
+                      : ClipOval(
+                          child: Transform.scale(
+                            // Las fotos vienen recortadas de una grilla: un pelin
+                            // de zoom saca cualquier resto de borde/otra celda.
+                            scale: 1.18,
+                            child: Image.asset(
+                              imagen!,
+                              package: 'my_ui',
+                              fit: BoxFit.cover,
+                              filterQuality: FilterQuality.high,
+                            ),
+                          ),
+                        ),
                 ),
                 const SizedBox(height: MySpacing.xxs),
                 Text(

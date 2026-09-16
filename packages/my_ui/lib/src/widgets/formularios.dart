@@ -146,9 +146,17 @@ void mostrarError(BuildContext context, Object error) {
   messenger?.hideCurrentSnackBar();
   messenger?.showSnackBar(
     SnackBar(
-      content: Text('$error'),
-      backgroundColor: MyColors.onErrorContainer,
+      content: Row(
+        children: [
+          const Icon(Symbols.error, color: Colors.white, size: 20),
+          const SizedBox(width: MySpacing.sm),
+          Expanded(child: Text('$error', style: const TextStyle(color: Colors.white))),
+        ],
+      ),
+      backgroundColor: MyColors.error,
       behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.md)),
+      elevation: 6,
     ),
   );
 }
@@ -156,7 +164,21 @@ void mostrarError(BuildContext context, Object error) {
 void mostrarAviso(BuildContext context, String texto) {
   final messenger = ScaffoldMessenger.maybeOf(context);
   messenger?.hideCurrentSnackBar();
-  messenger?.showSnackBar(SnackBar(content: Text(texto), behavior: SnackBarBehavior.floating));
+  messenger?.showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          const Icon(Symbols.check_circle, color: Colors.white, size: 20, fill: 1),
+          const SizedBox(width: MySpacing.sm),
+          Expanded(child: Text(texto, style: const TextStyle(color: Colors.white))),
+        ],
+      ),
+      backgroundColor: MyColors.dock,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(MyRadius.md)),
+      elevation: 6,
+    ),
+  );
 }
 
 /// Dibuja un AsyncValue con cargando / error / datos de forma pareja en toda la
