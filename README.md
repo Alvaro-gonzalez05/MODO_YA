@@ -136,7 +136,8 @@ publishable key, públicas por diseño).
 
 Doble clic en `dev.cmd` (o `dev rider` para la app del rider). Abre
 http://localhost:5051 conectada a la base real (`env/dev.json`) y **se recarga
-sola cada vez que se guarda un cambio**. En la PC se ve el diseño completo; para
+sola cada vez que se guarda un cambio** (compila en `D:\dev\modoya-dev`, ~1 min
+por cambio, para no llenar el disco C:). En la PC se ve el diseño completo; para
 ver el del celular, achicar la ventana o usar F12 → icono de celular. Desde un
 celular en la misma wifi: `http://<IP de la PC>:5051` (la consola la muestra).
 
