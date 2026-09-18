@@ -105,7 +105,7 @@ class MenuPage extends ConsumerWidget {
                           if (s != null)
                             PopupMenuButton<int>(
                               tooltip: 'Opciones de la sección',
-                              icon: const Icon(Symbols.more_horiz, color: MyColors.secondary),
+                              icon: Icon(Symbols.more_horiz, color: MyColors.secondary),
                               onSelected: (v) => v == 0 ? seccion(s) : borrarSeccion(s),
                               itemBuilder: (_) => const [
                                 PopupMenuItem(value: 0, child: Text('Renombrar')),

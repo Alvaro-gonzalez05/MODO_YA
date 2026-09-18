@@ -152,7 +152,7 @@ class _AltaCuentaPageState extends ConsumerState<AltaCuentaPage> {
             ),
             child: Row(
               children: [
-                const Icon(Symbols.key, color: MyColors.onSecondaryFixedVariant),
+                Icon(Symbols.key, color: MyColors.onSecondaryFixedVariant),
                 const SizedBox(width: MySpacing.sm),
                 Expanded(
                   child: Column(
@@ -213,7 +213,7 @@ class _AltaCuentaPageState extends ConsumerState<AltaCuentaPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Symbols.install_mobile, color: MyColors.primary, size: 32),
+                Icon(Symbols.install_mobile, color: MyColors.primary, size: 32),
                 const SizedBox(height: MySpacing.sm),
                 Text('App MODO YA Rider', style: MyType.headlineSm.copyWith(color: Colors.white)),
                 const SizedBox(height: MySpacing.xs),

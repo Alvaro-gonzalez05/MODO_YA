@@ -188,8 +188,8 @@ class _Tarjeta extends StatelessWidget {
                   Container(
                     width: 44,
                     height: 44,
-                    decoration: const BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
-                    child: const Icon(Symbols.system_update, color: MyColors.onPrimary),
+                    decoration: BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
+                    child: Icon(Symbols.system_update, color: MyColors.onPrimary),
                   ),
                   const SizedBox(width: MySpacing.sm),
                   Expanded(

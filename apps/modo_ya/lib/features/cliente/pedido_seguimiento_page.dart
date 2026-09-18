@@ -151,8 +151,8 @@ class _Contenido extends ConsumerWidget {
                 Container(
                   width: 52,
                   height: 52,
-                  decoration: const BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
-                  child: const Icon(Symbols.verified_user, color: MyColors.onPrimary, fill: 1),
+                  decoration: BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
+                  child: Icon(Symbols.verified_user, color: MyColors.onPrimary, fill: 1),
                 ),
                 const SizedBox(width: MySpacing.md),
                 Expanded(
@@ -185,8 +185,8 @@ class _Contenido extends ConsumerWidget {
                 Container(
                   width: 52,
                   height: 52,
-                  decoration: const BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
-                  child: const Icon(Symbols.sports_motorsports, color: MyColors.onPrimary, fill: 1),
+                  decoration: BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
+                  child: Icon(Symbols.sports_motorsports, color: MyColors.onPrimary, fill: 1),
                 ),
                 const SizedBox(width: MySpacing.sm),
                 Expanded(
@@ -211,7 +211,7 @@ class _Contenido extends ConsumerWidget {
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: ExpansionTile(
               shape: const Border(),
-              leading: const Icon(Symbols.receipt_long, color: MyColors.onSurface),
+              leading: Icon(Symbols.receipt_long, color: MyColors.onSurface),
               title: Text('Detalle del pedido', style: MyType.labelLg),
               subtitle: Text('${pedido.cantidadProductos} productos · ${Formato.pesos(pedido.total)}',
                   style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario)),

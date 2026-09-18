@@ -195,15 +195,17 @@ class MyStatTile extends StatelessWidget {
     required this.value,
     required this.label,
     this.icon,
-    this.background = MyColors.secondaryContainer,
-    this.valueColor = MyColors.onSurface,
+    this._background,
+    this._valueColor,
   });
 
   final String value;
   final String label;
   final IconData? icon;
-  final Color background;
-  final Color valueColor;
+  final Color? _background;
+  Color get background => _background ?? MyColors.secondaryContainer;
+  final Color? _valueColor;
+  Color get valueColor => _valueColor ?? MyColors.onSurface;
 
   @override
   Widget build(BuildContext context) {
@@ -277,10 +279,11 @@ class MyStatRow extends StatelessWidget {
 
 /// Etiqueta chica en mayusculas que rotula un dato ("PUNTO DE RETIRO").
 class MyOverline extends StatelessWidget {
-  const MyOverline(this.text, {super.key, this.color = MyColors.secondary});
+  const MyOverline(this.text, {super.key, this._color});
 
   final String text;
-  final Color color;
+  final Color? _color;
+  Color get color => _color ?? MyColors.secondary;
 
   @override
   Widget build(BuildContext context) {

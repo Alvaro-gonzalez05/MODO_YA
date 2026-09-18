@@ -202,7 +202,7 @@ class _CrearEnvioPageState extends ConsumerState<CrearEnvioPage> {
         shadows: const [],
         child: Row(
           children: [
-            const Icon(Symbols.info, color: MyColors.secondary),
+            Icon(Symbols.info, color: MyColors.secondary),
             const SizedBox(width: MySpacing.sm),
             Expanded(
               child: Text(

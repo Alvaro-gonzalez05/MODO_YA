@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'models/marketplace.dart';
 import 'models/models.dart';
+import 'repositories/carteles_repository.dart';
 import 'repositories/catalogo_repository.dart';
 import 'repositories/comercios_repository.dart';
 import 'repositories/cuentas_repository.dart';
@@ -25,6 +26,7 @@ final catalogoRepositoryProvider = Provider((_) => const CatalogoRepository());
 final pedidosRepositoryProvider = Provider((_) => const PedidosRepository());
 final direccionesRepositoryProvider = Provider((_) => const DireccionesRepository());
 final cuentasRepositoryProvider = Provider((_) => const CuentasRepository());
+final cartelesRepositoryProvider = Provider((_) => const CartelesRepository());
 
 // ---- Comunes ----------------------------------------------------------------
 
@@ -75,6 +77,16 @@ final envioProvider = StreamProvider.family<Envio?, String>(
 );
 
 // ---- Cliente ----------------------------------------------------------------
+
+/// Carteles del inicio, en vivo: si la administracion los edita, cambian solos.
+final cartelesActivosProvider = StreamProvider<List<Cartel>>(
+  (ref) => ref.watch(cartelesRepositoryProvider).watchActivos(),
+);
+
+/// Todos los carteles (tambien los apagados), para el editor del panel.
+final cartelesProvider = FutureProvider<List<Cartel>>(
+  (ref) => ref.watch(cartelesRepositoryProvider).todos(),
+);
 
 /// Vidriera del cliente, opcionalmente filtrada por rubro.
 final vidrieraProvider = FutureProvider.family<List<Comercio>, String?>(

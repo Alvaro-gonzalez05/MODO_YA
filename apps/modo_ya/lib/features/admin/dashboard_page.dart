@@ -140,7 +140,7 @@ class _TarjetaMapa extends StatelessWidget {
             ],
           ),
           const SizedBox(height: MySpacing.xs),
-          const Wrap(
+          Wrap(
             spacing: MySpacing.md,
             runSpacing: MySpacing.xxs,
             children: [
@@ -240,7 +240,7 @@ class _RequiereAtencion extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Symbols.notifications_active, color: MyColors.primary, size: 22),
+              Icon(Symbols.notifications_active, color: MyColors.primary, size: 22),
               const SizedBox(width: MySpacing.xs),
               Expanded(child: Text('Requiere tu atención', style: MyType.headlineSm)),
               if (items.isNotEmpty) MyBadge('${items.length} pendientes', tone: MyBadgeTone.danger),
@@ -256,7 +256,7 @@ class _RequiereAtencion extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Symbols.task_alt, color: MyColors.success),
+                  Icon(Symbols.task_alt, color: MyColors.success),
                   const SizedBox(width: MySpacing.sm),
                   Expanded(
                     child: Text(

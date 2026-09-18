@@ -55,7 +55,7 @@ class CargandoPage extends ConsumerWidget {
                     ),
                   )
                 else
-                  const MyCargando(size: 36, padding: EdgeInsets.zero, colorPunto: MyColors.inverseOnSurface),
+                  MyCargando(size: 36, padding: EdgeInsets.zero, colorPunto: MyColors.inverseOnSurface),
               ],
             ),
           ),

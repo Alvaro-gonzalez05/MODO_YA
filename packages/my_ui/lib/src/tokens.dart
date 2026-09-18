@@ -5,109 +5,353 @@ import 'package:flutter/material.dart';
 /// Identidad de marca: **fondo blanco, acento amarillo, texto negro**. El
 /// negro se usa solo como superficie fuerte y puntual (splash, banner hero,
 /// barra lateral de escritorio, pantalla de pedido confirmado); nunca como
-/// fondo de una pantalla comun. Los nombres siguen los roles de un
-/// `ColorScheme` de Material 3 para que toda la app (colores, botones,
-/// tarjetas, campos) se actualice desde este unico archivo.
-abstract final class MyColors {
+/// fondo de una pantalla comun. Desde 2026-09 hay ademas un modo oscuro que
+/// el usuario elige: misma jerarquia y mismo amarillo, sobre grises casi
+/// negros. Los nombres siguen los roles de un `ColorScheme` de Material 3
+/// para que toda la app (colores, botones, tarjetas, campos) se actualice
+/// desde este unico archivo.
+
+/// Una paleta completa: la del modo claro o la del oscuro.
+///
+/// Las pantallas no usan esta clase directamente: leen [MyColors], que
+/// devuelve siempre la paleta del modo activo.
+class MyPaleta {
+  const MyPaleta({
+    required this.brightness,
+    required this.primary,
+    required this.onPrimary,
+    required this.primaryContainer,
+    required this.onPrimaryContainer,
+    required this.primaryFixed,
+    required this.primaryFixedDim,
+    required this.onPrimaryFixed,
+    required this.onPrimaryFixedVariant,
+    required this.inversePrimary,
+    required this.surfaceTint,
+    required this.secondary,
+    required this.onSecondary,
+    required this.secondaryContainer,
+    required this.onSecondaryContainer,
+    required this.secondaryFixed,
+    required this.secondaryFixedDim,
+    required this.onSecondaryFixed,
+    required this.onSecondaryFixedVariant,
+    required this.tertiary,
+    required this.onTertiary,
+    required this.tertiaryContainer,
+    required this.onTertiaryContainer,
+    required this.tertiaryFixed,
+    required this.tertiaryFixedDim,
+    required this.onTertiaryFixed,
+    required this.onTertiaryFixedVariant,
+    required this.surface,
+    required this.surfaceDim,
+    required this.surfaceBright,
+    required this.surfaceContainerLowest,
+    required this.surfaceContainerLow,
+    required this.surfaceContainer,
+    required this.surfaceContainerHigh,
+    required this.surfaceContainerHighest,
+    required this.onSurface,
+    required this.onSurfaceVariant,
+    required this.inverseSurface,
+    required this.inverseOnSurface,
+    required this.dock,
+    required this.outline,
+    required this.outlineVariant,
+    required this.error,
+    required this.onError,
+    required this.errorContainer,
+    required this.onErrorContainer,
+    required this.success,
+    required this.successContainer,
+    required this.onSuccessContainer,
+  });
+
+  final Brightness brightness;
+
   // --- Marca: amarillo ----------------------------------------------------
   /// Amarillo MODO YA. CTAs principales, iconos activos, circulos de rubro.
-  static const primary = Color(0xFFFFC800);
+  final Color primary;
 
   /// Negro sobre amarillo: el amarillo puro no soporta texto blanco encima.
-  static const onPrimary = Color(0xFF171200);
+  final Color onPrimary;
 
   /// Negro de marca con tinte ambar: tarjetas hero / banner y CTA flotante
   /// del carrito. Encima va texto blanco y detalles amarillos.
-  static const primaryContainer = Color(0xFF17150C);
-  static const onPrimaryContainer = Color(0xFFFFE9A6);
+  final Color primaryContainer;
+  final Color onPrimaryContainer;
 
   /// Amarillo palido: relleno suave de paneles destacados, fila seleccionada,
   /// avisos ("info" de marca). Encima va texto oscuro.
-  static const primaryFixed = Color(0xFFFFF3C4);
-  static const primaryFixedDim = Color(0xFFFFD84D);
-  static const onPrimaryFixed = Color(0xFF3D2E00);
-  static const onPrimaryFixedVariant = Color(0xFF6B5300);
-  static const inversePrimary = Color(0xFFFFD84D);
-  static const surfaceTint = Color(0xFFFFC800);
+  final Color primaryFixed;
+  final Color primaryFixedDim;
+  final Color onPrimaryFixed;
+  final Color onPrimaryFixedVariant;
+  final Color inversePrimary;
+  final Color surfaceTint;
 
   // --- Secundario (gris neutro, sin tinte azul) ----------------------------
-  static const secondary = Color(0xFF6B6B75);
-  static const onSecondary = Color(0xFFFFFFFF);
-  static const secondaryContainer = Color(0xFFF2F2F4);
-  static const onSecondaryContainer = Color(0xFF2B2B30);
-  static const secondaryFixed = Color(0xFFE6E6EA);
-  static const secondaryFixedDim = Color(0xFFD8D8DE);
-  static const onSecondaryFixed = Color(0xFF1F1F24);
-  static const onSecondaryFixedVariant = Color(0xFF3F3F47);
+  final Color secondary;
+  final Color onSecondary;
+  final Color secondaryContainer;
+  final Color onSecondaryContainer;
+  final Color secondaryFixed;
+  final Color secondaryFixedDim;
+  final Color onSecondaryFixed;
+  final Color onSecondaryFixedVariant;
 
-  // --- Terciario (ambar calido para texto de precios sobre blanco) --------
-  static const tertiary = Color(0xFF8A6100);
-  static const onTertiary = Color(0xFFFFFFFF);
-  static const tertiaryContainer = Color(0xFFFFE9A6);
-  static const onTertiaryContainer = Color(0xFF4A3800);
-  static const tertiaryFixed = Color(0xFFFFE9A6);
-  static const tertiaryFixedDim = Color(0xFFFFD84D);
-  static const onTertiaryFixed = Color(0xFF4A3800);
-  static const onTertiaryFixedVariant = Color(0xFF6B5300);
+  // --- Terciario (ambar calido para texto de precios) ----------------------
+  final Color tertiary;
+  final Color onTertiary;
+  final Color tertiaryContainer;
+  final Color onTertiaryContainer;
+  final Color tertiaryFixed;
+  final Color tertiaryFixedDim;
+  final Color onTertiaryFixed;
+  final Color onTertiaryFixedVariant;
 
   // --- Superficies ---------------------------------------------------------
-  /// Fondo base de pantalla: blanco puro.
-  static const surface = Color(0xFFFFFFFF);
-  static const surfaceDim = Color(0xFFE6E6EA);
-  static const surfaceBright = Color(0xFFFFFFFF);
+  /// Fondo base de pantalla.
+  final Color surface;
+  final Color surfaceDim;
+  final Color surfaceBright;
 
-  /// Tarjetas: blanco con borde suave; los "escalones" son grises muy claros
-  /// para campos, chips y paneles secundarios.
-  static const surfaceContainerLowest = Color(0xFFFFFFFF);
-  static const surfaceContainerLow = Color(0xFFF7F7F9);
-  static const surfaceContainer = Color(0xFFF1F1F4);
-  static const surfaceContainerHigh = Color(0xFFE9E9ED);
-  static const surfaceContainerHighest = Color(0xFFDEDEE3);
-  static const surfaceVariant = Color(0xFFDEDEE3);
-  static const onSurface = Color(0xFF141416);
-  static const onSurfaceVariant = Color(0xFF5C5C66);
+  /// Tarjetas; los "escalones" son para campos, chips y paneles secundarios.
+  final Color surfaceContainerLowest;
+  final Color surfaceContainerLow;
+  final Color surfaceContainer;
+  final Color surfaceContainerHigh;
+  final Color surfaceContainerHighest;
+  final Color onSurface;
+  final Color onSurfaceVariant;
 
-  /// Superficie invertida (negra): snackbars, tooltips, chips seleccionados
-  /// en "oscuro".
-  static const inverseSurface = Color(0xFF1A1A1D);
-  static const inverseOnSurface = Color(0xFFFFFFFF);
+  /// Superficie invertida: snackbars, tooltips, chips seleccionados en
+  /// "oscuro". Encima va [inverseOnSurface].
+  final Color inverseSurface;
+  final Color inverseOnSurface;
 
   /// Negro de marca: barra lateral de escritorio, splash, pantalla de pedido
-  /// confirmado y pastillas "dark".
-  static const dock = Color(0xFF141416);
+  /// confirmado y pastillas "dark". Es negro en los dos modos.
+  final Color dock;
 
-  static const outline = Color(0xFF9A9AA3);
-  static const outlineVariant = Color(0xFFE6E6EC);
+  final Color outline;
+  final Color outlineVariant;
 
   // --- Estado ------------------------------------------------------------
-  static const error = Color(0xFFC22C2C);
-  static const onError = Color(0xFFFFFFFF);
-  static const errorContainer = Color(0xFFFFDAD6);
-  static const onErrorContainer = Color(0xFF410002);
+  final Color error;
+  final Color onError;
+  final Color errorContainer;
+  final Color onErrorContainer;
 
   /// Verde de "conectado / disponible / entregado". Uso puntual, no
   /// reemplaza al amarillo como color de marca.
-  static const success = Color(0xFF2E9E5B);
-  static const successContainer = Color(0xFFD7F5E3);
-  static const onSuccessContainer = Color(0xFF0C5138);
+  final Color success;
+  final Color successContainer;
+  final Color onSuccessContainer;
+
+  bool get esOscura => brightness == Brightness.dark;
+
+  /// Modo claro: la identidad de marca. Fondo blanco puro, tarjetas blancas
+  /// con borde suave, texto negro.
+  static const clara = MyPaleta(
+    brightness: Brightness.light,
+    primary: Color(0xFFFFC800),
+    onPrimary: Color(0xFF171200),
+    primaryContainer: Color(0xFF17150C),
+    onPrimaryContainer: Color(0xFFFFE9A6),
+    primaryFixed: Color(0xFFFFF3C4),
+    primaryFixedDim: Color(0xFFFFD84D),
+    onPrimaryFixed: Color(0xFF3D2E00),
+    onPrimaryFixedVariant: Color(0xFF6B5300),
+    inversePrimary: Color(0xFFFFD84D),
+    surfaceTint: Color(0xFFFFC800),
+    secondary: Color(0xFF6B6B75),
+    onSecondary: Color(0xFFFFFFFF),
+    secondaryContainer: Color(0xFFF2F2F4),
+    onSecondaryContainer: Color(0xFF2B2B30),
+    secondaryFixed: Color(0xFFE6E6EA),
+    secondaryFixedDim: Color(0xFFD8D8DE),
+    onSecondaryFixed: Color(0xFF1F1F24),
+    onSecondaryFixedVariant: Color(0xFF3F3F47),
+    tertiary: Color(0xFF8A6100),
+    onTertiary: Color(0xFFFFFFFF),
+    tertiaryContainer: Color(0xFFFFE9A6),
+    onTertiaryContainer: Color(0xFF4A3800),
+    tertiaryFixed: Color(0xFFFFE9A6),
+    tertiaryFixedDim: Color(0xFFFFD84D),
+    onTertiaryFixed: Color(0xFF4A3800),
+    onTertiaryFixedVariant: Color(0xFF6B5300),
+    surface: Color(0xFFFFFFFF),
+    surfaceDim: Color(0xFFE6E6EA),
+    surfaceBright: Color(0xFFFFFFFF),
+    surfaceContainerLowest: Color(0xFFFFFFFF),
+    surfaceContainerLow: Color(0xFFF7F7F9),
+    surfaceContainer: Color(0xFFF1F1F4),
+    surfaceContainerHigh: Color(0xFFE9E9ED),
+    surfaceContainerHighest: Color(0xFFDEDEE3),
+    onSurface: Color(0xFF141416),
+    onSurfaceVariant: Color(0xFF5C5C66),
+    inverseSurface: Color(0xFF1A1A1D),
+    inverseOnSurface: Color(0xFFFFFFFF),
+    dock: Color(0xFF141416),
+    outline: Color(0xFF9A9AA3),
+    outlineVariant: Color(0xFFE6E6EC),
+    error: Color(0xFFC22C2C),
+    onError: Color(0xFFFFFFFF),
+    errorContainer: Color(0xFFFFDAD6),
+    onErrorContainer: Color(0xFF410002),
+    success: Color(0xFF2E9E5B),
+    successContainer: Color(0xFFD7F5E3),
+    onSuccessContainer: Color(0xFF0C5138),
+  );
+
+  /// Modo oscuro: mismo amarillo y misma jerarquia sobre grises casi negros
+  /// (no negro puro, para que las tarjetas hero y el dock sigan destacando).
+  /// Los rellenos palidos pasan a ambar profundo, el texto secundario a gris
+  /// claro y los precios al amarillo claro. Los inversos (snackbars,
+  /// tooltips) quedan gris oscuro con texto blanco, asi el texto de las
+  /// tarjetas hero, que usa [inverseOnSurface], sigue siendo blanco.
+  static const oscura = MyPaleta(
+    brightness: Brightness.dark,
+    primary: Color(0xFFFFC800),
+    onPrimary: Color(0xFF171200),
+    primaryContainer: Color(0xFF1F1C10),
+    onPrimaryContainer: Color(0xFFFFE9A6),
+    primaryFixed: Color(0xFF3A2E00),
+    primaryFixedDim: Color(0xFFFFD84D),
+    onPrimaryFixed: Color(0xFFFFE9A6),
+    onPrimaryFixedVariant: Color(0xFFFFD84D),
+    inversePrimary: Color(0xFF8A6100),
+    surfaceTint: Color(0xFFFFC800),
+    secondary: Color(0xFFA7A7B1),
+    onSecondary: Color(0xFF141416),
+    secondaryContainer: Color(0xFF2A2A30),
+    onSecondaryContainer: Color(0xFFE6E6EA),
+    secondaryFixed: Color(0xFF2E2E34),
+    secondaryFixedDim: Color(0xFF38383F),
+    onSecondaryFixed: Color(0xFFECECF0),
+    onSecondaryFixedVariant: Color(0xFFC4C4CC),
+    tertiary: Color(0xFFFFD84D),
+    onTertiary: Color(0xFF2B2000),
+    tertiaryContainer: Color(0xFF4A3800),
+    onTertiaryContainer: Color(0xFFFFE9A6),
+    tertiaryFixed: Color(0xFF4A3800),
+    tertiaryFixedDim: Color(0xFF6B5300),
+    onTertiaryFixed: Color(0xFFFFE9A6),
+    onTertiaryFixedVariant: Color(0xFFFFD84D),
+    surface: Color(0xFF121214),
+    surfaceDim: Color(0xFF0E0E10),
+    surfaceBright: Color(0xFF2C2C32),
+    surfaceContainerLowest: Color(0xFF1A1A1E),
+    surfaceContainerLow: Color(0xFF1F1F24),
+    surfaceContainer: Color(0xFF26262B),
+    surfaceContainerHigh: Color(0xFF2E2E34),
+    surfaceContainerHighest: Color(0xFF38383F),
+    onSurface: Color(0xFFF4F4F6),
+    onSurfaceVariant: Color(0xFFB6B6C0),
+    inverseSurface: Color(0xFF2E2E34),
+    inverseOnSurface: Color(0xFFFFFFFF),
+    dock: Color(0xFF09090B),
+    outline: Color(0xFF7A7A85),
+    outlineVariant: Color(0xFF2F2F36),
+    error: Color(0xFFFF6E6E),
+    onError: Color(0xFF3A0000),
+    errorContainer: Color(0xFF4E1A1A),
+    onErrorContainer: Color(0xFFFFDAD6),
+    success: Color(0xFF4FCB84),
+    successContainer: Color(0xFF12361F),
+    onSuccessContainer: Color(0xFFBDF2D0),
+  );
+}
+
+/// Colores de MODO YA, siempre los del modo activo (claro u oscuro).
+///
+/// Se leen como `MyColors.primary`. Son getters, no constantes: no entran en
+/// expresiones `const`. El cambio de modo lo hace [MyTema] (theme.dart), que
+/// actualiza [paleta] y vuelve a dibujar toda la app.
+abstract final class MyColors {
+  /// La paleta activa. La cambia [MyTema]; el resto de la app solo la lee.
+  static MyPaleta paleta = MyPaleta.clara;
+
+  static bool get esOscuro => paleta.esOscura;
+
+  // --- Marca: amarillo ----------------------------------------------------
+  static Color get primary => paleta.primary;
+  static Color get onPrimary => paleta.onPrimary;
+  static Color get primaryContainer => paleta.primaryContainer;
+  static Color get onPrimaryContainer => paleta.onPrimaryContainer;
+  static Color get primaryFixed => paleta.primaryFixed;
+  static Color get primaryFixedDim => paleta.primaryFixedDim;
+  static Color get onPrimaryFixed => paleta.onPrimaryFixed;
+  static Color get onPrimaryFixedVariant => paleta.onPrimaryFixedVariant;
+  static Color get inversePrimary => paleta.inversePrimary;
+  static Color get surfaceTint => paleta.surfaceTint;
+
+  // --- Secundario ---------------------------------------------------------
+  static Color get secondary => paleta.secondary;
+  static Color get onSecondary => paleta.onSecondary;
+  static Color get secondaryContainer => paleta.secondaryContainer;
+  static Color get onSecondaryContainer => paleta.onSecondaryContainer;
+  static Color get secondaryFixed => paleta.secondaryFixed;
+  static Color get secondaryFixedDim => paleta.secondaryFixedDim;
+  static Color get onSecondaryFixed => paleta.onSecondaryFixed;
+  static Color get onSecondaryFixedVariant => paleta.onSecondaryFixedVariant;
+
+  // --- Terciario ----------------------------------------------------------
+  static Color get tertiary => paleta.tertiary;
+  static Color get onTertiary => paleta.onTertiary;
+  static Color get tertiaryContainer => paleta.tertiaryContainer;
+  static Color get onTertiaryContainer => paleta.onTertiaryContainer;
+  static Color get tertiaryFixed => paleta.tertiaryFixed;
+  static Color get tertiaryFixedDim => paleta.tertiaryFixedDim;
+  static Color get onTertiaryFixed => paleta.onTertiaryFixed;
+  static Color get onTertiaryFixedVariant => paleta.onTertiaryFixedVariant;
+
+  // --- Superficies --------------------------------------------------------
+  static Color get surface => paleta.surface;
+  static Color get surfaceDim => paleta.surfaceDim;
+  static Color get surfaceBright => paleta.surfaceBright;
+  static Color get surfaceContainerLowest => paleta.surfaceContainerLowest;
+  static Color get surfaceContainerLow => paleta.surfaceContainerLow;
+  static Color get surfaceContainer => paleta.surfaceContainer;
+  static Color get surfaceContainerHigh => paleta.surfaceContainerHigh;
+  static Color get surfaceContainerHighest => paleta.surfaceContainerHighest;
+  static Color get surfaceVariant => paleta.surfaceContainerHighest;
+  static Color get onSurface => paleta.onSurface;
+  static Color get onSurfaceVariant => paleta.onSurfaceVariant;
+  static Color get inverseSurface => paleta.inverseSurface;
+  static Color get inverseOnSurface => paleta.inverseOnSurface;
+  static Color get dock => paleta.dock;
+  static Color get outline => paleta.outline;
+  static Color get outlineVariant => paleta.outlineVariant;
+
+  // --- Estado -------------------------------------------------------------
+  static Color get error => paleta.error;
+  static Color get onError => paleta.onError;
+  static Color get errorContainer => paleta.errorContainer;
+  static Color get onErrorContainer => paleta.onErrorContainer;
+  static Color get success => paleta.success;
+  static Color get successContainer => paleta.successContainer;
+  static Color get onSuccessContainer => paleta.onSuccessContainer;
 
   // --- Alias "claro" -------------------------------------------------------
   //
   // El flujo de pedidos (carrito, direcciones, seguimiento) se escribio
   // cuando el tema claro era la excepcion y referencia estos nombres. Hoy son
   // los mismos tonos que el resto de la app.
-  static const claroFondo = surface;
-  static const claroSuperficie = surfaceContainerLowest;
-  static const claroSuperficieAlt = surfaceContainerLow;
-  static const claroBorde = outlineVariant;
-  static const claroTexto = onSurface;
-  static const claroTextoSecundario = onSurfaceVariant;
+  static Color get claroFondo => surface;
+  static Color get claroSuperficie => surfaceContainerLowest;
+  static Color get claroSuperficieAlt => surfaceContainerLow;
+  static Color get claroBorde => outlineVariant;
+  static Color get claroTexto => onSurface;
+  static Color get claroTextoSecundario => onSurfaceVariant;
 
   /// Amarillo de marca oscurecido para texto sobre blanco: el amarillo puro
   /// no tiene contraste suficiente para leerse (precios, montos).
-  static const claroAcento = tertiary;
+  static Color get claroAcento => tertiary;
 
-  static const claroError = error;
+  static Color get claroError => error;
 }
 
 /// Escala de espaciado (rem del export -> px logicos).

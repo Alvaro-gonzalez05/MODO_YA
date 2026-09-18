@@ -1,0 +1,23 @@
+# Iconos de la app (Android, web y Windows). Se generan con:
+#   dart pub global activate flutter_launcher_icons
+#   cd apps/modo_ya && dart pub global run flutter_launcher_icons
+# La imagen base (fondo negro + logo) se arma con tools/icono_app.ps1.
+flutter_launcher_icons:
+  image_path: "assets/icono/icono.png"
+  android: true
+  ios: false
+  # Icono adaptativo: fondo negro y el logo transparente con margen, para que
+  # el recorte redondo/cuadrado de cada celular no lo corte.
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "../../packages/my_ui/assets/branding/logo_modo_ya.png"
+  adaptive_icon_foreground_inset: 24
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/icono/icono.png"
+    background_color: "#000000"
+    theme_color: "#FFC800"
+  windows:
+    generate: true
+    image_path: "assets/icono/icono.png"
+    icon_size: 256

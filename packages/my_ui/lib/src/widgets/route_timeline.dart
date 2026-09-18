@@ -13,7 +13,7 @@ class MyRouteStop {
     this.subtitle,
     this.badge,
     this.icon = Symbols.storefront,
-    this.iconBackground = MyColors.primary,
+    this._iconBackground,
   });
 
   /// Rotulo chico en mayusculas: "PUNTO DE RETIRO".
@@ -29,7 +29,8 @@ class MyRouteStop {
   final String? badge;
 
   final IconData icon;
-  final Color iconBackground;
+  final Color? _iconBackground;
+  Color get iconBackground => _iconBackground ?? MyColors.primary;
 }
 
 /// Recorrido retiro -> entrega con conector punteado entre los dos discos.
@@ -41,12 +42,13 @@ class MyRouteTimeline extends StatelessWidget {
     super.key,
     required this.stops,
     this.padding = const EdgeInsets.all(MySpacing.md),
-    this.background = MyColors.surfaceContainerLow,
+    this._background,
   });
 
   final List<MyRouteStop> stops;
   final EdgeInsetsGeometry padding;
-  final Color background;
+  final Color? _background;
+  Color get background => _background ?? MyColors.surfaceContainerLow;
 
   @override
   Widget build(BuildContext context) {

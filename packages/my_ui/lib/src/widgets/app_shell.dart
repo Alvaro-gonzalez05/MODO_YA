@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../theme.dart';
 import '../tokens.dart';
 import '../typography.dart';
+import 'hoja_secciones.dart';
 import 'marca.dart';
 import 'navigation.dart';
 import 'responsive.dart';
@@ -156,72 +159,26 @@ class MyAppShell extends StatelessWidget {
   }
 
   Future<void> _hojaMas(BuildContext context, List<MyDestino> resto, int desde) {
-    return showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      builder: (hoja) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(MySpacing.md, MySpacing.md, MySpacing.md, MySpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(MySpacing.xs),
-                child: Row(
-                  children: [
-                    _Avatar(nombre: usuarioNombre),
-                    const SizedBox(width: MySpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(usuarioNombre, style: MyType.headlineSm, maxLines: 1, overflow: TextOverflow.ellipsis),
-                          if (usuarioDetalle != null)
-                            Text(
-                              usuarioDetalle!,
-                              style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: MySpacing.xs),
-              for (var i = 0; i < resto.length; i++)
-                _ItemHoja(
-                  icon: resto[i].icon,
-                  label: resto[i].label,
-                  activo: indice == desde + i,
-                  contador: resto[i].contador,
-                  onTap: () {
-                    Navigator.pop(hoja);
-                    onSelect(desde + i);
-                  },
-                ),
-              if (accionesUsuario.isNotEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: MySpacing.xs),
-                  child: Divider(),
-                ),
-                for (final a in accionesUsuario)
-                  _ItemHoja(
-                    icon: a.icon,
-                    label: a.label,
-                    peligrosa: a.peligrosa,
-                    onTap: () {
-                      Navigator.pop(hoja);
-                      a.onTap();
-                    },
-                  ),
-              ],
-            ],
+    // Las acciones peligrosas ("Cerrar sesion") van al boton rojo del pie; el
+    // resto, como accesos en la grilla junto a las secciones que no entraron.
+    final salir = accionesUsuario.where((a) => a.peligrosa).firstOrNull;
+    return mostrarHojaSecciones(
+      context,
+      usuarioNombre: usuarioNombre,
+      usuarioDetalle: usuarioDetalle,
+      secciones: [
+        for (var i = 0; i < resto.length; i++)
+          MySeccionHoja(
+            icon: resto[i].icon,
+            label: resto[i].label,
+            activo: indice == desde + i,
+            contador: resto[i].contador,
+            onTap: () => onSelect(desde + i),
           ),
-        ),
-      ),
+        for (final a in accionesUsuario)
+          if (!a.peligrosa) MySeccionHoja(icon: a.icon, label: a.label, onTap: a.onTap),
+      ],
+      onSalir: salir?.onTap,
     );
   }
 }
@@ -329,7 +286,7 @@ class _BarraLateral extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Symbols.verified, size: 18, color: MyColors.primary),
+                            Icon(Symbols.verified, size: 18, color: MyColors.primary),
                             const SizedBox(width: MySpacing.xs),
                             Expanded(
                               child: Text(
@@ -472,7 +429,7 @@ class _BarraSuperior extends StatelessWidget {
     return Container(
       height: 72,
       padding: const EdgeInsets.symmetric(horizontal: MySpacing.xxl),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: MyColors.surface,
         border: Border(bottom: BorderSide(color: MyColors.surfaceContainer)),
       ),
@@ -486,10 +443,12 @@ class _BarraSuperior extends StatelessWidget {
             Expanded(
               child: Align(alignment: Alignment.centerLeft, child: estado ?? const SizedBox()),
             ),
+            const _BotonTema(),
+            const SizedBox(width: MySpacing.md),
             MenuAnchor(
               alignmentOffset: const Offset(0, 8),
               style: MenuStyle(
-                backgroundColor: const WidgetStatePropertyAll(MyColors.surfaceContainerLowest),
+                backgroundColor: WidgetStatePropertyAll(MyColors.surfaceContainerLowest),
                 surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
                 elevation: const WidgetStatePropertyAll(8),
                 shape: WidgetStatePropertyAll(
@@ -540,13 +499,39 @@ class _BarraSuperior extends StatelessWidget {
                       const SizedBox(width: MySpacing.sm),
                       _Avatar(nombre: usuarioNombre),
                       const SizedBox(width: MySpacing.xxs),
-                      const Icon(Symbols.keyboard_arrow_down, size: 20, color: MyColors.secondary),
+                      Icon(Symbols.keyboard_arrow_down, size: 20, color: MyColors.secondary),
                     ],
                   ),
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Sol / luna: alterna el modo claro y oscuro de toda la app.
+class _BotonTema extends ConsumerWidget {
+  const _BotonTema();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final oscuro = ref.watch(temaProvider) == ThemeMode.dark;
+    return Tooltip(
+      message: oscuro ? 'Modo claro' : 'Modo oscuro',
+      child: Material(
+        color: MyColors.surfaceContainerLow,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: () => ref.read(temaProvider.notifier).alternar(),
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: 40,
+            height: 40,
+            child: Icon(oscuro ? Symbols.light_mode : Symbols.dark_mode, size: 20, color: MyColors.onSurface),
+          ),
         ),
       ),
     );
@@ -568,53 +553,10 @@ class _Avatar extends StatelessWidget {
       width: 40,
       height: 40,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
+      decoration: BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
       child: iniciales.isEmpty
-          ? const Icon(Symbols.person, size: 20, color: MyColors.onPrimary, fill: 1)
+          ? Icon(Symbols.person, size: 20, color: MyColors.onPrimary, fill: 1)
           : Text(iniciales, style: MyType.labelLg.copyWith(color: MyColors.onPrimary)),
-    );
-  }
-}
-
-class _ItemHoja extends StatelessWidget {
-  const _ItemHoja({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.activo = false,
-    this.peligrosa = false,
-    this.contador = 0,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool activo;
-  final bool peligrosa;
-  final int contador;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = peligrosa ? MyColors.error : (activo ? MyColors.onPrimaryFixed : MyColors.onSurface);
-    return Material(
-      color: activo ? MyColors.primaryFixed : Colors.transparent,
-      borderRadius: BorderRadius.circular(MyRadius.md),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(MyRadius.md),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: MySpacing.sm, vertical: MySpacing.sm),
-          child: Row(
-            children: [
-              Icon(icon, size: 22, color: peligrosa ? MyColors.error : (activo ? MyColors.onPrimaryFixed : MyColors.secondary), fill: activo ? 1 : 0),
-              const SizedBox(width: MySpacing.sm),
-              Expanded(child: Text(label, style: MyType.labelLg.copyWith(color: color, fontSize: 15))),
-              if (contador > 0)
-                Badge(label: Text('$contador'), backgroundColor: MyColors.error),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

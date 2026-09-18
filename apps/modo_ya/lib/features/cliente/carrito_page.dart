@@ -128,7 +128,7 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
                                 visualDensity: VisualDensity.compact,
                                 tooltip: 'Uno más',
                                 onPressed: () => notifier.cambiarCantidad(i.clave, i.cantidad + 1),
-                                icon: const Icon(Symbols.add, size: 18, color: MyColors.onSurface),
+                                icon: Icon(Symbols.add, size: 18, color: MyColors.onSurface),
                               ),
                             ],
                           ),
@@ -154,7 +154,7 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
                 const MyIconoCaja(Symbols.add_location, circular: true),
                 const SizedBox(width: MySpacing.sm),
                 Expanded(child: Text('Agregá tu dirección', style: MyType.labelLg)),
-                const Icon(Symbols.chevron_right, color: MyColors.claroTextoSecundario),
+                Icon(Symbols.chevron_right, color: MyColors.claroTextoSecundario),
               ],
             ),
           )
@@ -164,7 +164,7 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
               children: [
                 Row(
                   children: [
-                    const Icon(Symbols.location_on, color: MyColors.primary, fill: 1),
+                    Icon(Symbols.location_on, color: MyColors.primary, fill: 1),
                     const SizedBox(width: MySpacing.xs),
                     Expanded(child: Text(direccion.calle, style: MyType.headlineSm)),
                     MyBadge(direccion.alias, tone: MyBadgeTone.info),
@@ -185,7 +185,7 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
       controller: _nota,
       onChanged: notifier.setNota,
       maxLines: 2,
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         hintText: 'Nota para el local o el rider (opcional)',
         prefixIcon: Icon(Symbols.edit_note, size: 20),
         fillColor: MyColors.claroSuperficieAlt,
@@ -197,7 +197,7 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
       shadows: const [],
       child: Row(
         children: [
-          const Icon(Symbols.payments, color: MyColors.onPrimaryFixed),
+          Icon(Symbols.payments, color: MyColors.onPrimaryFixed),
           const SizedBox(width: MySpacing.sm),
           Expanded(
             child: Text(

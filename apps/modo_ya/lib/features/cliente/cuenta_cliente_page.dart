@@ -10,6 +10,82 @@ import '../../comun/formulario_emergente.dart';
 import '../../comun/menu_usuario.dart';
 import 'carrito.dart';
 
+/// Hoja inferior de "Mi cuenta" (celular): datos del usuario, accesos a lo
+/// que antes era la pantalla completa, tema claro/oscuro y cerrar sesion.
+Future<void> mostrarCuentaCliente(BuildContext context, WidgetRef ref) {
+  final s = ref.read(sesionProvider);
+  final direcciones = ref.read(direccionesProvider).value ?? const <DireccionCliente>[];
+  final principal = ref.read(direccionActualProvider);
+  return mostrarHojaSecciones(
+    context,
+    titulo: 'Mi cuenta',
+    usuarioNombre: s.nombre,
+    usuarioDetalle: s.email,
+    usuarioExtra: s.telefono,
+    onEditarUsuario: () => editarMisDatos(context, ref, s),
+    extra: principal == null
+        ? null
+        : _DireccionActual(direccion: principal, cantidad: direcciones.length, onTap: () => context.go('/cliente/direcciones')),
+    secciones: [
+      MySeccionHoja(icon: Symbols.person, label: 'Mis datos', onTap: () => editarMisDatos(context, ref, s)),
+      MySeccionHoja(icon: Symbols.home_pin, label: 'Direcciones', contador: 0, onTap: () => context.go('/cliente/direcciones')),
+      MySeccionHoja(icon: Symbols.receipt_long, label: 'Mis pedidos', onTap: () => context.go('/cliente/pedidos')),
+      MySeccionHoja(icon: Symbols.key, label: 'Contraseña', onTap: () => mostrarCambiarPassword(context, ref)),
+    ],
+    onSalir: () => cerrarSesion(context, ref),
+  );
+}
+
+/// Fila con la direccion de entrega elegida, dentro de la hoja.
+class _DireccionActual extends StatelessWidget {
+  const _DireccionActual({required this.direccion, required this.cantidad, required this.onTap});
+
+  final DireccionCliente direccion;
+  final int cantidad;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: MyColors.primaryFixed,
+      borderRadius: BorderRadius.circular(MyRadius.lg),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context, rootNavigator: true).pop();
+          Future.delayed(const Duration(milliseconds: 220), onTap);
+        },
+        borderRadius: BorderRadius.circular(MyRadius.lg),
+        child: Padding(
+          padding: const EdgeInsets.all(MySpacing.sm),
+          child: Row(
+            children: [
+              MyIconoCaja(Symbols.location_on, tamano: 36, circular: true),
+              const SizedBox(width: MySpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Entregar en', style: MyType.labelSm.copyWith(color: MyColors.onPrimaryFixedVariant)),
+                    Text(
+                      '${direccion.alias} · ${direccion.calle}',
+                      style: MyType.labelLg.copyWith(color: MyColors.onPrimaryFixed),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (cantidad > 1) MyBadge('$cantidad guardadas', tone: MyBadgeTone.neutral),
+              const SizedBox(width: MySpacing.xxs),
+              Icon(Symbols.chevron_right, size: 20, color: MyColors.onPrimaryFixed),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Cuenta del cliente: datos, direcciones y seguridad.
 class CuentaClientePage extends ConsumerWidget {
   const CuentaClientePage({super.key});
@@ -39,7 +115,7 @@ class CuentaClientePage extends ConsumerWidget {
             label: 'Editar',
             icon: Symbols.edit,
             tipo: MyBotonTipo.secundario,
-            onPressed: () => _editar(context, ref, s),
+            onPressed: () => editarMisDatos(context, ref, s),
           ),
       ],
     );
@@ -57,7 +133,7 @@ class CuentaClientePage extends ConsumerWidget {
                     label: 'Editar mis datos',
                     icon: Symbols.edit,
                     tipo: MyBotonTipo.secundario,
-                    onPressed: () => _editar(context, ref, s),
+                    onPressed: () => editarMisDatos(context, ref, s),
                   ),
                 ),
               ],
@@ -156,50 +232,52 @@ class CuentaClientePage extends ConsumerWidget {
     );
   }
 
-  Future<void> _editar(BuildContext context, WidgetRef ref, Sesion s) async {
-    final nombre = TextEditingController(text: s.nombre);
-    final telefono = TextEditingController(text: s.telefono);
-    final form = GlobalKey<FormState>();
+}
 
-    await mostrarFormularioEmergente(
-      context,
-      titulo: 'Mis datos',
-      builder: (h) => Form(
-        key: form,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            MyCampo(controller: nombre, label: 'Nombre y apellido', icon: Symbols.person),
-            MyCampo(controller: telefono, label: 'Teléfono', icon: Symbols.call, keyboard: TextInputType.phone),
-            const SizedBox(height: MySpacing.xs),
-            MyBotonAccion(
-              label: 'Guardar',
-              onPressed: () async {
-                if (!form.currentState!.validate()) return;
-                try {
-                  final db = Backend.db;
-                  // Perfil y ficha de cliente: los locales ven el nombre del
-                  // cliente copiado en cada pedido nuevo desde `clientes`.
-                  await db
-                      .from('perfiles')
-                      .update({'nombre': nombre.text.trim(), 'telefono': telefono.text.trim()})
-                      .eq('id', s.usuarioId);
-                  await db
-                      .from('clientes')
-                      .update({'nombre': nombre.text.trim(), 'telefono': telefono.text.trim()})
-                      .eq('perfil_id', s.usuarioId);
-                  ref.invalidate(sesionActualProvider);
-                  if (h.mounted) Navigator.pop(h);
-                } catch (e) {
-                  if (h.mounted) mostrarError(h, traducirError(e));
-                }
-              },
-            ),
-          ],
-        ),
+/// Formulario emergente para cambiar nombre y telefono.
+Future<void> editarMisDatos(BuildContext context, WidgetRef ref, Sesion s) async {
+  final nombre = TextEditingController(text: s.nombre);
+  final telefono = TextEditingController(text: s.telefono);
+  final form = GlobalKey<FormState>();
+
+  await mostrarFormularioEmergente(
+    context,
+    titulo: 'Mis datos',
+    builder: (h) => Form(
+      key: form,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          MyCampo(controller: nombre, label: 'Nombre y apellido', icon: Symbols.person),
+          MyCampo(controller: telefono, label: 'Teléfono', icon: Symbols.call, keyboard: TextInputType.phone),
+          const SizedBox(height: MySpacing.xs),
+          MyBotonAccion(
+            label: 'Guardar',
+            onPressed: () async {
+              if (!form.currentState!.validate()) return;
+              try {
+                final db = Backend.db;
+                // Perfil y ficha de cliente: los locales ven el nombre del
+                // cliente copiado en cada pedido nuevo desde `clientes`.
+                await db
+                    .from('perfiles')
+                    .update({'nombre': nombre.text.trim(), 'telefono': telefono.text.trim()})
+                    .eq('id', s.usuarioId);
+                await db
+                    .from('clientes')
+                    .update({'nombre': nombre.text.trim(), 'telefono': telefono.text.trim()})
+                    .eq('perfil_id', s.usuarioId);
+                ref.invalidate(sesionActualProvider);
+                if (h.mounted) Navigator.pop(h);
+              } catch (e) {
+                if (h.mounted) mostrarError(h, traducirError(e));
+              }
+            },
+          ),
+        ],
       ),
-    );
-    nombre.dispose();
-    telefono.dispose();
-  }
+    ),
+  );
+  nombre.dispose();
+  telefono.dispose();
 }

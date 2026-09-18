@@ -112,7 +112,7 @@ class _AdminRepartidoresPageState extends ConsumerState<AdminRepartidoresPage> {
                               ],
                             ),
                           ),
-                          const Icon(Symbols.chevron_right, color: MyColors.secondary),
+                          Icon(Symbols.chevron_right, color: MyColors.secondary),
                         ],
                       ),
                     ),

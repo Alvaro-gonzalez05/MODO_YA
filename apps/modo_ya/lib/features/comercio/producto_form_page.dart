@@ -161,7 +161,7 @@ class _ProductoFormPageState extends ConsumerState<ProductoFormPage> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Symbols.add_a_photo, size: 40, color: MyColors.secondary),
+                                Icon(Symbols.add_a_photo, size: 40, color: MyColors.secondary),
                                 const SizedBox(height: MySpacing.xs),
                                 Text('Agregar foto', style: MyType.labelLg.copyWith(color: MyColors.secondary)),
                                 Text('Una buena foto vende mucho más', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
@@ -358,7 +358,7 @@ class _EditorGrupo extends StatelessWidget {
                   decoration: const InputDecoration(hintText: 'Nombre del grupo (ej: Tamaño)'),
                 ),
               ),
-              IconButton(onPressed: onQuitar, icon: const Icon(Symbols.delete, color: MyColors.error)),
+              IconButton(onPressed: onQuitar, icon: Icon(Symbols.delete, color: MyColors.error)),
             ],
           ),
           const SizedBox(height: MySpacing.xs),
@@ -414,7 +414,7 @@ class _EditorGrupo extends StatelessWidget {
                             grupo.items.removeAt(i).dispose();
                             onCambio();
                           },
-                    icon: const Icon(Symbols.remove_circle, color: MyColors.secondary),
+                    icon: Icon(Symbols.remove_circle, color: MyColors.secondary),
                   ),
                 ],
               ),

@@ -159,8 +159,8 @@ class _Contenido extends ConsumerWidget {
                       Container(
                         width: 46,
                         height: 46,
-                        decoration: const BoxDecoration(color: MyColors.secondaryContainer, shape: BoxShape.circle),
-                        child: const Icon(Symbols.person, color: MyColors.onSurface, fill: 1),
+                        decoration: BoxDecoration(color: MyColors.secondaryContainer, shape: BoxShape.circle),
+                        child: Icon(Symbols.person, color: MyColors.onSurface, fill: 1),
                       ),
                       const SizedBox(width: MySpacing.sm),
                       Expanded(
@@ -181,7 +181,7 @@ class _Contenido extends ConsumerWidget {
                           await Clipboard.setData(ClipboardData(text: envio.cliente.telefono));
                           if (context.mounted) mostrarAviso(context, 'Teléfono copiado');
                         },
-                        icon: const Icon(Symbols.content_copy, color: MyColors.onSurface),
+                        icon: Icon(Symbols.content_copy, color: MyColors.onSurface),
                       ),
                     ],
                   ),
@@ -292,7 +292,7 @@ class _Finalizado extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Symbols.check_circle, size: 72, color: MyColors.success, fill: 1),
+              Icon(Symbols.check_circle, size: 72, color: MyColors.success, fill: 1),
               const SizedBox(height: MySpacing.md),
               Text('Entregado', style: MyType.displayLg, textAlign: TextAlign.center),
               Text('Buen trabajo. La ganancia ya quedo registrada.',

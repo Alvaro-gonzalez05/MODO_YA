@@ -184,7 +184,7 @@ class MyTopBar extends StatelessWidget implements PreferredSizeWidget {
               Expanded(
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: _ZonaPill(zona: zona, onTap: onZona),
+                  child: MyPastillaZona(zona: zona, onTap: onZona),
                 ),
               ),
               if (trailing != null) ...[
@@ -196,11 +196,11 @@ class MyTopBar extends StatelessWidget implements PreferredSizeWidget {
                 child: Container(
                   width: 36,
                   height: 36,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: MyColors.primary,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Symbols.person,
                     size: 20,
                     color: MyColors.onPrimary,
@@ -238,11 +238,16 @@ class _BrandMark extends StatelessWidget {
   }
 }
 
-class _ZonaPill extends StatelessWidget {
-  const _ZonaPill({required this.zona, this.onTap});
+/// Pastilla blanca con el pin amarillo y una flechita: la zona del rider o la
+/// direccion de entrega del cliente. Va en la barra superior, al lado de la marca.
+class MyPastillaZona extends StatelessWidget {
+  const MyPastillaZona({super.key, required this.zona, this.onTap, this.maxAncho = 120});
 
   final String zona;
   final VoidCallback? onTap;
+
+  /// Ancho maximo del texto antes de recortarlo con puntos suspensivos.
+  final double maxAncho;
 
   @override
   Widget build(BuildContext context) {
@@ -262,11 +267,11 @@ class _ZonaPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Symbols.location_on,
+            Icon(Symbols.location_on,
                 size: 16, color: MyColors.primary, fill: 1),
             const SizedBox(width: MySpacing.xxs),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 120),
+              constraints: BoxConstraints(maxWidth: maxAncho),
               child: Text(
                 zona,
                 style: MyType.labelMd,
@@ -274,7 +279,7 @@ class _ZonaPill extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Icon(Symbols.keyboard_arrow_down,
+            Icon(Symbols.keyboard_arrow_down,
                 size: 16, color: MyColors.outline),
           ],
         ),
@@ -295,7 +300,7 @@ class MyDockScaffold extends StatelessWidget {
     required this.currentIndex,
     required this.onSelect,
     this.appBar,
-    this.backgroundColor = MyColors.surface,
+    this._backgroundColor,
   });
 
   final Widget body;
@@ -303,7 +308,8 @@ class MyDockScaffold extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onSelect;
   final PreferredSizeWidget? appBar;
-  final Color backgroundColor;
+  final Color? _backgroundColor;
+  Color get backgroundColor => _backgroundColor ?? MyColors.surface;
 
   @override
   Widget build(BuildContext context) {

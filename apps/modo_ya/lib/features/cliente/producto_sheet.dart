@@ -157,7 +157,7 @@ class _ProductoSheetState extends State<ProductoSheet> {
                         Text('$_cantidad', style: MyType.headlineSm),
                         IconButton(
                           onPressed: _cantidad < 50 ? () => setState(() => _cantidad++) : null,
-                          icon: const Icon(Symbols.add, color: MyColors.onSurface),
+                          icon: Icon(Symbols.add, color: MyColors.onSurface),
                         ),
                       ],
                     ),

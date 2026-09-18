@@ -135,8 +135,8 @@ class _Perfil extends ConsumerWidget {
                     bottom: 2,
                     child: Container(
                       padding: const EdgeInsets.all(5),
-                      decoration: const BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
-                      child: const Icon(Symbols.photo_camera, size: 15, color: MyColors.onPrimary, fill: 1),
+                      decoration: BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
+                      child: Icon(Symbols.photo_camera, size: 15, color: MyColors.onPrimary, fill: 1),
                     ),
                   ),
                 ],
@@ -154,7 +154,7 @@ class _Perfil extends ConsumerWidget {
                   const SizedBox(height: MySpacing.xs),
                   Row(
                     children: [
-                      const Icon(Symbols.alternate_email, size: 16, color: MyColors.secondary),
+                      Icon(Symbols.alternate_email, size: 16, color: MyColors.secondary),
                       const SizedBox(width: MySpacing.xxs),
                       Flexible(child: Text(usuario!, style: MyType.labelMd, overflow: TextOverflow.ellipsis)),
                     ],

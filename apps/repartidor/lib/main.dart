@@ -11,6 +11,8 @@ import 'router.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es_AR');
+  // Modo claro u oscuro elegido por el usuario, antes de dibujar nada.
+  await MyTema.cargar();
 
   // Solo para pruebas automatizadas en web: expone el arbol de accesibilidad
   // como elementos del DOM para poder leer y tocar la app desde un navegador.
@@ -25,7 +27,7 @@ Future<void> main() async {
           padding: const EdgeInsets.all(12),
           child: Text(
             detalle.exceptionAsString(),
-            style: const TextStyle(fontSize: 11, color: MyColors.onErrorContainer),
+            style: TextStyle(fontSize: 11, color: MyColors.onErrorContainer),
           ),
         ),
       );
@@ -53,7 +55,9 @@ class AppRepartidor extends ConsumerWidget {
     return MaterialApp.router(
       title: 'MODO YA Rider',
       debugShowCheckedModeBanner: false,
-      theme: MyTheme.dark,
+      theme: MyTheme.claro,
+      darkTheme: MyTheme.oscuro,
+      themeMode: ref.watch(temaProvider),
       routerConfig: ref.watch(routerProvider),
       // Aviso de version nueva, encima de todas las pantallas.
       builder: (context, child) => MyAvisoActualizacion(

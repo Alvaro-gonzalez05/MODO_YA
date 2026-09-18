@@ -86,7 +86,7 @@ class _SelectorPuntoState extends State<_SelectorPunto> {
           ),
           // El pin queda fijo en el centro y se mueve el mapa por debajo: es
           // mucho mas preciso con el dedo que arrastrar un marcador.
-          const IgnorePointer(
+          IgnorePointer(
             child: Center(
               child: Padding(
                 padding: EdgeInsets.only(bottom: 44),
@@ -129,13 +129,14 @@ class MyMarcador {
   const MyMarcador({
     required this.punto,
     required this.icono,
-    this.color = MyColors.primary,
+    this._color,
     this.etiqueta,
   });
 
   final LatLng punto;
   final IconData icono;
-  final Color color;
+  final Color? _color;
+  Color get color => _color ?? MyColors.primary;
   final String? etiqueta;
 }
 

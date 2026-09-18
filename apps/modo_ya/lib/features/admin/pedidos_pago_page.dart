@@ -29,7 +29,7 @@ class PedidosPagoPage extends ConsumerWidget {
           padding: const EdgeInsets.all(MySpacing.md),
           child: Row(
             children: [
-              const Icon(Symbols.info, size: 20, color: MyColors.onPrimaryFixedVariant),
+              Icon(Symbols.info, size: 20, color: MyColors.onPrimaryFixedVariant),
               const SizedBox(width: MySpacing.sm),
               Expanded(
                 child: Text(

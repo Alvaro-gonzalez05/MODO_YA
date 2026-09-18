@@ -7,6 +7,7 @@ import 'package:my_ui/my_ui.dart';
 
 import 'carrito.dart';
 import 'comidas.dart';
+import 'cuenta_cliente_page.dart';
 import 'iconos_rubro.dart';
 
 /// Home del cliente (D1): dirección, comidas y locales.
@@ -55,7 +56,7 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
               ],
             ),
           ),
-          const Icon(Symbols.keyboard_arrow_down, color: MyColors.secondary),
+          Icon(Symbols.keyboard_arrow_down, color: MyColors.secondary),
         ],
       ),
     );
@@ -65,7 +66,35 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
       onChanged: (t) => setState(() => _texto = t),
     );
 
+    // Barra superior del celular, como la de la app del rider: la marca a la
+    // izquierda, la direccion de entrega como pastilla al lado y el avatar
+    // que abre "Mi cuenta" a la derecha.
+    final cabecera = Row(
+      children: [
+        const MyLogoMark(size: 30),
+        const SizedBox(width: MySpacing.xs),
+        Text('MODO YA', style: MyType.headlineSm.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.3)),
+        const SizedBox(width: MySpacing.sm),
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: MyPastillaZona(
+              zona: direccion?.calle ?? 'Agregá tu dirección',
+              maxAncho: 150,
+              onTap: () => context.go('/cliente/direcciones'),
+            ),
+          ),
+        ),
+        const SizedBox(width: MySpacing.xs),
+        GestureDetector(
+          onTap: () => mostrarCuentaCliente(context, ref),
+          child: MyAvatar(nombre: sesion.nombre, size: 36),
+        ),
+      ],
+    );
+
     return MyPagina(
+      cabecera: cabecera,
       rotulo: 'Malargüe',
       titulo: nombre.isEmpty ? '¿Qué pedimos hoy?' : 'Hola, $nombre',
       bajada: nombre.isEmpty ? null : '¿Qué pedimos hoy?',
@@ -74,11 +103,9 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
         ref.invalidate(direccionesProvider);
       },
       children: [
-        if (context.esMovil) ...[
-          direccionCard,
-          const SizedBox(height: MySpacing.sm),
-          buscador,
-        ] else
+        if (context.esMovil)
+          buscador
+        else
           Row(
             children: [
               Expanded(flex: 3, child: buscador),
@@ -89,7 +116,7 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
         const SizedBox(height: MySpacing.md),
         MyCambio(
           child: carrito.vacio
-              ? const _BannerMarca(key: ValueKey('banner'))
+              ? const _Carteles(key: ValueKey('carteles'))
               : _BannerCarrito(key: const ValueKey('carrito'), carrito: carrito),
         ),
         const SizedBox(height: MySpacing.lg),
@@ -182,10 +209,75 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
   }
 }
 
+/// Carteles del inicio: los escribe la administracion desde el panel y se
+/// actualizan en vivo. Si hay mas de uno, se pasan deslizando; se muestran
+/// mientras el carrito esta vacio.
+class _Carteles extends ConsumerStatefulWidget {
+  const _Carteles({super.key});
+
+  @override
+  ConsumerState<_Carteles> createState() => _CartelesState();
+}
+
+class _CartelesState extends ConsumerState<_Carteles> {
+  final _pagina = PageController();
+  var _actual = 0;
+
+  @override
+  void dispose() {
+    _pagina.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Mientras carga (o si falla) se ve el cartel de siempre: el home nunca
+    // queda con un hueco.
+    final carteles = ref.watch(cartelesActivosProvider).value ??
+        const [Cartel(id: '', titulo: 'El mejor sabor,\nen tu casa', subtitulo: 'Delivery rápido, simple y local')];
+    if (carteles.isEmpty) return const SizedBox.shrink();
+    if (carteles.length == 1) return _BannerMarca(cartel: carteles.first);
+
+    final indice = _actual.clamp(0, carteles.length - 1);
+    return Column(
+      children: [
+        SizedBox(
+          height: 124,
+          child: PageView.builder(
+            controller: _pagina,
+            itemCount: carteles.length,
+            onPageChanged: (i) => setState(() => _actual = i),
+            itemBuilder: (_, i) => _BannerMarca(cartel: carteles[i]),
+          ),
+        ),
+        const SizedBox(height: MySpacing.xs),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < carteles.length; i++)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: i == indice ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: i == indice ? MyColors.primary : MyColors.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(MyRadius.full),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 /// Banner negro de marca del home (como "El mejor sabor en tu casa" de la
-/// referencia): se muestra mientras el carrito está vacío.
+/// referencia), con el texto de un [Cartel].
 class _BannerMarca extends StatelessWidget {
-  const _BannerMarca({super.key});
+  const _BannerMarca({required this.cartel});
+
+  final Cartel cartel;
 
   @override
   Widget build(BuildContext context) {
@@ -195,17 +287,24 @@ class _BannerMarca extends StatelessWidget {
         children: [
           Expanded(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'El mejor sabor,\nen tu casa',
+                  cartel.titulo,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                   style: MyType.headlineMd.copyWith(color: MyColors.inverseOnSurface, height: 1.15),
                 ),
-                const SizedBox(height: MySpacing.xs),
-                Text(
-                  'Delivery rápido, simple y local',
-                  style: MyType.labelMd.copyWith(color: MyColors.primary),
-                ),
+                if (cartel.subtitulo.trim().isNotEmpty) ...[
+                  const SizedBox(height: MySpacing.xs),
+                  Text(
+                    cartel.subtitulo,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: MyType.labelMd.copyWith(color: MyColors.primary),
+                  ),
+                ],
               ],
             ),
           ),
@@ -236,8 +335,8 @@ class _BannerCarrito extends StatelessWidget {
               child: Container(
                 width: 40,
                 height: 40,
-                decoration: const BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
-                child: const Icon(Symbols.shopping_bag, color: MyColors.onPrimary, fill: 1),
+                decoration: BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
+                child: Icon(Symbols.shopping_bag, color: MyColors.onPrimary, fill: 1),
               ),
             ),
             const SizedBox(width: MySpacing.sm),
@@ -263,7 +362,7 @@ class _BannerCarrito extends StatelessWidget {
               formato: Formato.pesos,
               style: MyType.headlineSm.copyWith(color: MyColors.inverseOnSurface),
             ),
-            const Icon(Symbols.chevron_right, color: MyColors.primary),
+            Icon(Symbols.chevron_right, color: MyColors.primary),
           ],
         ),
       ),
@@ -385,7 +484,7 @@ class _TarjetaLocal extends ConsumerWidget {
                   const SizedBox(height: MySpacing.xs),
                   Row(
                     children: [
-                      const Icon(Symbols.sports_motorsports, size: 16, color: MyColors.tertiary),
+                      Icon(Symbols.sports_motorsports, size: 16, color: MyColors.tertiary),
                       const SizedBox(width: MySpacing.xxs),
                       Flexible(
                         child: Text(

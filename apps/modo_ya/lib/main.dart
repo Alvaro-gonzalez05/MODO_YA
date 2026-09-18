@@ -11,6 +11,8 @@ import 'router.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es_AR');
+  // Modo claro u oscuro elegido por el usuario, antes de dibujar nada.
+  await MyTema.cargar();
 
   // Solo para pruebas automatizadas en web: expone el arbol de accesibilidad
   // como elementos del DOM para poder leer y tocar la app desde un navegador.
@@ -27,7 +29,7 @@ Future<void> main() async {
           padding: const EdgeInsets.all(12),
           child: Text(
             detalle.exceptionAsString(),
-            style: const TextStyle(fontSize: 11, color: MyColors.onErrorContainer),
+            style: TextStyle(fontSize: 11, color: MyColors.onErrorContainer),
           ),
         ),
       );
@@ -56,7 +58,9 @@ class AppModoYa extends ConsumerWidget {
     return MaterialApp.router(
       title: 'MODO YA',
       debugShowCheckedModeBanner: false,
-      theme: MyTheme.dark,
+      theme: MyTheme.claro,
+      darkTheme: MyTheme.oscuro,
+      themeMode: ref.watch(temaProvider),
       routerConfig: ref.watch(routerProvider),
       // Aviso de version nueva, encima de todas las pantallas.
       builder: (context, child) => MyAvisoActualizacion(
@@ -85,7 +89,7 @@ class _ErrorDeArranque extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: MyTheme.dark,
+      theme: MyTheme.actual,
       home: Scaffold(
         body: MyEmptyState(
           title: 'La app no esta configurada',

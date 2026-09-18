@@ -182,7 +182,7 @@ class _AdminTarifasPageState extends ConsumerState<AdminTarifasPage> {
                   padding: const EdgeInsets.all(MySpacing.md),
                   child: Row(
                     children: [
-                      const Icon(Symbols.edit_note, color: MyColors.onPrimaryFixedVariant),
+                      Icon(Symbols.edit_note, color: MyColors.onPrimaryFixedVariant),
                       const SizedBox(width: MySpacing.sm),
                       Expanded(
                         child: Text(

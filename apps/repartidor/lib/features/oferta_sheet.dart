@@ -91,7 +91,7 @@ class _OfertaSheetState extends State<OfertaSheet> {
                         strokeWidth: 12,
                         strokeCap: StrokeCap.round,
                         backgroundColor: MyColors.secondaryContainer,
-                        valueColor: const AlwaysStoppedAnimation(MyColors.primary),
+                        valueColor: AlwaysStoppedAnimation(MyColors.primary),
                       ),
                     ),
                     Column(

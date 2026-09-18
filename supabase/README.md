@@ -32,6 +32,7 @@ van en una migración nueva.
 | `0021_validar_opciones_del_pedido.sql` | opciones obligatorias, únicas y máximos, validados en el servidor |
 | `0022_usuario_de_la_cuenta.sql` | `admin_usuario_de`: la administración ve con qué usuario entra cada local o rider |
 | `0023_rubros_con_acentos.sql` | nombres de rubros con acentos (y la copia en `comercios.rubro`) |
+| `0024_carteles_del_inicio.sql` | carteles del inicio del cliente, editables desde el panel de administración |
 
 ## Decisiones de diseño
 

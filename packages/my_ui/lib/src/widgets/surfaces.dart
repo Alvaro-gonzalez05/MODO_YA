@@ -110,13 +110,16 @@ class MyHeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0xFF1E1D18), MyColors.primaryContainer, MyColors.dock],
         ),
         borderRadius: BorderRadius.circular(radius),
         boxShadow: MyShadows.hero,
+        // En modo oscuro el negro de la tarjeta se parece al fondo: un borde
+        // ambar apenas visible la despega.
+        border: MyColors.esOscuro ? Border.all(color: MyColors.primary.withValues(alpha: 0.22)) : null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(radius),
@@ -230,7 +233,7 @@ class MyEmptyState extends StatelessWidget {
             child: Container(
               width: 72,
               height: 72,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: MyColors.primaryFixed,
                 shape: BoxShape.circle,
               ),

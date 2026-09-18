@@ -137,7 +137,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                   color: MyColors.primaryFixed,
                   child: Row(
                     children: [
-                      const Icon(Symbols.local_shipping, color: MyColors.onPrimaryFixed, size: 28, fill: 1),
+                      Icon(Symbols.local_shipping, color: MyColors.onPrimaryFixed, size: 28, fill: 1),
                       const SizedBox(width: MySpacing.sm),
                       Expanded(
                         child: Column(
@@ -149,7 +149,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                           ],
                         ),
                       ),
-                      const Icon(Symbols.chevron_right, color: MyColors.onSurface),
+                      Icon(Symbols.chevron_right, color: MyColors.onSurface),
                     ],
                   ),
                 ),

@@ -118,7 +118,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Symbols.sports_motorsports, size: 20, color: MyColors.tertiary),
+                                  Icon(Symbols.sports_motorsports, size: 20, color: MyColors.tertiary),
                                   const SizedBox(width: MySpacing.xs),
                                   Text(
                                     cot == null
@@ -266,7 +266,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
         children: [
           Row(
             children: [
-              const Icon(Symbols.shopping_bag, color: MyColors.onSurface, fill: 1),
+              Icon(Symbols.shopping_bag, color: MyColors.onSurface, fill: 1),
               const SizedBox(width: MySpacing.xs),
               Text('Tu pedido', style: MyType.headlineSm),
             ],
@@ -578,7 +578,7 @@ class _BarraPedido extends StatelessWidget {
                   formato: Formato.pesos,
                   style: MyType.headlineSm.copyWith(color: MyColors.primary),
                 ),
-                const Icon(Symbols.chevron_right, color: MyColors.primary),
+                Icon(Symbols.chevron_right, color: MyColors.primary),
               ],
             ),
           ),

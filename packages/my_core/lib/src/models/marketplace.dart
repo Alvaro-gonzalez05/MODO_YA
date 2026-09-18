@@ -20,6 +20,42 @@ class Rubro {
       );
 }
 
+/// Cartel del inicio del cliente (el banner negro "El mejor sabor, en tu
+/// casa"). Los escribe la administracion desde el panel.
+class Cartel {
+  const Cartel({
+    required this.id,
+    required this.titulo,
+    this.subtitulo = '',
+    this.activo = true,
+    this.orden = 0,
+  });
+
+  final String id;
+
+  /// Puede tener un salto de linea para cortar el titulo donde se quiera.
+  final String titulo;
+  final String subtitulo;
+  final bool activo;
+  final int orden;
+
+  factory Cartel.fromRow(Map<String, dynamic> f) => Cartel(
+        id: Fila.texto(f, 'id'),
+        titulo: Fila.texto(f, 'titulo'),
+        subtitulo: Fila.texto(f, 'subtitulo'),
+        activo: Fila.booleano(f, 'activo', true),
+        orden: Fila.entero(f, 'orden'),
+      );
+
+  Cartel copyWith({String? titulo, String? subtitulo, bool? activo, int? orden}) => Cartel(
+        id: id,
+        titulo: titulo ?? this.titulo,
+        subtitulo: subtitulo ?? this.subtitulo,
+        activo: activo ?? this.activo,
+        orden: orden ?? this.orden,
+      );
+}
+
 /// Un turno de atencion. Si [cierra] es menor que [abre], cruza la medianoche.
 class Horario {
   const Horario({required this.dia, required this.abre, required this.cierra});

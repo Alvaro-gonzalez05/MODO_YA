@@ -35,7 +35,7 @@ Future<void> mostrarCredenciales(
     context: context,
     barrierDismissible: false,
     builder: (c) => AlertDialog(
-      icon: const Icon(Symbols.check_circle, color: MyColors.success, size: 44, fill: 1),
+      icon: Icon(Symbols.check_circle, color: MyColors.success, size: 44, fill: 1),
       title: Text(titulo),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
@@ -140,7 +140,7 @@ class DatosDeAcceso extends ConsumerWidget {
           const SizedBox(height: MySpacing.xs),
           Row(
             children: [
-              const Icon(Symbols.alternate_email, size: 18, color: MyColors.secondary),
+              Icon(Symbols.alternate_email, size: 18, color: MyColors.secondary),
               const SizedBox(width: MySpacing.xs),
               Expanded(
                 child: SelectableText(

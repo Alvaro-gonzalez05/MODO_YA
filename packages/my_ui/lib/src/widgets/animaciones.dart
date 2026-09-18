@@ -194,9 +194,11 @@ class MyPasoCirculo extends StatelessWidget {
 /// Punto que "respira" (crece y se atenua en bucle): estado en vivo, rider
 /// buscando, pedido en curso.
 class MyPulso extends StatefulWidget {
-  const MyPulso({super.key, this.color = MyColors.primary, this.size = 10});
+  const MyPulso({super.key, this._color, this.size = 10});
 
-  final Color color;
+  final Color? _color;
+
+  Color get color => _color ?? MyColors.primary;
   final double size;
 
   @override
@@ -253,14 +255,15 @@ class MyCargando extends StatelessWidget {
     super.key,
     this.size = 40,
     this.padding = const EdgeInsets.all(MySpacing.xxl),
-    this.colorPunto = MyColors.onSurface,
+    this._colorPunto,
   });
 
   final double size;
   final EdgeInsetsGeometry padding;
 
   /// Color del punto del centro (blanco sobre el splash negro).
-  final Color colorPunto;
+  final Color? _colorPunto;
+  Color get colorPunto => _colorPunto ?? MyColors.onSurface;
 
   @override
   Widget build(BuildContext context) {
@@ -687,7 +690,7 @@ class _PantallaExitoState extends State<_PantallaExito> with SingleTickerProvide
                           child: Container(
                             width: 118,
                             height: 118,
-                            decoration: const BoxDecoration(color: MyColors.primary, shape: BoxShape.circle, boxShadow: MyShadows.glow),
+                            decoration: BoxDecoration(color: MyColors.primary, shape: BoxShape.circle, boxShadow: MyShadows.glow),
                             child: Transform.scale(
                               scale: tilde.value.clamp(0, 1.2),
                               child: Icon(widget.icono, size: 64, color: MyColors.onPrimary, weight: 700),

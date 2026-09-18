@@ -24,6 +24,7 @@ class MyPagina extends StatelessWidget {
     this.anchoMaximo = 1440,
     this.volver,
     this.conDock = true,
+    this.cabecera,
   });
 
   final String titulo;
@@ -40,13 +41,19 @@ class MyPagina extends StatelessWidget {
   /// En móvil deja espacio abajo para el dock flotante.
   final bool conDock;
 
+  /// Barra que va por encima del título (marca, selector de dirección,
+  /// avatar). Solo en móvil; en la PC esa información ya está en la barra
+  /// lateral y superior.
+  final Widget? cabecera;
+
   @override
   Widget build(BuildContext context) {
     final movil = context.esMovil;
+    final conCabecera = movil && cabecera != null;
     final margen = movil
         ? EdgeInsets.fromLTRB(
             MySpacing.screenEdge,
-            MediaQuery.paddingOf(context).top + MySpacing.md,
+            MediaQuery.paddingOf(context).top + (conCabecera ? MySpacing.xs : MySpacing.md),
             MySpacing.screenEdge,
             conDock ? MySpacing.dockClearance + MySpacing.md : MySpacing.xl,
           )
@@ -64,6 +71,10 @@ class MyPagina extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (conCabecera) ...[
+                    cabecera!,
+                    const SizedBox(height: MySpacing.lg),
+                  ],
                   MyEncabezado(
                     titulo: titulo,
                     rotulo: rotulo,
@@ -116,7 +127,7 @@ class MyEncabezado extends StatelessWidget {
         if (rotulo != null) ...[
           Row(
             children: [
-              const DecoratedBox(
+              DecoratedBox(
                 decoration: BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
                 child: SizedBox(width: 7, height: 7),
               ),
@@ -569,15 +580,17 @@ class MyIconoCaja extends StatelessWidget {
     this.icono, {
     super.key,
     this.tamano = 42,
-    this.fondo = MyColors.primary,
-    this.color = MyColors.onPrimary,
+    this._fondo,
+    this._color,
     this.circular = false,
   });
 
   final IconData icono;
   final double tamano;
-  final Color fondo;
-  final Color color;
+  final Color? _fondo;
+  Color get fondo => _fondo ?? MyColors.primary;
+  final Color? _color;
+  Color get color => _color ?? MyColors.onPrimary;
   final bool circular;
 
   @override
@@ -645,7 +658,7 @@ class MyBuscador extends StatelessWidget {
       onChanged: onChanged,
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: const Icon(Symbols.search, size: 22, color: MyColors.secondary),
+        prefixIcon: Icon(Symbols.search, size: 22, color: MyColors.secondary),
         fillColor: MyColors.surfaceContainerLowest,
       ),
     );
@@ -687,12 +700,13 @@ class MyPastillaEstado extends StatelessWidget {
     super.key,
     required this.texto,
     this.detalle,
-    this.color = MyColors.success,
+    this._color,
   });
 
   final String texto;
   final String? detalle;
-  final Color color;
+  final Color? _color;
+  Color get color => _color ?? MyColors.success;
 
   @override
   Widget build(BuildContext context) {

@@ -93,7 +93,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Symbols.storefront, size: 20, color: MyColors.onPrimaryFixed),
+                    Icon(Symbols.storefront, size: 20, color: MyColors.onPrimaryFixed),
                     const SizedBox(width: MySpacing.sm),
                     Expanded(
                       child: Text(

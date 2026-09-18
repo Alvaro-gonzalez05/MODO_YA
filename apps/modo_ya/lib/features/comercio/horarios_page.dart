@@ -97,7 +97,7 @@ class _HorariosPageState extends ConsumerState<HorariosPage> {
                       if (dias[d].isEmpty) Text('Cerrado', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
                       IconButton(
                         tooltip: 'Agregar turno',
-                        icon: const Icon(Symbols.add_circle, color: MyColors.onSurface, fill: 1),
+                        icon: Icon(Symbols.add_circle, color: MyColors.onSurface, fill: 1),
                         onPressed: () => setState(() => dias[d].add(
                               dias[d].isEmpty
                                   ? _Turno(const TimeOfDay(hour: 11, minute: 0), const TimeOfDay(hour: 15, minute: 0))
@@ -132,7 +132,7 @@ class _HorariosPageState extends ConsumerState<HorariosPage> {
                           if (_fmt(t.cierra).compareTo(_fmt(t.abre)) < 0) const MyBadge('cruza medianoche', tone: MyBadgeTone.info),
                           IconButton(
                             tooltip: 'Quitar turno',
-                            icon: const Icon(Symbols.close, size: 20, color: MyColors.secondary),
+                            icon: Icon(Symbols.close, size: 20, color: MyColors.secondary),
                             onPressed: () => setState(() => dias[d].remove(t)),
                           ),
                         ],
@@ -171,7 +171,7 @@ class _HorariosPageState extends ConsumerState<HorariosPage> {
               padding: const EdgeInsets.all(MySpacing.md),
               child: Row(
                 children: [
-                  const Icon(Symbols.nightlight, color: MyColors.onSecondaryFixedVariant),
+                  Icon(Symbols.nightlight, color: MyColors.onSecondaryFixedVariant),
                   const SizedBox(width: MySpacing.sm),
                   Expanded(
                     child: Text(

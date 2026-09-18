@@ -13,7 +13,7 @@ export '../../comun/estados_ui.dart';
 ///
 /// En la PC: barra lateral navy y barra superior con el estado de la operación
 /// y el menú del usuario. En el celular: dock con Resumen, Pedidos, Locales,
-/// Riders y "Más" (Envíos, Tarifas, contraseña y cerrar sesión).
+/// Riders y "Más" (Envíos, Tarifas, Carteles, contraseña y cerrar sesión).
 class AdminShell extends ConsumerWidget {
   const AdminShell({super.key, required this.navigationShell, required this.enRaiz});
 
@@ -38,6 +38,7 @@ class AdminShell extends ConsumerWidget {
         const MyDestino(icon: Symbols.sports_motorsports, label: 'Riders'),
         const MyDestino(icon: Symbols.route, label: 'Envíos'),
         const MyDestino(icon: Symbols.tune, label: 'Tarifas y reglas'),
+        const MyDestino(icon: Symbols.campaign, label: 'Carteles'),
       ],
       indice: navigationShell.currentIndex,
       onSelect: (i) => navigationShell.goBranch(i, initialLocation: i == navigationShell.currentIndex),

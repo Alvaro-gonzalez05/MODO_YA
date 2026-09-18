@@ -229,7 +229,7 @@ class _TarjetaLocal extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Symbols.chevron_right, color: MyColors.secondary),
+          Icon(Symbols.chevron_right, color: MyColors.secondary),
         ],
       ),
     );
