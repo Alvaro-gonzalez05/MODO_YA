@@ -354,6 +354,22 @@ void main() {
     );
   }, timeout: largo);
 
+  test('10b tiempo real: un cambio del local llega solo a quien lo mira', () async {
+    await entrarComo(_localEmail, localPass);
+    final vistos = <int>[];
+    final sub = enVivo(
+      canal: 'test-comercio',
+      tablas: const ['comercios'],
+      leer: () => comercios.porId(sLocal.comercioId!),
+    ).listen((c) => vistos.add(c!.demoraEstimadaMin));
+    await esperar(() async => vistos.length, (n) => n >= 1, que: 'la primera lectura');
+    await Future<void>.delayed(const Duration(seconds: 3)); // que el canal quede suscripto
+    await comercios.actualizar(sLocal.comercioId!, demoraEstimadaMin: 41);
+    await esperar(() async => vistos, (v) => v.contains(41), que: 'el cambio por Realtime');
+    await comercios.actualizar(sLocal.comercioId!, demoraEstimadaMin: 30);
+    await sub.cancel();
+  }, timeout: largo);
+
   // ---------------------------------------------------------------------------
   test('11 admin: ve el pedido por cobrar y registra el cobro', () async {
     await entrarComo(_adminEmail, _adminPass);

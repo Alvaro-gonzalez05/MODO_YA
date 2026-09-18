@@ -111,14 +111,19 @@ Future<T> intentar<T>(Future<T> Function() accion) async {
 ///
 /// Los cambios que llegan juntos se agrupan (250 ms) para no releer diez veces
 /// cuando una sola operacion toca varias filas.
+///
+/// [refrescarCada] vuelve a leer aunque la base no cambie: sirve para lo que
+/// depende de la hora (un local abre a las 20:00 sin que nadie toque nada).
 Stream<T> enVivo<T>({
   required String canal,
   required List<String> tablas,
   required Future<T> Function() leer,
+  Duration? refrescarCada,
 }) {
   late final StreamController<T> ctrl;
   RealtimeChannel? canalRt;
   Timer? agrupador;
+  Timer? reloj;
   var cerrado = false;
 
   Future<void> refrescar() async {
@@ -147,10 +152,12 @@ Stream<T> enVivo<T>({
         );
       }
       canalRt = c..subscribe();
+      if (refrescarCada != null) reloj = Timer.periodic(refrescarCada, (_) => refrescar());
     },
     onCancel: () async {
       cerrado = true;
       agrupador?.cancel();
+      reloj?.cancel();
       final c = canalRt;
       if (c != null) await Backend.db.removeChannel(c);
       await ctrl.close();

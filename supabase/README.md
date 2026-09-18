@@ -38,6 +38,7 @@ van en una migración nueva.
 | `0027_pedido_directo_al_local.sql` | el pedido llega directo al local con el medio de pago elegido; sin horarios = cerrado; la búsqueda de rider no se rinde |
 | `0028_cobros_en_pedidos.sql` | estado del cobro en `v_pedidos` para la administración |
 | `0029_tope_de_busqueda.sql` | la búsqueda de rider corta a las 3 horas |
+| `0030_todo_en_vivo.sql` | locales, horarios, menús, rubros, direcciones y tarifas en Realtime |
 
 ## Decisiones de diseño
 

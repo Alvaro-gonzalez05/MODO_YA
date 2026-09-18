@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'backend.dart';
 import 'models/marketplace.dart';
 import 'models/models.dart';
 import 'repositories/carteles_repository.dart';
@@ -30,25 +31,43 @@ final cartelesRepositoryProvider = Provider((_) => const CartelesRepository());
 
 // ---- Comunes ----------------------------------------------------------------
 
-final tarifarioProvider = FutureProvider<Tarifario?>(
-  (ref) => ref.watch(tarifasRepositoryProvider).vigente(),
+final tarifarioProvider = StreamProvider<Tarifario?>(
+  (ref) => enVivo(
+    canal: 'tarifario',
+    tablas: const ['tarifarios'],
+    leer: ref.watch(tarifasRepositoryProvider).vigente,
+  ),
 );
 
-final rubrosProvider = FutureProvider<List<Rubro>>(
-  (ref) => ref.watch(catalogoRepositoryProvider).rubros(),
+final rubrosProvider = StreamProvider<List<Rubro>>(
+  (ref) => enVivo(
+    canal: 'rubros',
+    tablas: const ['rubros'],
+    leer: ref.watch(catalogoRepositoryProvider).rubros,
+  ),
 );
 
-final comercioPorIdProvider = FutureProvider.family<Comercio?, String>(
-  (ref, id) => ref.watch(comerciosRepositoryProvider).porId(id),
+final comercioPorIdProvider = StreamProvider.family<Comercio?, String>(
+  (ref, id) => enVivo(
+    canal: 'comercio-$id',
+    tablas: const ['comercios', 'horarios_comercio'],
+    leer: () => ref.read(comerciosRepositoryProvider).porId(id),
+    refrescarCada: const Duration(minutes: 1),
+  ),
 );
 
 // ---- Local ------------------------------------------------------------------
 
 /// El local de la sesion. Se invalida despues de editar sus datos.
-final comercioActualProvider = FutureProvider<Comercio?>((ref) {
+final comercioActualProvider = StreamProvider<Comercio?>((ref) {
   final id = ref.watch(sesionProvider).comercioId;
-  if (id == null) return Future.value(null);
-  return ref.watch(comerciosRepositoryProvider).porId(id);
+  if (id == null) return Stream.value(null);
+  return enVivo(
+    canal: 'mi-comercio',
+    tablas: const ['comercios', 'horarios_comercio'],
+    leer: () => ref.read(comerciosRepositoryProvider).porId(id),
+    refrescarCada: const Duration(minutes: 1),
+  );
 });
 
 final enviosDelComercioProvider = StreamProvider<List<Envio>>((ref) {
@@ -64,12 +83,20 @@ final pedidosDelComercioProvider = StreamProvider<List<Pedido>>((ref) {
 });
 
 /// Menu completo (incluye lo no disponible). Para el editor del local.
-final menuDeComercioProvider = FutureProvider.family<Menu, String>(
-  (ref, comercioId) => ref.watch(catalogoRepositoryProvider).menu(comercioId),
+final menuDeComercioProvider = StreamProvider.family<Menu, String>(
+  (ref, comercioId) => enVivo(
+    canal: 'menu-$comercioId',
+    tablas: _tablasMenu,
+    leer: () => ref.read(catalogoRepositoryProvider).menu(comercioId),
+  ),
 );
 
-final horariosProvider = FutureProvider.family<List<Horario>, String>(
-  (ref, comercioId) => ref.watch(comerciosRepositoryProvider).horarios(comercioId),
+final horariosProvider = StreamProvider.family<List<Horario>, String>(
+  (ref, comercioId) => enVivo(
+    canal: 'horarios-$comercioId',
+    tablas: const ['horarios_comercio'],
+    leer: () => ref.read(comerciosRepositoryProvider).horarios(comercioId),
+  ),
 );
 
 final envioProvider = StreamProvider.family<Envio?, String>(
@@ -84,22 +111,39 @@ final cartelesActivosProvider = StreamProvider<List<Cartel>>(
 );
 
 /// Todos los carteles (tambien los apagados), para el editor del panel.
-final cartelesProvider = FutureProvider<List<Cartel>>(
-  (ref) => ref.watch(cartelesRepositoryProvider).todos(),
+final cartelesProvider = StreamProvider<List<Cartel>>(
+  (ref) => enVivo(
+    canal: 'carteles-todos',
+    tablas: const ['carteles'],
+    leer: ref.watch(cartelesRepositoryProvider).todos,
+  ),
 );
 
 /// Vidriera del cliente, opcionalmente filtrada por rubro.
-final vidrieraProvider = FutureProvider.family<List<Comercio>, String?>(
-  (ref, rubroId) => ref.watch(comerciosRepositoryProvider).vidriera(rubroId: rubroId),
+final vidrieraProvider = StreamProvider.family<List<Comercio>, String?>(
+  (ref, rubroId) => enVivo(
+    canal: 'vidriera-${rubroId ?? 'todos'}',
+    tablas: const ['comercios', 'horarios_comercio'],
+    leer: () => ref.read(comerciosRepositoryProvider).vidriera(rubroId: rubroId),
+    refrescarCada: const Duration(minutes: 1),
+  ),
 );
 
 /// Menu que ve el cliente: solo lo disponible.
-final menuPublicoProvider = FutureProvider.family<Menu, String>(
-  (ref, comercioId) => ref.watch(catalogoRepositoryProvider).menu(comercioId, soloDisponibles: true),
+final menuPublicoProvider = StreamProvider.family<Menu, String>(
+  (ref, comercioId) => enVivo(
+    canal: 'menu-publico-$comercioId',
+    tablas: _tablasMenu,
+    leer: () => ref.read(catalogoRepositoryProvider).menu(comercioId, soloDisponibles: true),
+  ),
 );
 
-final direccionesProvider = FutureProvider<List<DireccionCliente>>(
-  (ref) => ref.watch(direccionesRepositoryProvider).mias(),
+final direccionesProvider = StreamProvider<List<DireccionCliente>>(
+  (ref) => enVivo(
+    canal: 'direcciones',
+    tablas: const ['direcciones_cliente'],
+    leer: ref.watch(direccionesRepositoryProvider).mias,
+  ),
 );
 
 final pedidosDelClienteProvider = StreamProvider<List<Pedido>>(
@@ -138,8 +182,13 @@ final ofertasProvider = StreamProvider<List<OfertaServicio>>((ref) {
 
 // ---- Administracion ---------------------------------------------------------
 
-final todosLosComerciosProvider = FutureProvider<List<Comercio>>(
-  (ref) => ref.watch(comerciosRepositoryProvider).todos(),
+final todosLosComerciosProvider = StreamProvider<List<Comercio>>(
+  (ref) => enVivo(
+    canal: 'comercios-todos',
+    tablas: const ['comercios', 'horarios_comercio'],
+    leer: ref.watch(comerciosRepositoryProvider).todos,
+    refrescarCada: const Duration(minutes: 1),
+  ),
 );
 
 final todosLosRepartidoresProvider = StreamProvider<List<Repartidor>>(
@@ -153,3 +202,6 @@ final enviosActivosProvider = StreamProvider<List<Envio>>(
 final pedidosPendientesDePagoProvider = StreamProvider<List<Pedido>>(
   (ref) => ref.watch(pedidosRepositoryProvider).watchPendientesDePago(),
 );
+
+/// Todo lo que forma un menú: si cambia cualquiera, se vuelve a leer.
+const _tablasMenu = ['secciones_menu', 'productos', 'opciones_producto', 'opcion_items'];
