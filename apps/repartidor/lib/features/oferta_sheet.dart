@@ -107,6 +107,15 @@ class _OfertaSheetState extends State<OfertaSheet> {
                 ),
               ),
             ),
+            // Antes de aceptar tiene que saber si va a manejar plata o posnet.
+            if (envio.hayQueCobrar) ...[
+              const SizedBox(height: MySpacing.sm),
+              MyBadge(
+                envio.textoCobro,
+                tone: MyBadgeTone.ember,
+                icon: envio.cobroMetodo == MetodoPago.tarjeta ? Symbols.credit_card : Symbols.payments,
+              ),
+            ],
             const SizedBox(height: MySpacing.lg),
             MyStatRow(tiles: [
               MyStatTile(icon: Symbols.near_me, value: Formato.km(o.distanciaAlRetiroKm), label: 'Hasta el local'),

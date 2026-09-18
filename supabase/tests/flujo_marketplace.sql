@@ -169,6 +169,11 @@ begin
   insert into _r values ('6. aceptar_pedido',
     format('pedido=%s envio=%s estado_envio=%s', ped.estado, env.codigo, env.estado));
 
+  insert into _r values ('6b. rider cobra el efectivo',
+    case when env.cobrar_al_entregar = ped.total and env.cobro_metodo = 'efectivo'
+         then format('OK  el envio dice cobrar $%s en efectivo', ped.total)
+         else format('MAL  cobrar=%s metodo=%s', env.cobrar_al_entregar, env.cobro_metodo) end);
+
   insert into _r values ('7. cotizacion congelada',
     case when env.ganancia_repartidor = ped.envio_ganancia_repartidor
           and env.comision = ped.envio_comision

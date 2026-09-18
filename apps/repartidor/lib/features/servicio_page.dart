@@ -187,6 +187,32 @@ class _Contenido extends ConsumerWidget {
                   ),
                 ),
               ],
+              // Efectivo o posnet: el rider cobra en la puerta. Bien visible
+              // para que no se le pase al entregar.
+              if (envio.hayQueCobrar) ...[
+                const SizedBox(height: MySpacing.md),
+                Container(
+                  padding: const EdgeInsets.all(MySpacing.md),
+                  decoration: BoxDecoration(
+                    color: MyColors.primaryFixed,
+                    borderRadius: BorderRadius.circular(MyRadius.card),
+                    border: Border.all(color: MyColors.primary, width: 2),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        envio.cobroMetodo == MetodoPago.tarjeta ? Symbols.credit_card : Symbols.payments,
+                        color: MyColors.onPrimaryFixed,
+                        size: 28,
+                      ),
+                      const SizedBox(width: MySpacing.sm),
+                      Expanded(
+                        child: Text(envio.textoCobro, style: MyType.headlineSm.copyWith(color: MyColors.onPrimaryFixed)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (envio.quienPaga == QuienPaga.cliente && envio.pedidoId == null) ...[
                 const SizedBox(height: MySpacing.sm),
                 Text(

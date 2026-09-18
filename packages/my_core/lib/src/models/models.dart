@@ -1,3 +1,4 @@
+import '../formato.dart';
 import 'estados.dart';
 
 /// Lectores tolerantes de las filas que devuelve PostgREST.
@@ -293,6 +294,8 @@ class Envio {
     this.retiradoEn,
     this.entregadoEn,
     this.motivoCancelacion,
+    this.cobrarAlEntregar = 0,
+    this.cobroMetodo,
   });
 
   final String id;
@@ -313,6 +316,17 @@ class Envio {
   final DateTime? retiradoEn;
   final DateTime? entregadoEn;
   final String? motivoCancelacion;
+
+  /// Lo que el rider le cobra al cliente en la puerta (efectivo o posnet).
+  /// 0 si no tiene que cobrar nada.
+  final int cobrarAlEntregar;
+  final MetodoPago? cobroMetodo;
+
+  bool get hayQueCobrar => cobrarAlEntregar > 0;
+
+  /// "Cobrar $12.500 en efectivo" / "... con posnet".
+  String get textoCobro =>
+      'Cobrar ${Formato.pesos(cobrarAlEntregar)} ${cobroMetodo == MetodoPago.tarjeta ? 'con posnet (tarjeta)' : 'en efectivo'}';
 
   int get total => cotizacion.total;
 
@@ -356,6 +370,8 @@ class Envio {
         retiradoEn: Fila.fechaOpcional(f, 'retirado_en'),
         entregadoEn: Fila.fechaOpcional(f, 'entregado_en'),
         motivoCancelacion: Fila.textoOpcional(f, 'motivo_cancelacion'),
+        cobrarAlEntregar: Fila.entero(f, 'cobrar_al_entregar'),
+        cobroMetodo: f['cobro_metodo'] == null ? null : MetodoPago.fromWire(f['cobro_metodo'] as String?),
       );
 }
 
@@ -413,6 +429,8 @@ class OfertaServicio {
           quienPaga: QuienPaga.cliente,
           estado: EstadoEnvio.fromWire(f['estado'] as String?),
           creadoEn: Fila.fecha(f, 'ofrecida_en'),
+          cobrarAlEntregar: Fila.entero(f, 'cobrar_al_entregar'),
+          cobroMetodo: f['cobro_metodo'] == null ? null : MetodoPago.fromWire(f['cobro_metodo'] as String?),
         ),
       );
 }

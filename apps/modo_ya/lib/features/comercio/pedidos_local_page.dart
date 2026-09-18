@@ -271,6 +271,22 @@ class _TarjetaPedido extends ConsumerWidget {
             'El envío (${Formato.pesos(pedido.costoEnvio)}) lo cobra MODO YA.',
             style: MyType.bodySm.copyWith(color: MyColors.secondary),
           ),
+          if (pedido.metodoPago != null) ...[
+            const SizedBox(height: MySpacing.xs),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: MyBadge(
+                switch (pedido.metodoPago!) {
+                  MetodoPago.efectivo => 'Paga en efectivo al rider',
+                  MetodoPago.tarjeta => 'Paga con tarjeta (posnet del rider)',
+                  MetodoPago.transferencia => 'Paga por transferencia',
+                  final m => 'Paga con ${m.label.toLowerCase()}',
+                },
+                tone: MyBadgeTone.info,
+                icon: Symbols.payments,
+              ),
+            ),
+          ],
           if (!pedido.estado.esFinal) ...[
             const SizedBox(height: MySpacing.md),
             switch (pedido.estado) {
