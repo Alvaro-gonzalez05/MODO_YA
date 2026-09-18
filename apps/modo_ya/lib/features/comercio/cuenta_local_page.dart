@@ -106,12 +106,24 @@ class _Perfil extends ConsumerWidget {
   final Comercio comercio;
   final String? usuario;
 
-  Future<void> _cambiarLogo(BuildContext context, WidgetRef ref) async {
+  Future<void> _cambiarImagen(BuildContext context, WidgetRef ref, {required bool portada}) async {
     try {
-      final f = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 600, maxHeight: 600, imageQuality: 85);
+      // La portada se ve ancha (hasta ~800 px en la PC); el logo, chico.
+      final f = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: portada ? 1600 : 600,
+        maxHeight: portada ? 1000 : 600,
+        imageQuality: 85,
+      );
       if (f == null) return;
       final ext = f.name.split('.').last.toLowerCase() == 'png' ? 'png' : 'jpg';
-      await ref.read(comerciosRepositoryProvider).subirLogo(comercio.id, await f.readAsBytes(), extension: ext);
+      final repo = ref.read(comerciosRepositoryProvider);
+      final bytes = await f.readAsBytes();
+      if (portada) {
+        await repo.subirPortada(comercio.id, bytes, extension: ext);
+      } else {
+        await repo.subirLogo(comercio.id, bytes, extension: ext);
+      }
       ref.invalidate(comercioActualProvider);
     } catch (e) {
       if (context.mounted) mostrarError(context, e);
@@ -120,31 +132,89 @@ class _Perfil extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return MyCard(
+    const altoPortada = 170.0;
+    const ladoLogo = 84.0;
+
+    Widget tocable(Widget hijo, VoidCallback onTap) => MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(onTap: onTap, child: hijo),
+    );
+
+    Widget camara({String? texto}) => Container(
+      padding: EdgeInsets.symmetric(horizontal: texto == null ? 5 : MySpacing.sm, vertical: 5),
+      decoration: BoxDecoration(color: MyColors.primary, borderRadius: BorderRadius.circular(MyRadius.full)),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: () => _cambiarLogo(context, ref),
-              child: Stack(
-                children: [
-                  MyImagen(url: comercio.logoUrl, ancho: 84, alto: 84, radio: MyRadius.lg, icono: Symbols.storefront),
-                  Positioned(
-                    right: 2,
-                    bottom: 2,
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(color: MyColors.primary, shape: BoxShape.circle),
-                      child: Icon(Symbols.photo_camera, size: 15, color: MyColors.onPrimary, fill: 1),
-                    ),
+          Icon(Symbols.photo_camera, size: 15, color: MyColors.onPrimary, fill: 1),
+          if (texto != null) ...[
+            const SizedBox(width: 4),
+            Text(texto, style: MyType.labelMd.copyWith(color: MyColors.onPrimary)),
+          ],
+        ],
+      ),
+    );
+
+    return MyCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Portada a todo el ancho y el logo montado sobre el borde de abajo,
+          // igual que la ve el cliente.
+          SizedBox(
+            height: altoPortada + ladoLogo / 2,
+            child: Stack(
+              children: [
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  height: altoPortada,
+                  child: tocable(
+                    MyImagen(url: comercio.portadaUrl, alto: altoPortada, radio: MyRadius.card, icono: Symbols.image),
+                    () => _cambiarImagen(context, ref, portada: true),
                   ),
-                ],
-              ),
+                ),
+                Positioned(
+                  right: MySpacing.sm,
+                  top: MySpacing.sm,
+                  child: tocable(
+                    camara(texto: comercio.portadaUrl == null ? 'Subir portada' : 'Cambiar portada'),
+                    () => _cambiarImagen(context, ref, portada: true),
+                  ),
+                ),
+                Positioned(
+                  left: MySpacing.md,
+                  bottom: 0,
+                  child: tocable(
+                    Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: MyColors.surfaceContainerLowest,
+                            borderRadius: BorderRadius.circular(MyRadius.lg + 3),
+                          ),
+                          child: MyImagen(
+                            url: comercio.logoUrl,
+                            ancho: ladoLogo,
+                            alto: ladoLogo,
+                            radio: MyRadius.lg,
+                            icono: Symbols.storefront,
+                          ),
+                        ),
+                        Positioned(right: 0, bottom: 0, child: camara()),
+                      ],
+                    ),
+                    () => _cambiarImagen(context, ref, portada: false),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: MySpacing.md),
-          Expanded(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(MySpacing.md, MySpacing.sm, MySpacing.md, MySpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -156,12 +226,18 @@ class _Perfil extends ConsumerWidget {
                     children: [
                       Icon(Symbols.alternate_email, size: 16, color: MyColors.secondary),
                       const SizedBox(width: MySpacing.xxs),
-                      Flexible(child: Text(usuario!, style: MyType.labelMd, overflow: TextOverflow.ellipsis)),
+                      Flexible(
+                        child: Text(usuario!, style: MyType.labelMd, overflow: TextOverflow.ellipsis),
+                      ),
                     ],
                   ),
                 ],
                 const SizedBox(height: MySpacing.xs),
-                Text('Tocá el logo para cambiarlo.', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                Text(
+                  'La portada es la foto grande de tu tarjeta (tu comida o tu local, en horizontal). '
+                  'El logo va al lado del nombre. Tocá cada una para cambiarla.',
+                  style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                ),
               ],
             ),
           ),

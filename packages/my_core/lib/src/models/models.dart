@@ -166,6 +166,7 @@ class Comercio {
     required this.aprobacion,
     this.rubroId,
     this.logoUrl,
+    this.portadaUrl,
     this.abierto = false,
     this.aceptaPedidos = true,
     this.demoraEstimadaMin = 25,
@@ -178,7 +179,11 @@ class Comercio {
   final Direccion direccion;
   final String telefono;
   final EstadoAprobacion aprobacion;
+  /// La marca, cuadrada: va al lado del nombre.
   final String? logoUrl;
+
+  /// Foto ancha de la tarjeta (comida o el local).
+  final String? portadaUrl;
 
   /// Calculado en la base con los horarios y el interruptor de pausa.
   final bool abierto;
@@ -201,6 +206,7 @@ class Comercio {
         telefono: Fila.texto(f, 'telefono'),
         aprobacion: EstadoAprobacion.fromWire(f['estado_aprobacion'] as String?),
         logoUrl: Fila.textoOpcional(f, 'logo_url'),
+        portadaUrl: Fila.textoOpcional(f, 'portada_url'),
         abierto: Fila.booleano(f, 'abierto'),
         aceptaPedidos: Fila.booleano(f, 'acepta_pedidos', true),
         demoraEstimadaMin: Fila.entero(f, 'demora_estimada_min', 25),

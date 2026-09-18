@@ -63,10 +63,20 @@ class ComerciosRepository {
         () => _db.rpc('set_ubicacion_comercio', params: {'p_lat': lat, 'p_lng': lng}),
       );
 
-  /// Sube el logo a `catalogo/<comercio_id>/logo.<ext>` y guarda la URL.
+  /// Sube el logo (cuadrado) a `catalogo/<comercio_id>/marca.<ext>`.
+  ///
+  /// No es `logo.<ext>`: ahí quedó la portada de los locales que cargaron una
+  /// sola foto antes de que existiera la portada (ver 0025).
   Future<void> subirLogo(String comercioId, Uint8List bytes, {String extension = 'jpg'}) =>
+      _subirImagen(comercioId, 'marca', 'logo_url', bytes, extension);
+
+  /// Sube la portada (foto ancha de la tarjeta) a `catalogo/<comercio_id>/portada.<ext>`.
+  Future<void> subirPortada(String comercioId, Uint8List bytes, {String extension = 'jpg'}) =>
+      _subirImagen(comercioId, 'portada', 'portada_url', bytes, extension);
+
+  Future<void> _subirImagen(String comercioId, String nombre, String columna, Uint8List bytes, String extension) =>
       intentar(() async {
-        final ruta = '$comercioId/logo.$extension';
+        final ruta = '$comercioId/$nombre.$extension';
         await _db.storage.from('catalogo').uploadBinary(
               ruta,
               bytes,
@@ -76,7 +86,7 @@ class ComerciosRepository {
         // cuando se reemplaza con el mismo nombre.
         final url = '${_db.storage.from('catalogo').getPublicUrl(ruta)}'
             '?v=${DateTime.now().millisecondsSinceEpoch}';
-        await _db.from('comercios').update({'logo_url': url}).eq('id', comercioId);
+        await _db.from('comercios').update({columna: url}).eq('id', comercioId);
       });
 
   Future<List<Horario>> horarios(String comercioId) => intentar(() async {

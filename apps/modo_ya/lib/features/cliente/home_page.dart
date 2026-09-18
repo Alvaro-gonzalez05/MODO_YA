@@ -445,6 +445,8 @@ class _TarjetaLocal extends ConsumerWidget {
         ? null
         : ref.watch(cotizacionEnvioProvider((comercioId: comercio.id, direccionId: direccionId!))).value;
 
+    final gris = MyType.bodyMd.copyWith(color: MyColors.secondary);
+
     return MyCard(
       padding: EdgeInsets.zero,
       onTap: () => context.go('/cliente/local/${comercio.id}'),
@@ -453,47 +455,84 @@ class _TarjetaLocal extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Stack(
-              children: [
-                MyImagen(url: comercio.logoUrl, alto: 150, radio: MyRadius.card, icono: iconoDeRubro(null)),
-                Positioned(
-                  left: MySpacing.sm,
-                  top: MySpacing.sm,
-                  child: MyBadge(
-                    comercio.abierto ? 'Abierto' : 'Cerrado',
-                    tone: comercio.abierto ? MyBadgeTone.success : MyBadgeTone.dark,
-                    dot: true,
-                  ),
-                ),
-                if (cot != null)
+            // Portada a todo el ancho. Sin el SizedBox, dentro del Stack la
+            // foto tomaba su ancho natural y quedaba corrida a la izquierda.
+            SizedBox(
+              height: 160,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  MyImagen(url: comercio.portadaUrl, alto: 160, radio: MyRadius.card, icono: iconoDeRubro(null)),
                   Positioned(
-                    right: MySpacing.sm,
-                    bottom: MySpacing.sm,
-                    child: MyBadge('${cot.minutosEstimados} min', tone: MyBadgeTone.neutral, icon: Symbols.schedule),
+                    left: MySpacing.sm,
+                    top: MySpacing.sm,
+                    child: MyBadge(
+                      comercio.abierto ? 'Abierto' : 'Cerrado',
+                      tone: comercio.abierto ? MyBadgeTone.success : MyBadgeTone.dark,
+                      dot: true,
+                    ),
                   ),
-              ],
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(MySpacing.md),
-              child: Column(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(comercio.nombre, style: MyType.headlineSm, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text(comercio.rubro, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
-                  const SizedBox(height: MySpacing.xs),
-                  Row(
-                    children: [
-                      Icon(Symbols.sports_motorsports, size: 16, color: MyColors.tertiary),
-                      const SizedBox(width: MySpacing.xxs),
-                      Flexible(
-                        child: Text(
-                          cot == null ? 'Envío según tu dirección' : 'Envío ${Formato.pesos(cot.costoEnvio)}',
-                          style: MyType.bodySm.copyWith(color: cot == null ? MyColors.secondary : MyColors.tertiary, fontWeight: FontWeight.w600),
-                          overflow: TextOverflow.ellipsis,
+                  // Logo cuadrado con borde, como en las apps de delivery.
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: MyColors.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(MyRadius.lg + 2),
+                      border: Border.all(color: MyColors.outlineVariant),
+                    ),
+                    child: MyImagen(
+                      url: comercio.logoUrl,
+                      ancho: 60,
+                      alto: 60,
+                      radio: MyRadius.lg,
+                      icono: Symbols.storefront,
+                    ),
+                  ),
+                  const SizedBox(width: MySpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(comercio.nombre, style: MyType.headlineSm, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text(comercio.rubro, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                        const SizedBox(height: MySpacing.xxs),
+                        Row(
+                          children: [
+                            Icon(Symbols.schedule, size: 16, color: MyColors.secondary),
+                            const SizedBox(width: MySpacing.xxs),
+                            Text(
+                              cot == null ? '${comercio.demoraEstimadaMin} min' : '${cot.minutosEstimados} min',
+                              style: gris,
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(Symbols.sports_motorsports, size: 16, color: MyColors.tertiary),
+                            const SizedBox(width: MySpacing.xxs),
+                            Flexible(
+                              child: Text(
+                                cot == null ? 'Envío según tu dirección' : 'Envío ${Formato.pesos(cot.costoEnvio)}',
+                                style: MyType.bodyMd.copyWith(
+                                  color: cot == null ? MyColors.secondary : MyColors.tertiary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

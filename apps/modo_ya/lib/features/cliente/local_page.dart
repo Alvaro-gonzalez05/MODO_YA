@@ -77,7 +77,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                       ),
                     ),
                     flexibleSpace: FlexibleSpaceBar(
-                      background: MyImagen(url: comercio.logoUrl, radio: 0, icono: Symbols.storefront),
+                      background: MyImagen(url: comercio.portadaUrl, radio: 0, icono: Symbols.storefront),
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -89,6 +89,8 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                           children: [
                             Row(
                               children: [
+                                _Logo(url: comercio.logoUrl, lado: 52),
+                                const SizedBox(width: MySpacing.sm),
                                 Expanded(child: Text(comercio.nombre, style: MyType.headlineLg)),
                                 MyBadge(
                                   comercio.abierto ? 'Abierto' : 'Cerrado',
@@ -172,7 +174,10 @@ class _LocalPageState extends ConsumerState<LocalPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          MyImagen(url: comercio.logoUrl, alto: 200, radio: MyRadius.card, icono: Symbols.storefront),
+          SizedBox(
+            height: 200,
+            child: MyImagen(url: comercio.portadaUrl, alto: 200, radio: MyRadius.card, icono: Symbols.storefront),
+          ),
           Padding(
             padding: const EdgeInsets.all(MySpacing.lg),
             child: Wrap(
@@ -181,12 +186,19 @@ class _LocalPageState extends ConsumerState<LocalPage> {
               spacing: MySpacing.lg,
               runSpacing: MySpacing.sm,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(comercio.nombre, style: MyType.headlineLg),
-                    Text(comercio.rubro, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+                    _Logo(url: comercio.logoUrl, lado: 64),
+                    const SizedBox(width: MySpacing.md),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(comercio.nombre, style: MyType.headlineLg),
+                        Text(comercio.rubro, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+                      ],
+                    ),
                   ],
                 ),
                 Wrap(
@@ -586,4 +598,23 @@ class _BarraPedido extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Logo cuadrado del local con un borde fino, como en la tarjeta del inicio.
+class _Logo extends StatelessWidget {
+  const _Logo({required this.url, required this.lado});
+
+  final String? url;
+  final double lado;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: MyColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(MyRadius.lg + 2),
+          border: Border.all(color: MyColors.outlineVariant),
+        ),
+        child: MyImagen(url: url, ancho: lado, alto: lado, radio: MyRadius.lg, icono: Symbols.storefront),
+      );
 }

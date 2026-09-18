@@ -270,13 +270,17 @@ class MyPastillaZona extends StatelessWidget {
             Icon(Symbols.location_on,
                 size: 16, color: MyColors.primary, fill: 1),
             const SizedBox(width: MySpacing.xxs),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxAncho),
-              child: Text(
-                zona,
-                style: MyType.labelMd,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            // Flexible: si no entra (celular angosto), se recorta con "..." en
+            // vez de desbordar la barra.
+            Flexible(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxAncho),
+                child: Text(
+                  zona,
+                  style: MyType.labelMd,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
             Icon(Symbols.keyboard_arrow_down,
