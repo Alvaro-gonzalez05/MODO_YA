@@ -2,16 +2,44 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "modo-ya-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/dev.mjs",
+        "modo_ya",
+        "5051"
+      ],
+      "port": 5051
+    },
+    {
+      "name": "repartidor-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/dev.mjs",
+        "repartidor",
+        "5052"
+      ],
+      "port": 5052
+    },
+    {
       "name": "modo-ya-web",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["tools/servir.mjs", "apps/modo_ya/build/web", "5051"],
-      "port": 5051
+      "runtimeArgs": [
+        "tools/servir.mjs",
+        "apps/modo_ya/build/web",
+        "5061"
+      ],
+      "port": 5061
     },
     {
       "name": "repartidor-web",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["tools/servir.mjs", "apps/repartidor/build/web", "5052"],
-      "port": 5052
+      "runtimeArgs": [
+        "tools/servir.mjs",
+        "apps/repartidor/build/web",
+        "5062"
+      ],
+      "port": 5062
     }
   ]
 }

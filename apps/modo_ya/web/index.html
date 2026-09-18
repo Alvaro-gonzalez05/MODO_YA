@@ -55,6 +55,14 @@
       setTimeout(function () { c.remove(); }, 400);
     });
   </script>
+  <script>
+    // Solo en desarrollo (node tools/dev.mjs, puertos 5051/5052): recarga la
+    // página sola cuando se recompila un cambio. En producción no hace nada.
+    if (location.port === '5051' || location.port === '5052') {
+      new EventSource('http://' + location.hostname + ':' + (Number(location.port) + 1000))
+        .onmessage = function () { location.reload(); };
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

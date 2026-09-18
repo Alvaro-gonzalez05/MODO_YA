@@ -132,6 +132,14 @@ publishable key, públicas por diseño).
 - **Visual Studio** con la carga *Desarrollo para el escritorio con C++*.
   `flutter doctor` tiene que mostrar Visual Studio sin cruces.
 
+## Probar mientras se desarrolla
+
+Doble clic en `dev.cmd` (o `dev rider` para la app del rider). Abre
+http://localhost:5051 conectada a la base real (`env/dev.json`) y **se recarga
+sola cada vez que se guarda un cambio**. En la PC se ve el diseño completo; para
+ver el del celular, achicar la ventana o usar F12 → icono de celular. Desde un
+celular en la misma wifi: `http://<IP de la PC>:5051` (la consola la muestra).
+
 ## Diseño
 
 Cada pantalla tiene dos diseños, no uno estirado (`packages/my_ui/lib/src/widgets/responsive.dart`):
