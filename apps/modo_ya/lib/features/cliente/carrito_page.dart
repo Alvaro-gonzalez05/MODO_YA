@@ -9,8 +9,9 @@ import 'carrito.dart';
 
 /// Carrito y checkout (D3).
 ///
-/// Del diseño no están la propina ni el cupón (no existen en el sistema) y el
-/// método de pago figura "a confirmar": todavía no está definido cómo se cobra.
+/// Del diseño no están la propina ni el cupón (no existen en el sistema). El
+/// cliente elige con qué paga y el pedido le llega al local en el momento; el
+/// cobro lo registra después la administración (ver migración 0027).
 class CarritoPage extends ConsumerStatefulWidget {
   const CarritoPage({super.key});
 
@@ -20,6 +21,7 @@ class CarritoPage extends ConsumerStatefulWidget {
 
 class _CarritoPageState extends ConsumerState<CarritoPage> {
   late final _nota = TextEditingController(text: ref.read(carritoProvider).nota);
+  MetodoPago? _metodo;
 
   @override
   void dispose() {
@@ -34,11 +36,17 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
       mostrarError(context, 'Elegí a dónde te lo llevamos.');
       return;
     }
+    final metodo = _metodo;
+    if (metodo == null) {
+      mostrarError(context, 'Elegí cómo vas a pagar.');
+      return;
+    }
     try {
       final id = await ref.read(pedidosRepositoryProvider).crear(
             comercioId: carrito.comercio!.id,
             direccionId: direccion.id,
             items: carrito.items,
+            metodo: metodo,
             nota: _nota.text,
           );
       ref.read(carritoProvider.notifier).vaciar();
@@ -193,19 +201,15 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
     );
 
     final pago = MyCard(
-      color: MyColors.primaryFixed,
-      shadows: const [],
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(Symbols.payments, color: MyColors.onPrimaryFixed),
-          const SizedBox(width: MySpacing.sm),
-          Expanded(
-            child: Text(
-              'Te confirmamos cómo pagar apenas recibamos el pedido. '
-              'El local empieza a prepararlo cuando el pago quede confirmado.',
-              style: MyType.bodySm.copyWith(color: MyColors.onPrimaryFixed),
-            ),
-          ),
+          Text('¿Cómo pagás?', style: MyType.headlineSm),
+          const SizedBox(height: MySpacing.sm),
+          for (final m in MetodoPago.delCliente) ...[
+            _OpcionPago(metodo: m, elegido: _metodo == m, onTap: () => setState(() => _metodo = m)),
+            if (m != MetodoPago.delCliente.last) const SizedBox(height: MySpacing.xs),
+          ],
         ],
       ),
     );
@@ -324,4 +328,59 @@ class _Linea extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// Una opción de pago: tarjeta grande y tocable, marcada en amarillo cuando
+/// está elegida.
+class _OpcionPago extends StatelessWidget {
+  const _OpcionPago({required this.metodo, required this.elegido, required this.onTap});
+
+  final MetodoPago metodo;
+  final bool elegido;
+  final VoidCallback onTap;
+
+  IconData get _icono => switch (metodo) {
+        MetodoPago.efectivo => Symbols.payments,
+        MetodoPago.tarjeta => Symbols.credit_card,
+        MetodoPago.transferencia => Symbols.account_balance,
+        _ => Symbols.wallet,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: elegido ? MyColors.primaryFixed : MyColors.claroSuperficieAlt,
+      borderRadius: BorderRadius.circular(MyRadius.lg),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(MyRadius.lg),
+        child: Container(
+          padding: const EdgeInsets.all(MySpacing.sm),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(MyRadius.lg),
+            border: Border.all(color: elegido ? MyColors.primary : Colors.transparent, width: 2),
+          ),
+          child: Row(
+            children: [
+              Icon(_icono, color: elegido ? MyColors.onPrimaryFixed : MyColors.claroTextoSecundario),
+              const SizedBox(width: MySpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(metodo.label, style: MyType.labelLg),
+                    Text(metodo.detalle, style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario)),
+                  ],
+                ),
+              ),
+              Icon(
+                elegido ? Symbols.radio_button_checked : Symbols.radio_button_unchecked,
+                color: elegido ? MyColors.onPrimaryFixed : MyColors.claroTextoSecundario,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

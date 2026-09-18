@@ -317,6 +317,8 @@ class Pedido {
     this.minutosEstimados,
     this.nota,
     this.motivoRechazo,
+    this.metodoPago,
+    this.cobrado = false,
     this.items = const [],
   });
 
@@ -336,6 +338,13 @@ class Pedido {
   final int? minutosEstimados;
   final String? nota;
   final String? motivoRechazo;
+
+  /// Con qué eligió pagar el cliente.
+  final MetodoPago? metodoPago;
+
+  /// La administración ya registró el cobro. Solo lo ve la administración
+  /// (para el resto, `pagos` no se puede leer y viene en false).
+  final bool cobrado;
   final DateTime creadoEn;
   final List<PedidoItem> items;
 
@@ -363,6 +372,8 @@ class Pedido {
         minutosEstimados: Fila.enteroOpcional(f, 'envio_minutos_estimados'),
         nota: Fila.textoOpcional(f, 'nota_cliente'),
         motivoRechazo: Fila.textoOpcional(f, 'motivo_rechazo'),
+        metodoPago: f['metodo_pago'] == null ? null : MetodoPago.fromWire(f['metodo_pago'] as String?),
+        cobrado: f['pago_estado'] == 'acreditado',
         creadoEn: Fila.fecha(f, 'creado_en'),
         items: items,
       );
@@ -384,6 +395,8 @@ class Pedido {
         minutosEstimados: minutosEstimados,
         nota: nota,
         motivoRechazo: motivoRechazo,
+        metodoPago: metodoPago,
+        cobrado: cobrado,
         creadoEn: creadoEn,
         items: nuevos,
       );

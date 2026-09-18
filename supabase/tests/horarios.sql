@@ -19,9 +19,9 @@ begin
   insert into public.comercios (perfil_id, ciudad_id, nombre, rubro, telefono, calle, estado_aprobacion)
   values (u, ciudad, 'Hor', 'x', 'x', 'x', 'aprobado') returning id into com;
 
-  -- ---- Sin horarios: manda el interruptor ---------------------------------
-  insert into _r values ('01 sin horarios y acepta pedidos',
-    case when public.comercio_abierto_en(com, '2026-09-14 03:00') then 'OK abierto' else 'FALLA' end);
+  -- ---- Sin horarios: cerrado (0027) ---------------------------------------
+  insert into _r values ('01 sin horarios figura cerrado',
+    case when not public.comercio_abierto_en(com, '2026-09-14 20:00') then 'OK cerrado' else 'FALLA' end);
   update public.comercios set acepta_pedidos = false where id = com;
   insert into _r values ('02 sin horarios y pausado',
     case when not public.comercio_abierto_en(com, '2026-09-14 20:00') then 'OK cerrado' else 'FALLA' end);

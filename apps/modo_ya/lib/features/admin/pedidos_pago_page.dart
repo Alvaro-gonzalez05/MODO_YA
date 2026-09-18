@@ -4,13 +4,12 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-/// Pedidos esperando que se registre el pago.
+/// Cobros pendientes de los pedidos.
 ///
-/// PROVISORIO: existe porque todavía no está decidido cómo se cobra (efectivo,
-/// pasarela o ambos). Mientras tanto, un pedido no le llega al local hasta que
-/// la administración confirma el pago acá. Cuando haya pasarela, la
-/// confirmación la va a hacer el webhook y esta pantalla queda para casos
-/// excepcionales.
+/// El pedido le llega al local apenas el cliente lo confirma (0027): esta
+/// pantalla no frena nada. Sirve para llevar la cuenta de lo que falta cobrar
+/// (el efectivo que trae el rider, el posnet, las transferencias) y marcarlo
+/// cuando entra la plata.
 class PedidosPagoPage extends ConsumerWidget {
   const PedidosPagoPage({super.key});
 
@@ -21,7 +20,7 @@ class PedidosPagoPage extends ConsumerWidget {
     return MyPagina(
       rotulo: 'Cobros',
       titulo: 'Pedidos por cobrar',
-      bajada: 'No le llegan al local hasta que confirmás el pago',
+      bajada: 'Los pedidos ya le llegaron al local: acá registrás lo que se cobró',
       children: [
         MyCard(
           color: MyColors.primaryFixed,
@@ -33,7 +32,8 @@ class PedidosPagoPage extends ConsumerWidget {
               const SizedBox(width: MySpacing.sm),
               Expanded(
                 child: Text(
-                  'Provisorio hasta definir cómo se cobra. Por ahora cada pago se confirma a mano desde acá.',
+                  'El cliente elige con qué paga y el local recibe el pedido en el momento. '
+                  'Cuando entra la plata (efectivo, posnet o transferencia), marcalo como cobrado.',
                   style: MyType.bodySm.copyWith(color: MyColors.onPrimaryFixedVariant),
                 ),
               ),
@@ -49,8 +49,8 @@ class PedidosPagoPage extends ConsumerWidget {
               return const MyCard(
                 child: MyEmptyState(
                   icon: Symbols.task_alt,
-                  title: 'Nada pendiente',
-                  message: 'Cuando un cliente confirme un pedido, aparece acá.',
+                  title: 'Nada por cobrar',
+                  message: 'Cada pedido nuevo aparece acá hasta que registres el cobro.',
                 ),
               );
             }
@@ -69,7 +69,7 @@ class PedidosPagoPage extends ConsumerWidget {
                 MyColumna('Pedido'),
                 MyColumna('Local', flex: 2),
                 MyColumna('Cliente', flex: 2),
-                MyColumna('Productos', flex: 2),
+                MyColumna('Paga con'),
                 MyColumna('Total', alDerecha: true),
                 MyColumna('', flex: 3, alDerecha: true),
               ],
@@ -80,12 +80,7 @@ class PedidosPagoPage extends ConsumerWidget {
                       MyCeldaDoble(p.codigo, bajada: Formato.haceCuanto(p.creadoEn)),
                       Text(p.comercioNombre, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
                       MyCeldaDoble(p.clienteNombre ?? 'Cliente', bajada: p.clienteTelefono),
-                      Text(
-                        p.items.map((i) => '${i.cantidad}× ${i.nombreProducto}').join(', '),
-                        style: MyType.bodySm,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      MyCeldaDoble(p.metodoPago?.label ?? 'Sin elegir', bajada: p.estado.label),
                       Text(Formato.pesos(p.total), style: MyType.headlineSm.copyWith(color: MyColors.tertiary)),
                       _Acciones(pedido: p),
                     ],
@@ -131,7 +126,14 @@ class _TarjetaPedido extends StatelessWidget {
           ),
           Text(pedido.entrega.calle, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
           const SizedBox(height: MySpacing.xs),
-          for (final i in pedido.items) Text('${i.cantidad}× ${i.nombreProducto}', style: MyType.bodySm),
+          Wrap(
+            spacing: MySpacing.xs,
+            runSpacing: MySpacing.xs,
+            children: [
+              MyBadge('Paga con ${pedido.metodoPago?.label.toLowerCase() ?? 'sin elegir'}', tone: MyBadgeTone.info),
+              MyBadge(pedido.estado.label, tone: MyBadgeTone.neutral),
+            ],
+          ),
           const SizedBox(height: MySpacing.md),
           _Acciones(pedido: pedido),
         ],
@@ -149,14 +151,21 @@ class _Acciones extends ConsumerWidget {
     final metodo = await showDialog<MetodoPago>(
       context: context,
       builder: (c) => SimpleDialog(
-        title: Text('¿Cómo pagó ${pedido.codigo}?'),
+        title: Text('¿Cómo cobraste ${pedido.codigo}?'),
         children: [
-          for (final m in MetodoPago.values)
+          // Primero lo que eligió el cliente: es lo más probable.
+          for (final m in [
+            if (pedido.metodoPago != null) pedido.metodoPago!,
+            ...MetodoPago.values.where((m) => m != pedido.metodoPago),
+          ])
             SimpleDialogOption(
               onPressed: () => Navigator.pop(c, m),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: MySpacing.xs),
-                child: Text(m.label, style: MyType.labelLg),
+                child: Text(
+                  m == pedido.metodoPago ? '${m.label} (lo que eligió el cliente)' : m.label,
+                  style: MyType.labelLg,
+                ),
               ),
             ),
         ],
@@ -165,7 +174,7 @@ class _Acciones extends ConsumerWidget {
     if (metodo == null) return;
     try {
       await ref.read(pedidosRepositoryProvider).marcarPagado(pedido.id, metodo);
-      if (context.mounted) mostrarAviso(context, 'Pago registrado. El pedido ya le llegó al local.');
+      if (context.mounted) mostrarAviso(context, 'Cobro registrado.');
     } catch (e) {
       if (context.mounted) mostrarError(context, e);
     }
@@ -194,7 +203,7 @@ class _Acciones extends ConsumerWidget {
       runSpacing: MySpacing.xs,
       children: [
         MyBoton(label: 'Cancelar', tipo: MyBotonTipo.texto, onPressed: () => _cancelar(context, ref)),
-        MyBoton(label: 'Confirmar pago', icon: Symbols.payments, onPressed: () => _confirmar(context, ref)),
+        MyBoton(label: 'Cobrado', icon: Symbols.payments, onPressed: () => _confirmar(context, ref)),
       ],
     );
   }

@@ -163,7 +163,7 @@ void main() {
     expect(c.aprobacion, EstadoAprobacion.aprobado);
     expect(c.rubro, 'Pizzería');
     expect(c.direccion.lat, closeTo(_local.lat, 0.0001), reason: 'v_comercios tiene que traer lat numerico');
-    expect(c.abierto, isTrue, reason: 'sin horarios cargados manda el interruptor');
+    expect(c.abierto, isFalse, reason: 'sin horarios cargados figura cerrado (0027)');
   }, timeout: largo);
 
   test('03 admin: un email repetido da un error legible', () async {
@@ -227,9 +227,13 @@ void main() {
     final h = await comercios.horarios(sLocal.comercioId!);
     expect(h.map((x) => '${x.dia} ${x.abre}-${x.cierra}'), ['5 20:00-01:00', '6 11:00-15:00']);
     expect(h.first.cruzaMedianoche, isTrue);
-    // Se vacian para que el local quede abierto el resto del test.
-    await comercios.guardarHorarios(const []);
-    expect(await comercios.horarios(sLocal.comercioId!), isEmpty);
+    // Todo el dia, todos los dias: el local queda abierto el resto del test
+    // (sin horarios figuraria cerrado y no se le podria pedir).
+    await comercios.guardarHorarios([
+      for (var d = 0; d < 7; d++) Horario(dia: d, abre: '00:00', cierra: '23:59'),
+    ]);
+    final abierto = await comercios.porId(sLocal.comercioId!);
+    expect(abierto!.abierto, isTrue);
   }, timeout: largo);
 
   test('06 local: no puede aprobarse ni tocar datos ajenos a su vidriera', () async {
@@ -291,13 +295,16 @@ void main() {
       comercioId: sLocal.comercioId!,
       direccionId: direccionId,
       nota: 'Tocar timbre',
+      metodo: MetodoPago.tarjeta,
       items: [
         ItemCarrito(producto: pizza, cantidad: 2, elegidas: [grande, queso], nota: 'bien cocida'),
       ],
     );
 
+    // Le llega al local en el momento: no espera a la administracion.
     final p = await pedidos.watchPorId(pedidoId).first;
-    expect(p!.estado, EstadoPedido.pendientePago);
+    expect(p!.estado, EstadoPedido.pagado);
+    expect(p.metodoPago, MetodoPago.tarjeta);
     expect(p.subtotal, (8000 + 2000 + 900) * 2);
     expect(p.items.single.opciones, containsAll(['Tamano: Grande', 'Agregados: Extra queso']));
     expect(p.clienteNombre, 'Cliente Prueba');
@@ -314,6 +321,7 @@ void main() {
           pedidos.crear(
             comercioId: sLocal.comercioId!,
             direccionId: direccionId,
+            metodo: MetodoPago.efectivo,
             items: [ItemCarrito(producto: pizza, cantidad: 1, elegidas: elegidas)],
           ),
           throwsA(isA<ErrorModoYa>()
@@ -333,6 +341,7 @@ void main() {
       pedidos.crear(
         comercioId: sLocal.comercioId!,
         direccionId: direccionId,
+        metodo: MetodoPago.efectivo,
         items: [
           ItemCarrito(
             producto: pizza,
@@ -346,12 +355,15 @@ void main() {
   }, timeout: largo);
 
   // ---------------------------------------------------------------------------
-  test('11 admin: ve el pedido por cobrar y confirma el pago', () async {
+  test('11 admin: ve el pedido por cobrar y registra el cobro', () async {
     await entrarComo(_adminEmail, _adminPass);
     final pendientes = await pedidos.watchPendientesDePago().first;
     final p = pendientes.firstWhere((x) => x.id == pedidoId);
     expect(p.items, isNotEmpty);
-    await pedidos.marcarPagado(pedidoId, MetodoPago.efectivo);
+    expect(p.cobrado, isFalse);
+    await pedidos.marcarPagado(pedidoId, MetodoPago.tarjeta);
+    final despues = await pedidos.watchPendientesDePago().first;
+    expect(despues.map((x) => x.id), isNot(contains(pedidoId)));
   }, timeout: largo);
 
   test('12 local: acepta, prepara y lo marca listo (sale a buscar rider)', () async {
@@ -435,7 +447,7 @@ void main() {
   }, timeout: largo);
 
   // ---------------------------------------------------------------------------
-  test('17 local: cadeteria, el rider rechaza y queda sin rider', () async {
+  test('17 local: cadeteria, el rider rechaza y el envio sigue buscando', () async {
     await entrarComo(_localEmail, localPass);
     final cot = await envios.cotizar(lat: _casa.lat, lng: _casa.lng);
     expect(cot.total, cot.gananciaRepartidor + cot.comision);
@@ -460,13 +472,12 @@ void main() {
     );
     await envios.responderOferta(ofertas.firstWhere((o) => o.envio.id == envioCadeteria).id, acepta: false);
 
+    // Antes quedaba `sin_repartidor` para siempre. Ahora sigue buscando: el
+    // cron se lo vuelve a ofrecer (a este mismo rider, pasado un minuto).
     await entrarComo(_localEmail, localPass);
-    final sinRider = await esperar<Envio?>(
-      () => envios.watchPorId(envioCadeteria).first,
-      (x) => x?.estado == EstadoEnvio.sinRepartidor,
-      que: 'que quede sin rider (no hay otro rider cerca)',
-    );
-    expect(sinRider!.estado, EstadoEnvio.sinRepartidor);
+    await Future<void>.delayed(const Duration(seconds: 12));
+    final sigue = await envios.watchPorId(envioCadeteria).first;
+    expect(sigue!.estado, EstadoEnvio.buscandoRepartidor);
   }, timeout: largo);
 
   test('18 local: tiempo real, cancelar llega por Realtime', () async {

@@ -33,6 +33,11 @@ van en una migración nueva.
 | `0022_usuario_de_la_cuenta.sql` | `admin_usuario_de`: la administración ve con qué usuario entra cada local o rider |
 | `0023_rubros_con_acentos.sql` | nombres de rubros con acentos (y la copia en `comercios.rubro`) |
 | `0024_carteles_del_inicio.sql` | carteles del inicio del cliente, editables desde el panel de administración |
+| `0025_portada_del_local.sql` | portada del local aparte del logo |
+| `0026_pago_con_tarjeta.sql` | medio de pago "tarjeta" |
+| `0027_pedido_directo_al_local.sql` | el pedido llega directo al local con el medio de pago elegido; sin horarios = cerrado; la búsqueda de rider no se rinde |
+| `0028_cobros_en_pedidos.sql` | estado del cobro en `v_pedidos` para la administración |
+| `0029_tope_de_busqueda.sql` | la búsqueda de rider corta a las 3 horas |
 
 ## Decisiones de diseño
 

@@ -56,7 +56,7 @@ class DashboardPage extends ConsumerWidget {
           rotulo: 'Pedidos por cobrar',
           valor: '${porCobrar.length}',
           icono: Symbols.payments,
-          detalle: porCobrar.isEmpty ? 'Nada pendiente' : 'Tocá para confirmar el pago',
+          detalle: porCobrar.isEmpty ? 'Nada pendiente' : 'Tocá para registrar lo cobrado',
           destacado: porCobrar.isNotEmpty,
           onTap: () => context.go('/admin/pedidos'),
         ),

@@ -40,14 +40,16 @@ class PedidosRepository {
         },
       );
 
-  /// Pedidos que esperan que la administracion registre el pago.
+  /// Pedidos con el cobro pendiente: la administracion registra cuando entra
+  /// la plata. No frenan el pedido (ver 0027).
   Stream<List<Pedido>> watchPendientesDePago() => enVivo(
-        canal: 'pedidos-pago',
-        tablas: const ['pedidos'],
+        canal: 'pedidos-cobro',
+        tablas: const ['pedidos', 'pagos'],
         leer: () async => _conItems(_lista(await _db
             .from('v_pedidos')
             .select()
-            .eq('estado', 'pendiente_pago')
+            .eq('pago_estado', 'pendiente')
+            .not('estado', 'in', '(cancelado,rechazado)')
             .order('creado_en', ascending: true))),
       );
 
@@ -94,6 +96,7 @@ class PedidosRepository {
     required String comercioId,
     required String direccionId,
     required List<ItemCarrito> items,
+    required MetodoPago metodo,
     String? nota,
   }) =>
       intentar(() async {
@@ -102,6 +105,7 @@ class PedidosRepository {
           'p_direccion_id': direccionId,
           'p_items': items.map((i) => i.toJson()).toList(),
           'p_nota': (nota ?? '').trim().isEmpty ? null : nota!.trim(),
+          'p_metodo': metodo.wire,
         });
         return (r as Map)['id'] as String;
       });
@@ -117,7 +121,7 @@ class PedidosRepository {
   Future<void> cancelar(String id, String motivo) =>
       intentar(() => _db.rpc('cancelar_pedido', params: {'p_pedido': id, 'p_motivo': motivo}));
 
-  /// Solo administracion. Mientras no haya pasarela, es como se confirma un pago.
+  /// Solo administracion: registra que entro la plata del pedido.
   Future<void> marcarPagado(String id, MetodoPago metodo) => intentar(
         () => _db.rpc('marcar_pedido_pagado', params: {'p_pedido': id, 'p_metodo': metodo.wire}),
       );

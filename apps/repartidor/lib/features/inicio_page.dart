@@ -245,14 +245,39 @@ class _TarjetaConexion extends StatelessWidget {
   }
 }
 
-class _EstadoUbicacion extends StatelessWidget {
+class _EstadoUbicacion extends ConsumerWidget {
   const _EstadoUbicacion({required this.lectura});
 
   final Lectura lectura;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = lectura;
+    if (l is LecturaSinSegundoPlano) {
+      // Con "solo mientras se usa la app", al apagar la pantalla deja de
+      // mandar y no le llegan ofertas.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Symbols.warning, size: 16, color: MyColors.error),
+              const SizedBox(width: MySpacing.xs),
+              Expanded(
+                child: Text(
+                  'Con la pantalla apagada no te llegan envíos. En Ubicación elegí "Permitir todo el tiempo".',
+                  style: MyType.bodySm.copyWith(color: MyColors.error),
+                ),
+              ),
+            ],
+          ),
+          TextButton(
+            onPressed: () => ref.read(ubicacionRiderProvider.notifier).abrirAjustes(),
+            child: const Text('Abrir ajustes'),
+          ),
+        ],
+      );
+    }
     final (icono, texto, color) = switch (l) {
       LecturaOk(simulada: true) => (Symbols.science, 'Ubicación simulada (centro de Malargüe)', MyColors.secondary),
       LecturaOk() => (Symbols.my_location, 'Ubicación enviada', MyColors.success),

@@ -1,7 +1,9 @@
 -- Prueba de extremo a extremo del flujo de marketplace.
 --
--- Cliente arma un pedido con opciones -> paga -> el comercio lo acepta y se
--- genera el envio -> lo prepara -> sale el cadete -> entrega.
+-- Cliente arma un pedido con opciones y elige como paga -> le llega al comercio
+-- sin esperar a nadie -> lo acepta y se genera el envio -> lo prepara -> sale
+-- el cadete (con reoferta si alguno dice que no) -> entrega. La
+-- administracion registra el cobro aparte.
 -- Verifica sobre todo que los precios los ponga el servidor y que el estado del
 -- pedido siga al del envio sin que nadie lo sincronice a mano.
 
@@ -19,8 +21,11 @@ declare
   ped public.pedidos;
   env public.envios;
   of  public.ofertas;
+  of2 public.ofertas;
+  pago_id uuid;
   cod text;
   esperado integer;
+  envio_esperado integer;
   n_ped int; n_items int; n_env int; n_dir int;
 begin
   select id into ciudad from public.ciudades where nombre = 'Malargue';
@@ -92,19 +97,26 @@ begin
         'opciones', jsonb_build_array(it_grande, it_queso)
       )
     ),
-    'Tocar timbre'
+    'Tocar timbre',
+    'efectivo'
   );
+  pago_id := ped.pago_id;
 
-  -- (8000 + 2000 + 900) x 2 = 21800 de productos, + 3500 de envio.
+  -- (8000 + 2000 + 900) x 2 = 21800 de productos, + el envio que cotiza el
+  -- tarifario vigente (lo cambia la administracion, no se fija en la prueba).
   esperado := (8000 + 2000 + 900) * 2;
+  select total into envio_esperado from public.cotizar(
+    ciudad,
+    (select ubicacion from public.comercios where id = com),
+    (select ubicacion from public.direcciones_cliente where id = dir));
   insert into _r values ('1. crear_pedido',
     format('codigo=%s estado=%s subtotal=$%s envio=$%s total=$%s',
            ped.codigo, ped.estado, ped.subtotal, ped.costo_envio, ped.total));
   insert into _r values ('2. precio del servidor',
-    case when ped.subtotal = esperado and ped.costo_envio = 3500
-         then format('OK  $%s productos + $%s envio', esperado, 3500)
-         else format('MAL  esperaba %s + 3500, dio %s + %s',
-                     esperado, ped.subtotal, ped.costo_envio) end);
+    case when ped.subtotal = esperado and ped.costo_envio = envio_esperado
+         then format('OK  $%s productos + $%s envio', esperado, envio_esperado)
+         else format('MAL  esperaba %s + %s, dio %s + %s',
+                     esperado, envio_esperado, ped.subtotal, ped.costo_envio) end);
 
   insert into _r values ('3. opciones copiadas',
     (select format('%s renglon, %s opciones: %s',
@@ -134,10 +146,21 @@ begin
     insert into _r values ('4. cliente no toca precios', 'OK  RLS lo bloqueo');
   end;
 
-  -- ---- Pago (hoy lo registra la administracion) ----------------------------
+  -- ---- Le llega al local sin esperar a la administracion -------------------
+  insert into _r values ('5. directo al local',
+    case when ped.estado = 'pagado' and ped.metodo_pago = 'efectivo'
+          and (select estado from public.pagos where id = pago_id) = 'pendiente'
+         then 'OK  nace "Nuevo" con el cobro pendiente'
+         else format('MAL  estado=%s metodo=%s', ped.estado, ped.metodo_pago) end);
+
+  -- ---- La administracion registra el cobro: no mueve el pedido -------------
   perform set_config('request.jwt.claims', json_build_object('sub',u_adm)::text, true);
-  ped := public.marcar_pedido_pagado(ped.id, 'mercado_pago', 'TEST-REF-1');
-  insert into _r values ('5. marcar_pagado', 'estado=' || ped.estado);
+  ped := public.marcar_pedido_pagado(ped.id, 'efectivo', 'TEST-REF-1');
+  insert into _r values ('5b. cobro registrado',
+    case when ped.estado = 'pagado'
+          and (select estado from public.pagos where id = pago_id) = 'acreditado'
+         then 'OK  pago acreditado, el pedido sigue igual'
+         else 'MAL  estado=' || ped.estado end);
 
   -- ---- El comercio lo acepta: nace el envio --------------------------------
   perform set_config('request.jwt.claims', json_build_object('sub',u_com)::text, true);
@@ -162,10 +185,25 @@ begin
          then 'OK  el envio salio a buscar cadete recien al estar listo'
          else 'MAL  estado_envio=' || env.estado end);
 
-  -- ---- El cadete acepta y entrega ------------------------------------------
+  -- ---- El cadete dice que no: se le vuelve a ofrecer ----------------------
+  -- Con un solo rider cerca, antes el envio quedaba sin nadie para siempre.
   select * into of from public.ofertas where envio_id = env.id and respuesta is null;
   perform set_config('request.jwt.claims', json_build_object('sub',u_rep)::text, true);
-  env := public.responder_oferta(of.id, true);
+  perform public.responder_oferta(of.id, false);
+  -- Pasa el minuto de espera y se reintenta, como hace el cron cada 10 s. Se
+  -- llama solo para este envio: vencer_ofertas() recorre todos los de la base
+  -- y podria ofrecerle al cadete de prueba un envio real que este buscando.
+  update public.ofertas set ofrecida_en = now() - interval '2 minutes' where id = of.id;
+  perform public.ofrecer_al_siguiente(env.id);
+  select * into of2 from public.ofertas where envio_id = env.id and respuesta is null;
+  select * into env from public.envios where id = env.id;
+  insert into _r values ('8b. reoferta tras un no',
+    case when of2.id is not null and of2.repartidor_id = rep and env.estado = 'buscando_repartidor'
+         then 'OK  se le volvio a ofrecer y el envio sigue buscando'
+         else format('MAL  oferta=%s envio=%s', of2.id, env.estado) end);
+
+  -- ---- El cadete acepta y entrega ------------------------------------------
+  env := public.responder_oferta(of2.id, true);
   cod := env.codigo_entrega;
 
   env := public.avanzar_estado(env.id, 'en_local');
@@ -226,7 +264,7 @@ begin
   update public.pedidos set envio_id = null where id = ped.id;
   delete from public.envios   where pedido_id = ped.id;
   delete from public.pedidos  where id = ped.id;
-  delete from public.pagos    where referencia_externa = 'TEST-REF-1';
+  delete from public.pagos    where id = pago_id;
   delete from public.productos where comercio_id = com;
   delete from public.secciones_menu where comercio_id = com;
   delete from public.horarios_comercio where comercio_id = com;

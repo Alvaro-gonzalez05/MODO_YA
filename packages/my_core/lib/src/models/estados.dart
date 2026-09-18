@@ -113,6 +113,7 @@ enum Vehiculo {
 
 enum MetodoPago {
   efectivo('efectivo', 'Efectivo'),
+  tarjeta('tarjeta', 'Tarjeta'),
   mercadoPago('mercado_pago', 'Mercado Pago'),
   transferencia('transferencia', 'Transferencia'),
   otro('otro', 'Otro');
@@ -121,6 +122,18 @@ enum MetodoPago {
 
   final String wire;
   final String label;
+
+  /// Lo que el cliente puede elegir al pedir. Mercado Pago online, cuando
+  /// haya pasarela.
+  static const delCliente = [efectivo, tarjeta, transferencia];
+
+  String get detalle => switch (this) {
+        efectivo => 'Pagás al recibir el pedido',
+        tarjeta => 'Débito o crédito, con posnet al recibir',
+        transferencia => 'Te pasamos el alias al confirmar',
+        mercadoPago => 'Pago online',
+        otro => '',
+      };
 
   static MetodoPago fromWire(String? v) =>
       _desdeWire(values, v, (e) => e.wire, 'Método de pago');
