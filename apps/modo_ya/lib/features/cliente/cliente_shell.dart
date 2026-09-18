@@ -21,6 +21,17 @@ class ClienteShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Timbre cuando un pedido pasa a "en camino": el rider sale para su casa.
+    // Se escucha aca para que suene en cualquier pantalla.
+    ref.listen(pedidosDelClienteProvider, (antes, ahora) {
+      final previos = {for (final p in antes?.value ?? const <Pedido>[]) p.id: p.estado};
+      if (antes?.value == null) return;
+      final salio = (ahora.value ?? const <Pedido>[]).any(
+        (p) => p.estado == EstadoPedido.enCamino && previos[p.id] != null && previos[p.id] != EstadoPedido.enCamino,
+      );
+      if (salio) MySonidos.tocar(MySonido.riderEnCamino);
+    });
+
     final sesion = ref.watch(sesionProvider);
     final direccion = ref.watch(direccionActualProvider);
     final activos = ref.watch(pedidosDelClienteProvider).value?.where((p) => !p.estado.esFinal).length ?? 0;

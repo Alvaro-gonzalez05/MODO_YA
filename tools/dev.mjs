@@ -10,7 +10,7 @@
 
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
-import { watch } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync, watch } from 'node:fs';
 import { networkInterfaces } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -18,6 +18,17 @@ const app = process.argv[2] ?? 'modo_ya';
 const puerto = process.argv[3] ?? '5051';
 const raiz = resolve(import.meta.dirname, '..');
 const dirApp = join(raiz, 'apps', app);
+
+// Flutter deja una carpeta flutter_tools.* (~0,3 GB) por cada arranque y no la
+// borra. Van a D: (el disco C: de esta PC se llena) y se limpian las de las
+// veces anteriores antes de arrancar.
+const temporales = 'D:/dev/tmp';
+mkdirSync(temporales, { recursive: true });
+for (const d of readdirSync(temporales)) {
+  if (d.startsWith('flutter_tools.')) {
+    try { rmSync(join(temporales, d), { recursive: true, force: true }); } catch { /* en uso por otro flutter */ }
+  }
+}
 
 const flutter = spawn(
   'flutter',
@@ -35,7 +46,12 @@ const flutter = spawn(
     '--no-web-experimental-hot-reload',
     '--dart-define-from-file=../../env/dev.json',
   ],
-  { cwd: dirApp, shell: true, stdio: ['pipe', 'pipe', 'inherit'] },
+  {
+    cwd: dirApp,
+    shell: true,
+    stdio: ['pipe', 'pipe', 'inherit'],
+    env: { ...process.env, TEMP: temporales, TMP: temporales },
+  },
 );
 
 // Aviso de recarga para el navegador: el cliente de depuración de Flutter no

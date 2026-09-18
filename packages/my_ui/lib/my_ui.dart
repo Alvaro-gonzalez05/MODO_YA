@@ -5,6 +5,7 @@
 library;
 
 export 'src/actualizaciones/aviso_actualizacion.dart';
+export 'src/sonidos.dart';
 export 'src/theme.dart';
 export 'src/widgets/animaciones.dart';
 export 'src/tokens.dart';

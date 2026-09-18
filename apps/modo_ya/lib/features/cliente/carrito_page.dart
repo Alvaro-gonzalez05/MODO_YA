@@ -51,6 +51,7 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
           );
       ref.read(carritoProvider.notifier).vaciar();
       if (!mounted) return;
+      MySonidos.tocar(MySonido.pedidoConfirmado);
       await mostrarExito(
         context,
         titulo: '¡Pedido confirmado!',

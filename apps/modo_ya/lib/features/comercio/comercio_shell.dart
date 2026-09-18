@@ -8,7 +8,8 @@ import 'package:my_ui/my_ui.dart';
 import '../../comun/menu_usuario.dart';
 
 /// Contenedor de las pantallas del local: barra lateral en la PC, dock en el
-/// celular. Avisa de los pedidos nuevos esté donde esté.
+/// celular. Avisa de los pedidos nuevos esté donde esté: el timbre suena en
+/// loop hasta que no quede ninguno sin aceptar.
 class ComercioShell extends ConsumerWidget {
   const ComercioShell({super.key, required this.navigationShell, required this.enRaiz});
 
@@ -40,7 +41,10 @@ class ComercioShell extends ConsumerWidget {
     final pedidos = ref.watch(pedidosDelComercioProvider).value ?? const <Pedido>[];
     final nuevos = pedidos.where((p) => p.estado == EstadoPedido.pagado).length;
 
-    return MyAppShell(
+    return MyAlarma(
+      activa: nuevos > 0,
+      sonido: MySonido.pedidoNuevo,
+      child: MyAppShell(
       seccion: 'Local',
       subtitulo: comercio?.nombre ?? 'Malargüe · Mendoza',
       destinos: [
@@ -65,6 +69,7 @@ class ComercioShell extends ConsumerWidget {
       version: versionVisible,
       mostrarDock: enRaiz,
       body: navigationShell,
+      ),
     );
   }
 }
