@@ -23,6 +23,7 @@ import 'features/cliente/direcciones_page.dart';
 import 'features/cliente/home_page.dart';
 import 'features/cliente/local_page.dart';
 import 'features/cliente/mis_pedidos_page.dart';
+import 'features/cliente/pago_page.dart';
 import 'features/cliente/pedido_seguimiento_page.dart';
 import 'features/comercio/comercio_shell.dart';
 import 'features/comercio/crear_envio_page.dart';
@@ -106,6 +107,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               routes: [
                 GoRoute(path: 'local/:id', builder: (_, st) => LocalPage(comercioId: st.pathParameters['id']!)),
                 GoRoute(path: 'carrito', builder: (_, _) => const CarritoPage()),
+                GoRoute(path: 'pagar/:id', builder: (_, st) => PagoPage(pedidoId: st.pathParameters['id']!)),
                 GoRoute(path: 'direcciones', builder: (_, _) => const DireccionesPage()),
               ],
             ),

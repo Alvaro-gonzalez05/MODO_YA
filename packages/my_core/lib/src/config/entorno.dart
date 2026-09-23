@@ -24,6 +24,10 @@ abstract final class Entorno {
     defaultValue: 'https://github.com/Alvaro-gonzalez05/MODO_YA/releases/latest/download/ultima.json',
   );
 
+  /// Clave publica de Mercado Pago (no es secreta: va en la app). Vacia =
+  /// pagos simulados, para poder probar la pantalla sin cuenta.
+  static const mpPublicKey = String.fromEnvironment('MY_MP_PUBLIC_KEY');
+
   static const supabaseUrl = String.fromEnvironment('MY_SUPABASE_URL');
   static const supabaseKey = String.fromEnvironment('MY_SUPABASE_KEY');
 

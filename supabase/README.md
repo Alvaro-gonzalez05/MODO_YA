@@ -113,6 +113,26 @@ aprobación o privilegios va por funciones `admin_*` que verifican el rol por
 dentro. `tests/permisos.sql` prueba los dos lados: lo que no se tiene que poder
 y lo que sí (cerrar de más también es un bug).
 
+## Pagos con tarjeta
+
+El cliente paga dentro de la app y la plata entra a la cuenta de MODO YA.
+
+**Los datos de la tarjeta nunca pasan por la base ni por nuestro servidor.** La
+app se los manda directo a Mercado Pago (Checkout API) con la clave pública
+(`MY_MP_PUBLIC_KEY`), que devuelve un token de un solo uso. Con ese token cobra
+la Edge Function `pagar-pedido`, la única que tiene el secreto
+`MP_ACCESS_TOKEN`. De la tarjeta guardada solo queda la referencia de Mercado
+Pago y "Visa ••••4218" (`tarjetas_guardadas`).
+
+El pedido nace en `pendiente_pago` y **no le llega al local hasta que el pago
+se aprueba**: si la tarjeta rebota, la cocina no llegó a empezar. Un rechazo no
+cancela el pedido (se puede reintentar con otra tarjeta); los abandonados los
+cierra `cerrar_pagos_vencidos()` a la media hora.
+
+**Sin `MP_ACCESS_TOKEN` configurado, la función trabaja simulada**: aprueba sin
+cobrar nada (o rechaza si el titular es "RECHAZADA"). Sirve para probar la
+pantalla antes de tener la cuenta.
+
 ## Fotos
 
 | Bucket | Acceso | Ruta |

@@ -12,6 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.4.3
+  http: ^1.6.0
   intl: ^0.20.3
   supabase_flutter: ^2.17.2
 

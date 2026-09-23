@@ -1,5 +1,6 @@
 {
   "MY_FLAVOR": "dev",
   "MY_SUPABASE_URL": "https://TU-PROYECTO.supabase.co",
-  "MY_SUPABASE_KEY": "sb_publishable_REEMPLAZAR"
+  "MY_SUPABASE_KEY": "sb_publishable_REEMPLAZAR",
+  "MY_MP_PUBLIC_KEY": ""
 }

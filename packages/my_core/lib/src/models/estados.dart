@@ -114,7 +114,7 @@ enum Vehiculo {
 enum MetodoPago {
   efectivo('efectivo', 'Efectivo'),
   tarjeta('tarjeta', 'Tarjeta'),
-  mercadoPago('mercado_pago', 'Mercado Pago'),
+  mercadoPago('mercado_pago', 'Tarjeta de débito o crédito'),
   transferencia('transferencia', 'Transferencia'),
   otro('otro', 'Otro');
 
@@ -125,13 +125,13 @@ enum MetodoPago {
 
   /// Lo que el cliente puede elegir al pedir. Mercado Pago online, cuando
   /// haya pasarela.
-  static const delCliente = [efectivo, tarjeta, transferencia];
+  static const delCliente = [mercadoPago, efectivo, tarjeta, transferencia];
 
   String get detalle => switch (this) {
+        mercadoPago => 'Pagás ahora, en la app. Podés guardar la tarjeta',
         efectivo => 'Pagás al recibir el pedido',
         tarjeta => 'Débito o crédito, con posnet al recibir',
         transferencia => 'Te pasamos el alias al confirmar',
-        mercadoPago => 'Pago online',
         otro => '',
       };
 

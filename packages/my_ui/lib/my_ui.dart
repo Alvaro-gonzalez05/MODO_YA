@@ -21,3 +21,4 @@ export 'src/widgets/navigation.dart';
 export 'src/widgets/responsive.dart';
 export 'src/widgets/route_timeline.dart';
 export 'src/widgets/surfaces.dart';
+export 'src/widgets/tarjeta_visual.dart';

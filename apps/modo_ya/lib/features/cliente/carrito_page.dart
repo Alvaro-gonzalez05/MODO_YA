@@ -51,6 +51,14 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
           );
       ref.read(carritoProvider.notifier).vaciar();
       if (!mounted) return;
+
+      // Con tarjeta el pedido queda esperando el pago: recién le llega al
+      // local cuando la tarjeta aprueba.
+      if (metodo == MetodoPago.mercadoPago) {
+        context.go('/cliente/pagar/$id');
+        return;
+      }
+
       MySonidos.tocar(MySonido.pedidoConfirmado);
       await mostrarExito(
         context,
@@ -341,8 +349,9 @@ class _OpcionPago extends StatelessWidget {
   final VoidCallback onTap;
 
   IconData get _icono => switch (metodo) {
+        MetodoPago.mercadoPago => Symbols.credit_card,
         MetodoPago.efectivo => Symbols.payments,
-        MetodoPago.tarjeta => Symbols.credit_card,
+        MetodoPago.tarjeta => Symbols.point_of_sale,
         MetodoPago.transferencia => Symbols.account_balance,
         _ => Symbols.wallet,
       };

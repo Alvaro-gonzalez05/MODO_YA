@@ -27,6 +27,9 @@ class MyCampo extends StatelessWidget {
     this.autofill,
     this.accion,
     this.onSubmit,
+    this.formatos,
+    this.foco,
+    this.mayusculas = false,
   });
 
   final TextEditingController controller;
@@ -44,6 +47,13 @@ class MyCampo extends StatelessWidget {
   final TextInputAction? accion;
   final ValueChanged<String>? onSubmit;
 
+  /// Para campos con formato propio (número de tarjeta, vencimiento).
+  final List<TextInputFormatter>? formatos;
+  final FocusNode? foco;
+
+  /// Escribe en mayúsculas mientras se tipea (nombre del titular).
+  final bool mayusculas;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -55,8 +65,10 @@ class MyCampo extends StatelessWidget {
           const SizedBox(height: MySpacing.xs),
           TextFormField(
             controller: controller,
+            focusNode: foco,
             keyboardType: soloNumeros ? TextInputType.number : keyboard,
-            inputFormatters: soloNumeros ? [FilteringTextInputFormatter.digitsOnly] : null,
+            textCapitalization: mayusculas ? TextCapitalization.characters : TextCapitalization.none,
+            inputFormatters: formatos ?? (soloNumeros ? [FilteringTextInputFormatter.digitsOnly] : null),
             maxLines: ocultar ? 1 : lineas,
             obscureText: ocultar,
             onChanged: onChanged,

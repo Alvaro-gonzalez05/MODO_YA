@@ -4,6 +4,7 @@ import 'backend.dart';
 import 'models/marketplace.dart';
 import 'models/models.dart';
 import 'repositories/carteles_repository.dart';
+import 'repositories/pagos_repository.dart';
 import 'repositories/catalogo_repository.dart';
 import 'repositories/comercios_repository.dart';
 import 'repositories/cuentas_repository.dart';
@@ -28,6 +29,7 @@ final pedidosRepositoryProvider = Provider((_) => const PedidosRepository());
 final direccionesRepositoryProvider = Provider((_) => const DireccionesRepository());
 final cuentasRepositoryProvider = Provider((_) => const CuentasRepository());
 final cartelesRepositoryProvider = Provider((_) => const CartelesRepository());
+final pagosRepositoryProvider = Provider((_) => const PagosRepository());
 
 // ---- Comunes ----------------------------------------------------------------
 
@@ -201,6 +203,11 @@ final enviosActivosProvider = StreamProvider<List<Envio>>(
 
 final pedidosPendientesDePagoProvider = StreamProvider<List<Pedido>>(
   (ref) => ref.watch(pedidosRepositoryProvider).watchPendientesDePago(),
+);
+
+/// Tarjetas guardadas del cliente que está usando la app.
+final tarjetasGuardadasProvider = StreamProvider<List<TarjetaGuardada>>(
+  (ref) => ref.watch(pagosRepositoryProvider).watchTarjetas(),
 );
 
 /// Todo lo que forma un menú: si cambia cualquiera, se vuelve a leer.
