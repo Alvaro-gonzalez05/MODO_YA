@@ -211,8 +211,8 @@ class _RequiereAtencion extends StatelessWidget {
       if (porCobrar > 0)
         _Alerta(
           icono: Symbols.payments,
-          titulo: porCobrar == 1 ? 'Un pedido espera el pago' : '$porCobrar pedidos esperan el pago',
-          detalle: 'No le llegan al local hasta que se confirme.',
+          titulo: porCobrar == 1 ? 'Un pedido sin cobrar' : '$porCobrar pedidos sin cobrar',
+          detalle: 'Ya los recibió el local: falta registrar la plata.',
           accion: 'Revisar',
           onTap: () => context.go('/admin/pedidos'),
         ),

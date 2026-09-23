@@ -4,6 +4,7 @@ import 'backend.dart';
 import 'models/marketplace.dart';
 import 'models/models.dart';
 import 'repositories/carteles_repository.dart';
+import 'repositories/liquidaciones_repository.dart';
 import 'repositories/pagos_repository.dart';
 import 'repositories/catalogo_repository.dart';
 import 'repositories/comercios_repository.dart';
@@ -30,6 +31,7 @@ final direccionesRepositoryProvider = Provider((_) => const DireccionesRepositor
 final cuentasRepositoryProvider = Provider((_) => const CuentasRepository());
 final cartelesRepositoryProvider = Provider((_) => const CartelesRepository());
 final pagosRepositoryProvider = Provider((_) => const PagosRepository());
+final liquidacionesRepositoryProvider = Provider((_) => const LiquidacionesRepository());
 
 // ---- Comunes ----------------------------------------------------------------
 
@@ -203,6 +205,25 @@ final enviosActivosProvider = StreamProvider<List<Envio>>(
 
 final pedidosPendientesDePagoProvider = StreamProvider<List<Pedido>>(
   (ref) => ref.watch(pedidosRepositoryProvider).watchPendientesDePago(),
+);
+
+/// Liquidaciones pendientes del período elegido (administración).
+typedef Periodo = ({DateTime desde, DateTime hasta});
+
+final pendientesComerciosProvider = StreamProvider.family<List<PendienteComercio>, Periodo>(
+  (ref, p) => ref.watch(liquidacionesRepositoryProvider).watchPendientesComercios(p.desde, p.hasta),
+);
+
+final pendientesRidersProvider = StreamProvider.family<List<PendienteRider>, Periodo>(
+  (ref, p) => ref.watch(liquidacionesRepositoryProvider).watchPendientesRiders(p.desde, p.hasta),
+);
+
+final historialLiquidacionesProvider = StreamProvider<List<Liquidacion>>(
+  (ref) => ref.watch(liquidacionesRepositoryProvider).watchHistorial(),
+);
+
+final cargosDeComercioProvider = StreamProvider.family<List<CargoComercio>, String>(
+  (ref, id) => ref.watch(liquidacionesRepositoryProvider).watchCargos(id),
 );
 
 /// Tarjetas guardadas del cliente que está usando la app.

@@ -34,6 +34,7 @@ class AdminShell extends ConsumerWidget {
       destinos: [
         const MyDestino(icon: Symbols.space_dashboard, label: 'Resumen'),
         MyDestino(icon: Symbols.receipt_long, label: 'Cobros', contador: porCobrar),
+        const MyDestino(icon: Symbols.account_balance_wallet, label: 'Liquidaciones'),
         const MyDestino(icon: Symbols.storefront, label: 'Locales'),
         const MyDestino(icon: Symbols.sports_motorsports, label: 'Riders'),
         const MyDestino(icon: Symbols.route, label: 'Envíos'),

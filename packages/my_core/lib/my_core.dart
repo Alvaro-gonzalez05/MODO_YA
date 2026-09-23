@@ -18,6 +18,7 @@ export 'src/repositories/catalogo_repository.dart';
 export 'src/repositories/comercios_repository.dart';
 export 'src/repositories/cuentas_repository.dart';
 export 'src/repositories/envios_repository.dart';
+export 'src/repositories/liquidaciones_repository.dart';
 export 'src/repositories/pagos_repository.dart';
 export 'src/repositories/pedidos_repository.dart';
 export 'src/repositories/repartidores_repository.dart';

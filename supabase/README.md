@@ -133,6 +133,21 @@ cierra `cerrar_pagos_vencidos()` a la media hora.
 cobrar nada (o rechaza si el titular es "RECHAZADA"). Sirve para probar la
 pantalla antes de tener la cuenta.
 
+## Liquidaciones
+
+La plata la cobra MODO YA (tarjeta en la app) o la junta el rider (efectivo).
+Después hay que repartirla:
+
+- **Local** = lo que vendió en productos − mensualidad − publicidad − ajustes
+  (`cargos_comercio`). El envío no entra: ese dinero es de MODO YA.
+- **Rider** = la ganancia de los envíos que entregó − el efectivo que cobró en
+  la puerta y todavía no rindió.
+
+`pendiente_de_liquidar_comercios()` y `pendiente_de_liquidar_riders()` son lo
+que muestra el panel; `cerrar_liquidacion_*()` la deja registrada y marca esos
+pedidos y envíos, para que **no se paguen dos veces**. `supabase/tests/liquidaciones.sql`
+recorre el circuito entero.
+
 ## Fotos
 
 | Bucket | Acceso | Ruta |

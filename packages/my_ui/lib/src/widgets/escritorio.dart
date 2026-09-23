@@ -674,6 +674,7 @@ class MyFiltros<T> extends StatelessWidget {
     required this.onChanged,
   });
 
+  /// `cantidad` negativa: se muestra solo la etiqueta, sin el número.
   final List<(T valor, String label, int cantidad)> opciones;
   final T seleccionado;
   final ValueChanged<T> onChanged;
@@ -685,7 +686,11 @@ class MyFiltros<T> extends StatelessWidget {
       child: Row(
         children: [
           for (final (valor, label, cantidad) in opciones) ...[
-            MyChip('$label ($cantidad)', selected: valor == seleccionado, onTap: () => onChanged(valor)),
+            MyChip(
+              cantidad < 0 ? label : '$label ($cantidad)',
+              selected: valor == seleccionado,
+              onTap: () => onChanged(valor),
+            ),
             const SizedBox(width: MySpacing.xs),
           ],
         ],
