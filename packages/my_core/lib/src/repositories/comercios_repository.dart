@@ -24,7 +24,12 @@ class ComerciosRepository {
         var q = _db.from('v_comercios').select().eq('estado_aprobacion', 'aprobado');
         if (rubroId != null) q = q.eq('rubro_id', rubroId);
         final lista = _lista(await q.order('nombre', ascending: true));
-        lista.sort((a, b) => (b.abierto ? 1 : 0) - (a.abierto ? 1 : 0));
+        // Abiertos primero y, entre ellos, los que pagan publicidad.
+        lista.sort((a, b) {
+          final abierto = (b.abierto ? 1 : 0) - (a.abierto ? 1 : 0);
+          if (abierto != 0) return abierto;
+          return (b.destacado ? 1 : 0) - (a.destacado ? 1 : 0);
+        });
         return lista;
       });
 

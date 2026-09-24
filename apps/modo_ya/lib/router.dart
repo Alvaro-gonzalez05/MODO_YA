@@ -25,7 +25,9 @@ import 'features/cliente/home_page.dart';
 import 'features/cliente/local_page.dart';
 import 'features/cliente/mis_pedidos_page.dart';
 import 'features/cliente/pago_page.dart';
+import 'features/cliente/plus_page.dart';
 import 'features/cliente/pedido_seguimiento_page.dart';
+import 'features/comercio/campanias_page.dart';
 import 'features/comercio/comercio_shell.dart';
 import 'features/comercio/crear_envio_page.dart';
 import 'features/comercio/cuenta_local_page.dart';
@@ -109,6 +111,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(path: 'local/:id', builder: (_, st) => LocalPage(comercioId: st.pathParameters['id']!)),
                 GoRoute(path: 'carrito', builder: (_, _) => const CarritoPage()),
                 GoRoute(path: 'pagar/:id', builder: (_, st) => PagoPage(pedidoId: st.pathParameters['id']!)),
+                GoRoute(path: 'plus', builder: (_, _) => const PlusPage()),
                 GoRoute(path: 'direcciones', builder: (_, _) => const DireccionesPage()),
               ],
             ),
@@ -142,6 +145,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/local/pedidos', builder: (_, _) => const PedidosLocalPage()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/local/campanias', builder: (_, _) => const CampaniasPage()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(

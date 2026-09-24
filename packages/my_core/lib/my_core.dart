@@ -13,6 +13,7 @@ export 'src/models/estados.dart';
 export 'src/models/marketplace.dart';
 export 'src/models/models.dart';
 export 'src/providers.dart';
+export 'src/repositories/campanias_repository.dart';
 export 'src/repositories/carteles_repository.dart';
 export 'src/repositories/catalogo_repository.dart';
 export 'src/repositories/comercios_repository.dart';

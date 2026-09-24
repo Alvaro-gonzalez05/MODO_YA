@@ -16,7 +16,9 @@ class ComercioShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
   final bool enRaiz;
 
-  static const raices = {'/local', '/local/pedidos', '/local/menu', '/local/envios', '/local/cuenta'};
+  static const raices = {
+    '/local', '/local/pedidos', '/local/campanias', '/local/menu', '/local/envios', '/local/cuenta',
+  };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -50,6 +52,7 @@ class ComercioShell extends ConsumerWidget {
       destinos: [
         const MyDestino(icon: Symbols.home, label: 'Inicio'),
         MyDestino(icon: Symbols.receipt_long, label: 'Pedidos', contador: nuevos),
+        const MyDestino(icon: Symbols.campaign, label: 'Campañas'),
         const MyDestino(icon: Symbols.menu_book, label: 'Menú'),
         const MyDestino(icon: Symbols.sports_motorsports, label: 'Envíos'),
         const MyDestino(icon: Symbols.storefront, label: 'Mi local'),

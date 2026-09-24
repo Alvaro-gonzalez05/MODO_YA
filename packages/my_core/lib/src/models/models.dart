@@ -168,6 +168,8 @@ class Comercio {
     this.rubroId,
     this.logoUrl,
     this.portadaUrl,
+    this.plus = false,
+    this.destacado = false,
     this.abierto = false,
     this.aceptaPedidos = true,
     this.demoraEstimadaMin = 25,
@@ -185,6 +187,12 @@ class Comercio {
 
   /// Foto ancha de la tarjeta (comida o el local).
   final String? portadaUrl;
+
+  /// Regala el envío a los clientes con MODO YA Plus.
+  final bool plus;
+
+  /// Tiene publicidad activa: va primero en la lista, marcado como tal.
+  final bool destacado;
 
   /// Calculado en la base con los horarios y el interruptor de pausa.
   final bool abierto;
@@ -208,6 +216,8 @@ class Comercio {
         aprobacion: EstadoAprobacion.fromWire(f['estado_aprobacion'] as String?),
         logoUrl: Fila.textoOpcional(f, 'logo_url'),
         portadaUrl: Fila.textoOpcional(f, 'portada_url'),
+        plus: Fila.booleano(f, 'plus'),
+        destacado: Fila.booleano(f, 'destacado'),
         abierto: Fila.booleano(f, 'abierto'),
         aceptaPedidos: Fila.booleano(f, 'acepta_pedidos', true),
         demoraEstimadaMin: Fila.entero(f, 'demora_estimada_min', 25),

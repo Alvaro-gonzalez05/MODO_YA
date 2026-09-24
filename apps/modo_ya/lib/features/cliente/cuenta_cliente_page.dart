@@ -182,6 +182,38 @@ class CuentaClientePage extends ConsumerWidget {
       ),
     );
 
+    final plus = ref.watch(miPlusProvider).value;
+    final tarjetaPlus = MyCard(
+      color: MyColors.dock,
+      child: Row(
+        children: [
+          Icon(Symbols.local_shipping, color: MyColors.primary, fill: 1, size: 28),
+          const SizedBox(width: MySpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('MODO YA Plus', style: MyType.headlineSm.copyWith(color: Colors.white)),
+                Text(
+                  plus == null
+                      ? 'Envío gratis en los locales adheridos'
+                      : plus.activo
+                          ? 'Activo hasta el ${Formato.fechaCorta(plus.hasta!)}'
+                          : 'Envío gratis en los locales adheridos por ${Formato.pesos(plus.precio)} al mes',
+                  style: MyType.bodySm.copyWith(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: MySpacing.sm),
+          MyBoton(
+            label: plus?.activo ?? false ? 'Ver' : 'Quiero',
+            onPressed: () => context.go('/cliente/plus'),
+          ),
+        ],
+      ),
+    );
+
     final seguridad = MyCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -216,9 +248,11 @@ class CuentaClientePage extends ConsumerWidget {
       titulo: 'Mi cuenta',
       anchoMaximo: 1080,
       children: context.esMovil
-          ? [perfilConAccion, espacio, misDirecciones, espacio, seguridad]
+          ? [perfilConAccion, espacio, tarjetaPlus, espacio, misDirecciones, espacio, seguridad]
           : [
               perfil,
+              espacio,
+              tarjetaPlus,
               espacio,
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

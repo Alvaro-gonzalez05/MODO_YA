@@ -466,12 +466,25 @@ class _TarjetaLocal extends ConsumerWidget {
                   Positioned(
                     left: MySpacing.sm,
                     top: MySpacing.sm,
-                    child: MyBadge(
-                      comercio.abierto ? 'Abierto' : 'Cerrado',
-                      tone: comercio.abierto ? MyBadgeTone.success : MyBadgeTone.dark,
-                      dot: true,
+                    child: Wrap(
+                      spacing: MySpacing.xxs,
+                      children: [
+                        MyBadge(
+                          comercio.abierto ? 'Abierto' : 'Cerrado',
+                          tone: comercio.abierto ? MyBadgeTone.success : MyBadgeTone.dark,
+                          dot: true,
+                        ),
+                        // El local paga el envío de los clientes con Plus.
+                        if (comercio.plus) const MyBadge('Envío gratis', tone: MyBadgeTone.info),
+                      ],
                     ),
                   ),
+                  if (comercio.destacado)
+                    Positioned(
+                      right: MySpacing.sm,
+                      top: MySpacing.sm,
+                      child: const MyBadge('Destacado', tone: MyBadgeTone.ember, icon: Symbols.star),
+                    ),
                 ],
               ),
             ),
@@ -521,7 +534,11 @@ class _TarjetaLocal extends ConsumerWidget {
                             const SizedBox(width: MySpacing.xxs),
                             Flexible(
                               child: Text(
-                                cot == null ? 'Envío según tu dirección' : 'Envío ${Formato.pesos(cot.costoEnvio)}',
+                                cot == null
+                                ? 'Envío según tu dirección'
+                                : cot.envioGratis
+                                    ? 'Envío gratis con Plus'
+                                    : 'Envío ${Formato.pesos(cot.costoEnvio)}',
                                 style: MyType.bodyMd.copyWith(
                                   color: cot == null ? MyColors.secondary : MyColors.tertiary,
                                   fontWeight: FontWeight.w600,

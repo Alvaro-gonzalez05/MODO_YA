@@ -39,6 +39,15 @@ van en una migración nueva.
 | `0028_cobros_en_pedidos.sql` | estado del cobro en `v_pedidos` para la administración |
 | `0029_tope_de_busqueda.sql` | la búsqueda de rider corta a las 3 horas |
 | `0030_todo_en_vivo.sql` | locales, horarios, menús, rubros, direcciones y tarifas en Realtime |
+| `0031_cobro_al_entregar.sql` | el envío dice cuánto tiene que cobrar el rider en la puerta y con qué |
+| `0032_pago_con_tarjeta_en_la_app.sql` | cobro con Mercado Pago (Checkout API), tarjetas guardadas |
+| `0033_evento_del_pago_con_perfil.sql` | arreglo: el evento del pago guarda el perfil, no el cliente |
+| `0034_reintentar_el_pago.sql` | una tarjeta rechazada no cancela el pedido; los abandonados los cierra un cron |
+| `0035_liquidaciones.sql` | qué le queda a cada local y a cada rider, y el cierre que evita pagar dos veces |
+| `0036_campanias_y_plus.sql` | campañas del local (publicidad y Plus) y suscripciones de MODO YA Plus |
+| `0037_envio_gratis_con_plus.sql` | el local con campaña Plus paga el envío; al cliente le figura gratis |
+| `0038_publicidad_una_vez_por_dia.sql` | arreglo: la publicidad se cobra un solo día por día |
+| `0039_vista_de_campanias_y_alta_de_plus.sql` | `v_campanias` con lo gastado y lo disponible; alta de Plus |
 
 ## Decisiones de diseño
 
@@ -147,6 +156,33 @@ Después hay que repartirla:
 que muestra el panel; `cerrar_liquidacion_*()` la deja registrada y marca esos
 pedidos y envíos, para que **no se paguen dos veces**. `supabase/tests/liquidaciones.sql`
 recorre el circuito entero.
+
+## Campañas y MODO YA Plus
+
+El local pone plata en una **campaña** y elige para qué la usa:
+
+- **Publicidad** — aparece primero en la lista de locales (`destacado`). Se
+  cobra por día, una sola vez por día (`cobrar_dia_de_publicidad()`, cron
+  `publicidad-del-dia` a las 03:05).
+- **MODO YA Plus** — el local le regala el envío a los clientes con Plus. El
+  rider cobra igual: la diferencia sale del fondo de la campaña
+  (`pedidos.envio_cubierto` y la fila en `campania_gastos`).
+
+El fondo se termina y la campaña queda `sin_fondo` sola: nadie paga de más ni
+hay que acordarse de apagarla. `fondo_disponible()` descuenta lo ya gastado y
+`rendimiento_campania()` devuelve lo que se ve en el panel (ingresos, pedidos,
+costo y retorno por peso invertido).
+
+**El cliente paga la mensualidad de Plus** (`tarifarios.precio_plus_mensual`,
+$2.500) con la misma pantalla de tarjeta que el pedido, y durante 30 días no
+paga envío en los locales adheridos. `cotizar_para_cliente` ya devuelve
+`costo_envio` en 0, más `costo_envio_real`, `envio_gratis`, `local_adherido` y
+`tiene_plus`, así el carrito puede decirle cuánto se ahorraría si se suscribe.
+
+La plata de las campañas **se descuenta en la liquidación del local**, igual que
+la mensualidad: es gasto suyo, no de MODO YA. `tests/campanias.sql` recorre el
+circuito entero (fondo, envío cubierto, publicidad diaria, cierre por falta de
+fondo y el descuento en la liquidación).
 
 ## Fotos
 

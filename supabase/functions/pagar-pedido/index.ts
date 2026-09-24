@@ -12,6 +12,7 @@
 //     una tarjeta guardada (card_id + token con el codigo de seguridad).
 //   * tarjetas: lista las tarjetas guardadas del cliente.
 //   * borrar_tarjeta: la saca de Mercado Pago y de la base.
+//   * plus: cobra un mes de MODO YA Plus y activa la suscripcion.
 //
 // Por que es una Edge Function y no una RPC: cobrar necesita el access token de
 // Mercado Pago, que no puede vivir dentro de una app que se instala. Aca existe
@@ -38,7 +39,7 @@ const MP_TOKEN = Deno.env.get('MP_ACCESS_TOKEN') ?? '';
 const SIMULADO = MP_TOKEN === '';
 
 interface Cuerpo {
-  accion?: 'pagar' | 'tarjetas' | 'borrar_tarjeta';
+  accion?: 'pagar' | 'tarjetas' | 'borrar_tarjeta' | 'plus';
   pedido_id?: string;
   /** Token de un solo uso que devuelve Mercado Pago en la app. */
   token?: string;
@@ -139,6 +140,67 @@ Deno.serve(async (req) => {
     }
     await servicio.from('tarjetas_guardadas').delete().eq('id', t.id);
     return responder({ ok: true });
+  }
+
+  // ---- MODO YA Plus: un mes -------------------------------------------------
+
+  if (accion === 'plus') {
+    if (!c.token) return responder({ error: 'Faltan los datos de la tarjeta.' }, 400);
+
+    const { data: precio } = await servicio.rpc('precio_plus');
+    const monto = Number(precio ?? 2500);
+    let estado: 'acreditado' | 'rechazado' = 'acreditado';
+    let detalle: string | null = null;
+    let mpId: string | null = null;
+
+    if (SIMULADO) {
+      const rechazar = (c.titular ?? '').trim().toUpperCase() === 'RECHAZADA';
+      estado = rechazar ? 'rechazado' : 'acreditado';
+      detalle = rechazar ? motivo('cc_rejected_insufficient_amount') : null;
+      mpId = `simulado-plus-${crypto.randomUUID()}`;
+    } else {
+      const pago = await mp('/v1/payments', {
+        method: 'POST',
+        headers: { 'X-Idempotency-Key': `plus-${cliente.id}-${c.token.slice(-16)}` },
+        body: JSON.stringify({
+          transaction_amount: monto,
+          token: c.token,
+          installments: 1,
+          payment_method_id: c.metodo_pago_id,
+          description: 'MODO YA Plus, un mes',
+          statement_descriptor: 'MODO YA PLUS',
+          payer: { email: user.email },
+          metadata: { cliente_id: cliente.id, concepto: 'plus' },
+        }),
+      });
+      mpId = String(pago.id);
+      estado = pago.status === 'approved' ? 'acreditado' : 'rechazado';
+      detalle = estado === 'acreditado' ? null : motivo(pago.status_detail ?? '');
+    }
+
+    if (estado !== 'acreditado') {
+      return responder({ aprobado: false, detalle, simulado: SIMULADO });
+    }
+
+    const { data: pago } = await servicio
+      .from('pagos')
+      .insert({
+        metodo: 'mercado_pago', estado: 'acreditado', monto,
+        mp_payment_id: mpId, cuotas: 1, acreditado_en: new Date().toISOString(),
+      })
+      .select().single();
+
+    const { data: sus, error } = await servicio.rpc('activar_plus', {
+      p_cliente: cliente.id,
+      p_precio: monto,
+      p_pago: pago?.id ?? null,
+    });
+    if (error) {
+      console.error('activar_plus', error);
+      return responder({ error: 'Se cobró la suscripción pero no se pudo activar. Escribinos.' }, 500);
+    }
+
+    return responder({ aprobado: true, simulado: SIMULADO, suscripcion: sus });
   }
 
   // ---- Pagar ----------------------------------------------------------------

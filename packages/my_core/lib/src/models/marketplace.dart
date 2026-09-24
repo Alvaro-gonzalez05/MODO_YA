@@ -319,6 +319,7 @@ class Pedido {
     this.motivoRechazo,
     this.metodoPago,
     this.cobrado = false,
+    this.envioCubierto = 0,
     this.items = const [],
   });
 
@@ -338,6 +339,9 @@ class Pedido {
   final int? minutosEstimados;
   final String? nota;
   final String? motivoRechazo;
+
+  /// Cuánto del envío puso el local con su campaña Plus (0 = lo pagó el cliente).
+  final int envioCubierto;
 
   /// Con qué eligió pagar el cliente.
   final MetodoPago? metodoPago;
@@ -374,6 +378,7 @@ class Pedido {
         motivoRechazo: Fila.textoOpcional(f, 'motivo_rechazo'),
         metodoPago: f['metodo_pago'] == null ? null : MetodoPago.fromWire(f['metodo_pago'] as String?),
         cobrado: f['pago_estado'] == 'acreditado',
+        envioCubierto: Fila.entero(f, 'envio_cubierto'),
         creadoEn: Fila.fecha(f, 'creado_en'),
         items: items,
       );
@@ -397,6 +402,7 @@ class Pedido {
         motivoRechazo: motivoRechazo,
         metodoPago: metodoPago,
         cobrado: cobrado,
+        envioCubierto: envioCubierto,
         creadoEn: creadoEn,
         items: nuevos,
       );
@@ -439,16 +445,39 @@ class CotizacionPedido {
     required this.distanciaKm,
     required this.costoEnvio,
     required this.minutosEstimados,
+    this.costoEnvioReal = 0,
+    this.envioGratis = false,
+    this.localAdherido = false,
+    this.tienePlus = false,
   });
 
   final double distanciaKm;
+
+  /// Lo que paga el cliente: 0 si el envío va gratis con MODO YA Plus.
   final int costoEnvio;
   final int minutosEstimados;
+
+  /// Lo que vale el envío, aunque no lo pague el cliente.
+  final int costoEnvioReal;
+
+  /// El cliente tiene Plus y el local está adherido: no paga envío.
+  final bool envioGratis;
+
+  /// El local regala el envío a los clientes con Plus (aunque este no lo sea).
+  final bool localAdherido;
+  final bool tienePlus;
+
+  /// "Con MODO YA Plus este envío te salía gratis": hay algo para ofrecerle.
+  bool get puedeAhorrar => localAdherido && !tienePlus;
 
   factory CotizacionPedido.fromJson(Map<String, dynamic> f) => CotizacionPedido(
         distanciaKm: Fila.decimal(f, 'distancia_km'),
         costoEnvio: Fila.entero(f, 'costo_envio'),
         minutosEstimados: Fila.entero(f, 'minutos_estimados'),
+        costoEnvioReal: Fila.entero(f, 'costo_envio_real', Fila.entero(f, 'costo_envio')),
+        envioGratis: Fila.booleano(f, 'envio_gratis'),
+        localAdherido: Fila.booleano(f, 'local_adherido'),
+        tienePlus: Fila.booleano(f, 'tiene_plus'),
       );
 }
 

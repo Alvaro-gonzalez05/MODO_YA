@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'backend.dart';
 import 'models/marketplace.dart';
 import 'models/models.dart';
+import 'repositories/campanias_repository.dart';
 import 'repositories/carteles_repository.dart';
 import 'repositories/liquidaciones_repository.dart';
 import 'repositories/pagos_repository.dart';
@@ -32,6 +33,7 @@ final cuentasRepositoryProvider = Provider((_) => const CuentasRepository());
 final cartelesRepositoryProvider = Provider((_) => const CartelesRepository());
 final pagosRepositoryProvider = Provider((_) => const PagosRepository());
 final liquidacionesRepositoryProvider = Provider((_) => const LiquidacionesRepository());
+final campaniasRepositoryProvider = Provider((_) => const CampaniasRepository());
 
 // ---- Comunes ----------------------------------------------------------------
 
@@ -224,6 +226,26 @@ final historialLiquidacionesProvider = StreamProvider<List<Liquidacion>>(
 
 final cargosDeComercioProvider = StreamProvider.family<List<CargoComercio>, String>(
   (ref, id) => ref.watch(liquidacionesRepositoryProvider).watchCargos(id),
+);
+
+/// Campañas del local de la sesión (publicidad y MODO YA Plus).
+final campaniasDelComercioProvider = StreamProvider<List<Campania>>((ref) {
+  final id = ref.watch(sesionProvider).comercioId;
+  if (id == null) return Stream.value(const []);
+  return ref.watch(campaniasRepositoryProvider).watchDelComercio(id);
+});
+
+final rendimientoCampaniaProvider = FutureProvider.family<RendimientoCampania, String>(
+  (ref, id) => ref.watch(campaniasRepositoryProvider).rendimiento(id),
+);
+
+final gastosDeCampaniaProvider = StreamProvider.family<List<GastoCampania>, String>(
+  (ref, id) => ref.watch(campaniasRepositoryProvider).watchGastos(id),
+);
+
+/// MODO YA Plus del cliente.
+final miPlusProvider = StreamProvider<EstadoPlus>(
+  (ref) => ref.watch(pagosRepositoryProvider).watchPlus(),
 );
 
 /// Tarjetas guardadas del cliente que está usando la app.

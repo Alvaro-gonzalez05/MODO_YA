@@ -46,6 +46,17 @@ class TarjetaGuardada {
       );
 }
 
+/// MODO YA Plus del cliente: hasta cuándo lo tiene y cuánto sale renovarlo.
+class EstadoPlus {
+  const EstadoPlus({required this.activo, required this.precio, this.hasta});
+
+  final bool activo;
+  final int precio;
+  final DateTime? hasta;
+
+  factory EstadoPlus.sinDatos(int precio) => EstadoPlus(activo: false, precio: precio);
+}
+
 /// Resultado de intentar cobrar un pedido.
 class ResultadoPago {
   const ResultadoPago({required this.aprobado, this.detalle, this.simulado = false});
@@ -193,6 +204,61 @@ class PagosRepository {
           simulado: d['simulado'] == true,
         );
       });
+
+  /// Estado de MODO YA Plus del cliente que está usando la app.
+  Stream<EstadoPlus> watchPlus() => enVivo(
+        canal: 'plus',
+        tablas: const ['suscripciones_plus', 'tarifarios'],
+        leer: () async {
+          final precio = await _db.rpc('precio_plus');
+          final f = await _db
+              .from('suscripciones_plus')
+              .select()
+              .order('hasta', ascending: false)
+              .limit(1)
+              .maybeSingle();
+          if (f == null) return EstadoPlus.sinDatos(Fila.entero({'p': precio}, 'p'));
+          final hasta = Fila.fecha(f, 'hasta');
+          return EstadoPlus(
+            activo: !hasta.isBefore(DateTime.now().subtract(const Duration(days: 1))),
+            precio: Fila.entero({'p': precio}, 'p'),
+            hasta: hasta,
+          );
+        },
+      );
+
+  /// Paga un mes de Plus con una tarjeta nueva.
+  Future<ResultadoPago> suscribirsePlus({
+    required String numero,
+    required String titular,
+    required int mes,
+    required int anio,
+    required String codigo,
+    String? documento,
+    required String marca,
+  }) async {
+    final token = await _tokenizar(
+      numero: numero, titular: titular, mes: mes, anio: anio, codigo: codigo, documento: documento,
+    );
+    return _cobrar({
+      'accion': 'plus',
+      'token': token,
+      'metodo_pago_id': marca,
+      'titular': titular,
+    });
+  }
+
+  /// Paga un mes de Plus con una tarjeta ya guardada.
+  Future<ResultadoPago> suscribirsePlusConTarjeta(TarjetaGuardada t, String codigo) async {
+    final token = simulado ? 'token-simulado-plus' : await _tokenDeTarjetaGuardada(t.mpCardId, codigo);
+    return _cobrar({
+      'accion': 'plus',
+      'token': token,
+      'card_id': t.mpCardId,
+      'metodo_pago_id': t.marca,
+      'titular': t.titular,
+    });
+  }
 
   Stream<List<TarjetaGuardada>> watchTarjetas() => enVivo(
         canal: 'tarjetas-guardadas',

@@ -223,6 +223,37 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
       ),
     );
 
+    // El local regala el envío a los clientes con Plus, y este todavía no lo
+    // tiene: se le muestra cuánto se ahorraría.
+    final ofertaPlus = cot != null && cot.puedeAhorrar
+        ? MyCard(
+            color: MyColors.dock,
+            child: Row(
+              children: [
+                Icon(Symbols.local_shipping, color: MyColors.primary, fill: 1),
+                const SizedBox(width: MySpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Con MODO YA Plus este envío te salía gratis',
+                        style: MyType.labelLg.copyWith(color: Colors.white),
+                      ),
+                      Text(
+                        'Te ahorrabas ${Formato.pesos(cot.costoEnvioReal)} en este pedido.',
+                        style: MyType.bodySm.copyWith(color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: MySpacing.sm),
+                MyBoton(label: 'Ver Plus', onPressed: () => context.go('/cliente/plus')),
+              ],
+            ),
+          )
+        : null;
+
     final resumen = MyCard(
       child: Column(
         children: [
@@ -235,7 +266,9 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
                     ? '…'
                     : cot == null
                         ? 'No disponible'
-                        : Formato.pesos(cot.costoEnvio),
+                        : cot.envioGratis
+                            ? 'Gratis con Plus'
+                            : Formato.pesos(cot.costoEnvio),
           ),
           if (cot != null) _Linea('Llega en', '~${cot.minutosEstimados} min'),
           const Divider(height: MySpacing.lg),
@@ -287,6 +320,7 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
       nota,
     ];
     final derecha = [
+      if (ofertaPlus != null) ...[ofertaPlus, espacio],
       titulo('Resumen'),
       resumen,
       const SizedBox(height: MySpacing.md),
