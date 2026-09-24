@@ -181,6 +181,9 @@ class Producto {
     this.disponible = true,
     this.orden = 0,
     this.opciones = const [],
+    this.precioLista,
+    this.descuento,
+    this.promocion,
   });
 
   final String id;
@@ -188,13 +191,50 @@ class Producto {
   final String? seccionId;
   final String nombre;
   final String? descripcion;
+
+  /// Lo que se paga hoy: ya trae aplicada la promoción que rija.
   final int precio;
   final String? fotoUrl;
   final bool disponible;
   final int orden;
   final List<OpcionProducto> opciones;
 
+  /// Lo que costaba sin promoción. Null si hoy no tiene descuento.
+  final int? precioLista;
+
+  /// Porcentaje de la promoción vigente.
+  final int? descuento;
+
+  /// Nombre de la promoción ("Martes de pizza"), para mostrarlo.
+  final String? promocion;
+
+  bool get enPromocion => precioLista != null && precioLista! > precio;
+
   bool get tienePersonalizacion => opciones.isNotEmpty;
+
+  /// El precio con descuento lo calcula la base (`promociones_del_local`): acá
+  /// solo se pega sobre el producto que ya se leyó.
+  Producto conPromocion({
+    required int precio,
+    required int precioLista,
+    required int descuento,
+    required String promocion,
+  }) =>
+      Producto(
+        id: id,
+        comercioId: comercioId,
+        seccionId: seccionId,
+        nombre: nombre,
+        descripcion: descripcion,
+        precio: precio,
+        fotoUrl: fotoUrl,
+        disponible: disponible,
+        orden: orden,
+        opciones: opciones,
+        precioLista: precioLista,
+        descuento: descuento,
+        promocion: promocion,
+      );
 
   factory Producto.fromRow(Map<String, dynamic> f) {
     final opciones = ((f['opciones_producto'] as List?) ?? const [])

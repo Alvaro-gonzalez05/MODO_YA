@@ -48,6 +48,7 @@ van en una migración nueva.
 | `0037_envio_gratis_con_plus.sql` | el local con campaña Plus paga el envío; al cliente le figura gratis |
 | `0038_publicidad_una_vez_por_dia.sql` | arreglo: la publicidad se cobra un solo día por día |
 | `0039_vista_de_campanias_y_alta_de_plus.sql` | `v_campanias` con lo gastado y lo disponible; alta de Plus |
+| `0040_promociones.sql` | descuentos del local sobre su menú: todo, secciones o productos sueltos |
 
 ## Decisiones de diseño
 
@@ -183,6 +184,28 @@ La plata de las campañas **se descuenta en la liquidación del local**, igual q
 la mensualidad: es gasto suyo, no de MODO YA. `tests/campanias.sql` recorre el
 circuito entero (fondo, envío cubierto, publicidad diaria, cierre por falta de
 fondo y el descuento en la liquidación).
+
+## Promociones del local
+
+El local baja el precio de **todo su menú**, de **las secciones que elija** o de
+**productos sueltos**, con fecha de fin opcional y, si quiere, solo ciertos días
+("martes de pizza"). A diferencia de una campaña, acá no se le paga nada a MODO
+YA: el descuento sale de su propio precio, y como la liquidación se arma con lo
+que realmente se vendió (`pedidos.subtotal`), se descuenta solo.
+
+**El precio con descuento lo calcula la base.** `promociones_del_local()` le da
+a la app los productos que hoy tienen promoción, y `crear_pedido` lo vuelve a
+calcular antes de cobrar: una app vieja o modificada no puede inventarse un
+precio. El renglón del pedido guarda `precio_lista` y `promocion_id`, así un
+pedido de hace un mes sigue diciendo con qué promo se hizo.
+
+Si dos promociones tocan el mismo producto gana la que más descuenta. El
+descuento es sobre el producto, no sobre los agregados: la muzzarella con 20%
+sigue cobrando el extra de jamón completo. `v_comercios.descuento` es el mejor
+porcentaje vigente, que la vidriera muestra como "20% OFF".
+
+`tests/promociones.sql` recorre el circuito entero (13 comprobaciones: alcances,
+días, vencimiento, pausa, cuál gana, el precio cobrado y la liquidación).
 
 ## Fotos
 

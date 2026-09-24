@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../backend.dart';
 import '../models/marketplace.dart';
+import 'promociones_repository.dart';
 
 /// Rubros y menu de cada local.
 ///
@@ -32,7 +33,27 @@ class CatalogoRepository {
             .select('*, opciones_producto(*, opcion_items(*))')
             .eq('comercio_id', comercioId);
         if (soloDisponibles) q = q.eq('disponible', true);
-        final productos = (await q.order('orden', ascending: true).order('nombre', ascending: true)).map(Producto.fromRow).toList();
+        var productos = (await q.order('orden', ascending: true).order('nombre', ascending: true)).map(Producto.fromRow).toList();
+
+        // El precio con descuento lo calcula la base, no la app: acá solo se
+        // pega sobre el producto. `crear_pedido` lo vuelve a calcular.
+        final promos = {
+          for (final p in await const PromocionesRepository().preciosDe(comercioId)) p.productoId: p,
+        };
+        if (promos.isNotEmpty) {
+          productos = [
+            for (final p in productos)
+              if (promos[p.id] case final promo?)
+                p.conPromocion(
+                  precio: promo.precio,
+                  precioLista: promo.precioLista,
+                  descuento: promo.porcentaje,
+                  promocion: promo.promocion,
+                )
+              else
+                p,
+          ];
+        }
 
         return Menu(
           secciones: soloDisponibles ? secciones.where((s) => s.activa).toList() : secciones,

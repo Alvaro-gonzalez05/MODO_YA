@@ -22,6 +22,7 @@ export 'src/repositories/envios_repository.dart';
 export 'src/repositories/liquidaciones_repository.dart';
 export 'src/repositories/pagos_repository.dart';
 export 'src/repositories/pedidos_repository.dart';
+export 'src/repositories/promociones_repository.dart';
 export 'src/repositories/repartidores_repository.dart';
 export 'src/repositories/tarifas_repository.dart';
 export 'src/sesion.dart';

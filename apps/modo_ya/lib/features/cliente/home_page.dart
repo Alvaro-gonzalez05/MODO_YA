@@ -476,6 +476,9 @@ class _TarjetaLocal extends ConsumerWidget {
                         ),
                         // El local paga el envío de los clientes con Plus.
                         if (comercio.plus) const MyBadge('Envío gratis', tone: MyBadgeTone.info),
+                        // Descuento que el local puso en su propio menú.
+                        if (comercio.descuento != null)
+                          MyBadge('${comercio.descuento}% OFF', icon: Symbols.sell),
                       ],
                     ),
                   ),

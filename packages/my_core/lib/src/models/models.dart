@@ -170,6 +170,7 @@ class Comercio {
     this.portadaUrl,
     this.plus = false,
     this.destacado = false,
+    this.descuento,
     this.abierto = false,
     this.aceptaPedidos = true,
     this.demoraEstimadaMin = 25,
@@ -193,6 +194,9 @@ class Comercio {
 
   /// Tiene publicidad activa: va primero en la lista, marcado como tal.
   final bool destacado;
+
+  /// El mejor descuento que rige hoy en su menú, si tiene alguna promoción.
+  final int? descuento;
 
   /// Calculado en la base con los horarios y el interruptor de pausa.
   final bool abierto;
@@ -218,6 +222,7 @@ class Comercio {
         portadaUrl: Fila.textoOpcional(f, 'portada_url'),
         plus: Fila.booleano(f, 'plus'),
         destacado: Fila.booleano(f, 'destacado'),
+        descuento: Fila.enteroOpcional(f, 'descuento'),
         abierto: Fila.booleano(f, 'abierto'),
         aceptaPedidos: Fila.booleano(f, 'acepta_pedidos', true),
         demoraEstimadaMin: Fila.entero(f, 'demora_estimada_min', 25),

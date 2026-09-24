@@ -37,6 +37,7 @@ import 'features/comercio/inicio_page.dart';
 import 'features/comercio/menu_page.dart';
 import 'features/comercio/pedidos_local_page.dart';
 import 'features/comercio/producto_form_page.dart';
+import 'features/comercio/promociones_page.dart';
 import 'features/comercio/seguimiento_page.dart';
 
 /// Avisa a go_router cada vez que cambia la sesion, para que vuelva a decidir
@@ -155,6 +156,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, _) => const MenuPage(),
               routes: [
                 GoRoute(path: 'producto', builder: (_, st) => ProductoFormPage(producto: st.extra as Producto?)),
+                GoRoute(path: 'promociones', builder: (_, _) => const PromocionesPage()),
               ],
             ),
           ]),

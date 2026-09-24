@@ -67,6 +67,12 @@ class MenuPage extends ConsumerWidget {
           : '$total productos${sinStock > 0 ? ' · $sinStock sin stock' : ''}',
       onRefresh: () => ref.refresh(menuDeComercioProvider(comercioId).future),
       acciones: [
+        MyBoton(
+          label: 'Promos',
+          icon: Symbols.sell,
+          tipo: MyBotonTipo.secundario,
+          onPressed: () => context.go('/local/menu/promociones'),
+        ),
         MyBoton(label: 'Sección', icon: Symbols.playlist_add, tipo: MyBotonTipo.secundario, onPressed: seccion),
         MyBoton(label: 'Producto', icon: Symbols.add, onPressed: () => context.go('/local/menu/producto')),
       ],
@@ -213,7 +219,12 @@ class _TarjetaProducto extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(Formato.pesos(p.precio), style: MyType.headlineSm.copyWith(color: MyColors.tertiary)),
+                        MyPrecio(
+                          precio: Formato.pesos(p.precio),
+                          precioLista: p.enPromocion ? Formato.pesos(p.precioLista!) : null,
+                          descuento: p.descuento,
+                          estilo: MyType.headlineSm.copyWith(color: MyColors.tertiary),
+                        ),
                         if (_detalle(p).isNotEmpty) Text(_detalle(p), style: MyType.bodySm.copyWith(color: MyColors.secondary)),
                       ],
                     ),
@@ -251,7 +262,12 @@ class _FilaProducto extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(p.nombre, style: MyType.labelLg, maxLines: 2, overflow: TextOverflow.ellipsis),
-                  Text(Formato.pesos(p.precio), style: MyType.headlineSm.copyWith(color: MyColors.tertiary)),
+                  MyPrecio(
+                    precio: Formato.pesos(p.precio),
+                    precioLista: p.enPromocion ? Formato.pesos(p.precioLista!) : null,
+                    descuento: p.descuento,
+                    estilo: MyType.headlineSm.copyWith(color: MyColors.tertiary),
+                  ),
                   if (_detalle(p).isNotEmpty) Text(_detalle(p), style: MyType.bodySm.copyWith(color: MyColors.secondary)),
                 ],
               ),

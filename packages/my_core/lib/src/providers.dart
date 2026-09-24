@@ -12,6 +12,7 @@ import 'repositories/comercios_repository.dart';
 import 'repositories/cuentas_repository.dart';
 import 'repositories/envios_repository.dart';
 import 'repositories/pedidos_repository.dart';
+import 'repositories/promociones_repository.dart';
 import 'repositories/repartidores_repository.dart';
 import 'repositories/tarifas_repository.dart';
 import 'sesion.dart';
@@ -34,6 +35,7 @@ final cartelesRepositoryProvider = Provider((_) => const CartelesRepository());
 final pagosRepositoryProvider = Provider((_) => const PagosRepository());
 final liquidacionesRepositoryProvider = Provider((_) => const LiquidacionesRepository());
 final campaniasRepositoryProvider = Provider((_) => const CampaniasRepository());
+final promocionesRepositoryProvider = Provider((_) => const PromocionesRepository());
 
 // ---- Comunes ----------------------------------------------------------------
 
@@ -242,6 +244,13 @@ final rendimientoCampaniaProvider = FutureProvider.family<RendimientoCampania, S
 final gastosDeCampaniaProvider = StreamProvider.family<List<GastoCampania>, String>(
   (ref, id) => ref.watch(campaniasRepositoryProvider).watchGastos(id),
 );
+
+/// Promociones del local de la sesión (descuentos sobre su menú).
+final promocionesDelComercioProvider = StreamProvider<List<Promocion>>((ref) {
+  final id = ref.watch(sesionProvider).comercioId;
+  if (id == null) return Stream.value(const []);
+  return ref.watch(promocionesRepositoryProvider).watchDelComercio(id);
+});
 
 /// MODO YA Plus del cliente.
 final miPlusProvider = StreamProvider<EstadoPlus>(

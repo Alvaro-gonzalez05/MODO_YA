@@ -466,8 +466,13 @@ class _TarjetaProducto extends StatelessWidget {
                 const SizedBox(height: MySpacing.sm),
                 Row(
                   children: [
-                    Text(Formato.pesos(producto.precio), style: MyType.headlineMd.copyWith(color: MyColors.onSurface)),
-                    const Spacer(),
+                    Expanded(
+                      child: MyPrecio(
+                        precio: Formato.pesos(producto.precio),
+                        precioLista: producto.enPromocion ? Formato.pesos(producto.precioLista!) : null,
+                        descuento: producto.descuento,
+                      ),
+                    ),
                     if (habilitado)
                       MyCircleIconButton(
                         icon: Symbols.add,
@@ -530,7 +535,11 @@ class _TarjetaProductoAncha extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(Formato.pesos(p.precio), style: MyType.headlineMd.copyWith(color: MyColors.onSurface)),
+                      MyPrecio(
+                        precio: Formato.pesos(p.precio),
+                        precioLista: p.enPromocion ? Formato.pesos(p.precioLista!) : null,
+                        descuento: p.descuento,
+                      ),
                       if (p.tienePersonalizacion) Text('Personalizable', style: MyType.labelSm.copyWith(color: MyColors.secondary)),
                     ],
                   ),

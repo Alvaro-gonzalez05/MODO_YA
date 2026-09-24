@@ -96,6 +96,54 @@ class MyBadge extends StatelessWidget {
   }
 }
 
+/// El precio de un producto, con el de lista tachado cuando hay promocion.
+///
+/// Se usa igual en el menu del local y en el del cliente: si el descuento se
+/// ve distinto en cada lado, alguno de los dos parece un error.
+class MyPrecio extends StatelessWidget {
+  const MyPrecio({
+    super.key,
+    required this.precio,
+    this.precioLista,
+    this.descuento,
+    this.estilo,
+  });
+
+  /// Lo que se paga hoy, ya con el descuento aplicado.
+  final String precio;
+
+  /// Lo que costaba sin promocion. Null si no hay descuento.
+  final String? precioLista;
+
+  /// "20" para dibujar la pastilla "20% OFF".
+  final int? descuento;
+
+  final TextStyle? estilo;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = estilo ?? MyType.headlineMd.copyWith(color: MyColors.onSurface);
+    if (precioLista == null) return Text(precio, style: base);
+
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: MySpacing.xs,
+      runSpacing: MySpacing.xxs,
+      children: [
+        Text(precio, style: base.copyWith(color: MyColors.tertiary)),
+        Text(
+          precioLista!,
+          style: MyType.bodySm.copyWith(
+            color: MyColors.secondary,
+            decoration: TextDecoration.lineThrough,
+          ),
+        ),
+        if (descuento != null) MyBadge('$descuento% OFF'),
+      ],
+    );
+  }
+}
+
 /// Chip de categoria o filtro. Activo: amarillo con texto negro. Inactivo:
 /// blanco con borde suave. El cambio de estado esta animado.
 class MyChip extends StatelessWidget {
