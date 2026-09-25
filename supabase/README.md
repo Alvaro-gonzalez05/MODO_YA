@@ -52,6 +52,7 @@ van en una migración nueva.
 | `0041_renovacion_de_plus.sql` | Plus se renueva solo con la tarjeta guardada, y el cliente lo corta cuando quiere |
 | `0042_promociones_con_el_local.sql` | `v_promociones` dice de qué local es cada una (pantalla de la administración) |
 | `0043_plus_se_renueva_el_mismo_dia.sql` | Plus se cobra el mismo día de cada mes, no cada 30 días |
+| `0044_avisos_de_mercado_pago.sql` | buzón de webhooks de Mercado Pago (`mp_notificaciones`) |
 
 ## Decisiones de diseño
 
@@ -145,6 +146,45 @@ cierra `cerrar_pagos_vencidos()` a la media hora.
 **Sin `MP_ACCESS_TOKEN` configurado, la función trabaja simulada**: aprueba sin
 cobrar nada (o rechaza si el titular es "RECHAZADA"). Sirve para probar la
 pantalla antes de tener la cuenta.
+
+## Avisos de Mercado Pago (webhooks)
+
+El cobro con tarjeta responde en el momento, así que para el caso feliz no hace
+falta nada más. Los webhooks tapan lo que pasa **después**:
+
+- un pago que quedó `in_process` y se aprueba diez minutos más tarde (hoy el
+  pedido lo cierra `cerrar_pagos_vencidos()` sin enterarse);
+- una devolución o un contracargo hechos desde el panel de Mercado Pago, que
+  dejarían la liquidación de ese local mal;
+- renovaciones de Plus que Mercado Pago resuelva en diferido.
+
+La Edge Function **`mp-webhook`** recibe el aviso y lo guarda tal cual en
+`mp_notificaciones`. **Por ahora solo guarda**: todavía no toca el pedido,
+porque el cuerpo del aviso cambia según la aplicación de Mercado Pago sea de
+Orders o de Payments y no hay credenciales para ver avisos reales. Guardar desde
+el día uno permite reprocesar lo que ya llegó en vez de haberlo perdido.
+
+Reglas de Mercado Pago que condicionan el diseño:
+
+- Hay que contestar **200 o 201 en menos de 22 segundos**; si no, reintenta cada
+  15 minutos. Por eso la función no llama a nadie ni hace nada lento.
+- Un reintento trae el mismo `x-request-id`, así que ese campo tiene índice
+  único: el mismo aviso no se guarda dos veces.
+- El aviso viene firmado en `x-signature` (`ts=…,v1=…`). La firma es un
+  HMAC-SHA256 del texto `id:<data.id>;request-id:<x-request-id>;ts:<ts>;` con la
+  clave secreta que Mercado Pago muestra al configurar la notificación, y que va
+  como secreto `MP_WEBHOOK_SECRET`.
+
+Sin `MP_WEBHOOK_SECRET` no se valida y se guarda igual con `firma_valida` en
+null, para poder probar con el simulador de notificaciones antes de tener la
+clave. **Antes de actuar sobre un pedido hay que exigir `firma_valida`**: si no,
+cualquiera que conozca la URL podría darnos un pago por bueno.
+
+URL a cargar en Mercado Pago (Tus integraciones → la aplicación → Webhooks):
+
+```
+https://wqahdncdqnzrusrmdyui.supabase.co/functions/v1/mp-webhook
+```
 
 ## Liquidaciones
 
