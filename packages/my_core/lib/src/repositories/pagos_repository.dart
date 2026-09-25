@@ -52,6 +52,7 @@ class EstadoPlus {
     required this.activo,
     required this.precio,
     this.hasta,
+    this.desde,
     this.renovar = false,
     this.fallos = 0,
     this.ultimoError,
@@ -60,6 +61,10 @@ class EstadoPlus {
   final bool activo;
   final int precio;
   final DateTime? hasta;
+
+  /// El día que se suscribió por primera vez: es el día del mes en el que se
+  /// le va a cobrar siempre.
+  final DateTime? desde;
 
   /// Si al vencerse se le vuelve a cobrar con la tarjeta guardada.
   final bool renovar;
@@ -228,6 +233,7 @@ class PagosRepository {
         tablas: const ['suscripciones_plus', 'tarifarios'],
         leer: () async {
           final precio = await _db.rpc('precio_plus');
+          final desde = await _db.rpc('plus_desde');
           final f = await _db
               .from('suscripciones_plus')
               .select()
@@ -240,6 +246,7 @@ class PagosRepository {
             activo: !hasta.isBefore(DateTime.now().subtract(const Duration(days: 1))),
             precio: Fila.entero({'p': precio}, 'p'),
             hasta: hasta,
+            desde: desde == null ? null : DateTime.parse(desde as String),
             renovar: Fila.booleano(f, 'renovar'),
             fallos: Fila.entero(f, 'intentos_fallidos'),
             ultimoError: Fila.textoOpcional(f, 'ultimo_error'),

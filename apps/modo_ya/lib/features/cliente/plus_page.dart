@@ -38,7 +38,8 @@ class PlusPage extends ConsumerWidget {
       await mostrarExito(
         context,
         titulo: '¡Ya tenés MODO YA Plus!',
-        mensaje: 'Durante 30 días no pagás envío en los locales adheridos.',
+        mensaje: 'No pagás envío en los locales adheridos. Se renueva sola todos '
+            'los meses, el mismo día, y te podés dar de baja cuando quieras.',
       );
       if (context.mounted) context.go('/cliente');
       return null;
@@ -68,26 +69,7 @@ class PlusPage extends ConsumerWidget {
                 _Presentacion(estado: estado),
                 const SizedBox(height: MySpacing.lg),
                 if (estado.activo) ...[
-                  MyCard(
-                    child: MyEmptyState(
-                      icon: Symbols.verified,
-                      title: 'Ya sos Plus',
-                      message: estado.hasta == null
-                          ? 'Disfrutá los envíos gratis.'
-                          : estado.renovar
-                              ? 'Se renueva solo el ${Formato.fechaCorta(estado.hasta!)} '
-                                  'con la tarjeta que dejaste guardada.'
-                              : 'Lo tenés hasta el ${Formato.fechaCorta(estado.hasta!)}. '
-                                  'Después no se te cobra más.',
-                      action: MyBoton(
-                        label: 'Ver locales',
-                        icon: Symbols.storefront,
-                        onPressed: () => context.go('/cliente'),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: MySpacing.md),
-                  _Renovacion(estado: estado),
+                  _Suscripcion(estado: estado),
                 ] else
                   FormularioTarjeta(
                     etiquetaBoton: 'Suscribirme por ${Formato.pesos(estado.precio)}',
@@ -102,31 +84,46 @@ class PlusPage extends ConsumerWidget {
   }
 }
 
-/// El interruptor de la renovación automática.
+/// La suscripción en curso: cuándo se le vuelve a cobrar y cómo darse de baja.
 ///
-/// Se muestra siempre que tenga Plus, no escondido en una pantalla de ajustes:
-/// que se sepa que se va a volver a cobrar, y que cortarlo sea un toque, es
-/// parte de no hacerle una trampa al cliente.
-class _Renovacion extends ConsumerWidget {
-  const _Renovacion({required this.estado});
+/// No hay ningún interruptor que prender: se suscribió y se renueva sola. Lo
+/// único que tiene que encontrar rápido es la baja, y por eso está acá y no
+/// escondida en una pantalla de ajustes.
+class _Suscripcion extends ConsumerWidget {
+  const _Suscripcion({required this.estado});
 
   final EstadoPlus estado;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Future<void> cambiar(bool valor) async {
+    Future<void> cambiar(bool renovar) async {
+      if (!renovar) {
+        final ok = await confirmar(
+          context,
+          titulo: 'Darte de baja de MODO YA Plus',
+          mensaje: estado.hasta == null
+              ? 'No se te va a cobrar más.'
+              : 'Seguís con envío gratis hasta el ${Formato.fechaLarga(estado.hasta!)}. '
+                  'Después no se te cobra más.',
+          aceptar: 'Darme de baja',
+          peligroso: true,
+        );
+        if (!ok) return;
+      }
       try {
-        await ref.read(pagosRepositoryProvider).renovarPlusAutomaticamente(valor);
+        await ref.read(pagosRepositoryProvider).renovarPlusAutomaticamente(renovar);
         ref.invalidate(miPlusProvider);
         if (!context.mounted) return;
         mostrarAviso(
           context,
-          valor ? 'Se va a renovar solo cuando se venza.' : 'No se te va a cobrar más.',
+          renovar ? 'Listo, se vuelve a renovar sola.' : 'Listo, no se te cobra más.',
         );
       } catch (e) {
         if (context.mounted) mostrarError(context, e);
       }
     }
+
+    final dia = estado.desde?.day ?? estado.hasta?.day;
 
     return MyCard(
       child: Column(
@@ -134,30 +131,57 @@ class _Renovacion extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(Symbols.autorenew, color: MyColors.tertiary, fill: 1),
-              const SizedBox(width: MySpacing.sm),
+              MyIconoCaja(
+                estado.renovar ? Symbols.verified : Symbols.event_busy,
+                tamano: 48,
+                circular: true,
+              ),
+              const SizedBox(width: MySpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Renovación automática', style: MyType.labelLg),
+                    Text(estado.renovar ? 'Ya sos Plus' : 'Te diste de baja', style: MyType.headlineSm),
                     Text(
                       estado.renovar
-                          ? 'Se cobra ${Formato.pesos(estado.precio)} cada 30 días.'
-                          : 'Cuando se venza, se corta.',
-                      style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                          ? (estado.hasta == null
+                              ? 'Disfrutá los envíos gratis.'
+                              : 'Se renueva sola el ${Formato.fechaLarga(estado.hasta!)}'
+                                  '${dia == null ? '' : ', y así todos los $dia de cada mes'}.')
+                          : estado.hasta == null
+                              ? 'No se te va a cobrar más.'
+                              : 'Tenés envío gratis hasta el ${Formato.fechaLarga(estado.hasta!)}. '
+                                  'Después no se te cobra más.',
+                      style: MyType.bodyMd.copyWith(color: MyColors.secondary),
                     ),
                   ],
                 ),
               ),
-              Switch(value: estado.renovar, onChanged: cambiar),
             ],
           ),
-          // Si la tarjeta viene rebotando, se le avisa antes de que se quede
-          // sin Plus de un dia para el otro.
+          const SizedBox(height: MySpacing.md),
+          if (estado.renovar)
+            MyStatRow(
+              tiles: [
+                MyStatTile(
+                  label: 'Por mes',
+                  value: Formato.pesos(estado.precio),
+                  icon: Symbols.payments,
+                ),
+                if (estado.desde != null)
+                  MyStatTile(
+                    label: 'Sos Plus desde',
+                    value: Formato.fechaCorta(estado.desde!),
+                    icon: Symbols.calendar_month,
+                  ),
+              ],
+            ),
+          // La tarjeta viene rebotando: se le avisa antes de que se quede sin
+          // Plus de un día para el otro.
           if (estado.seRindio) ...[
             const SizedBox(height: MySpacing.sm),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(Symbols.error, size: 18, color: MyColors.error),
                 const SizedBox(width: MySpacing.xs),
@@ -171,6 +195,45 @@ class _Renovacion extends ConsumerWidget {
               ],
             ),
           ],
+          const SizedBox(height: MySpacing.md),
+          // En el celular no entran los dos al lado: "Darme de baja" queda
+          // cortado y una baja a medias leer no se puede.
+          if (context.esMovil) ...[
+            MyBoton(
+              label: 'Ver locales',
+              icon: Symbols.storefront,
+              tipo: MyBotonTipo.secundario,
+              onPressed: () => context.go('/cliente'),
+            ),
+            const SizedBox(height: MySpacing.xs),
+            MyBoton(
+              label: estado.renovar ? 'Darme de baja' : 'Volver a activarla',
+              icon: estado.renovar ? Symbols.cancel : Symbols.autorenew,
+              tipo: estado.renovar ? MyBotonTipo.texto : MyBotonTipo.principal,
+              onPressed: () => cambiar(!estado.renovar),
+            ),
+          ] else
+            Row(
+              children: [
+                Expanded(
+                  child: MyBoton(
+                    label: 'Ver locales',
+                    icon: Symbols.storefront,
+                    tipo: MyBotonTipo.secundario,
+                    onPressed: () => context.go('/cliente'),
+                  ),
+                ),
+                const SizedBox(width: MySpacing.sm),
+                Expanded(
+                  child: MyBoton(
+                    label: estado.renovar ? 'Darme de baja' : 'Volver a activarla',
+                    icon: estado.renovar ? Symbols.cancel : Symbols.autorenew,
+                    tipo: estado.renovar ? MyBotonTipo.texto : MyBotonTipo.principal,
+                    onPressed: () => cambiar(!estado.renovar),
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -204,7 +267,8 @@ class _Presentacion extends StatelessWidget {
           const SizedBox(height: MySpacing.sm),
           for (final t in const [
             'No pagás envío en los locales adheridos, sin mínimo de compra.',
-            'Se renueva cada 30 días y lo cortás cuando quieras.',
+            'Se renueva sola todos los meses, el mismo día que te suscribís.',
+            'Te podés dar de baja cuando quieras, desde esta misma pantalla.',
             'Los locales adheridos están marcados con "Envío gratis".',
           ])
             Padding(

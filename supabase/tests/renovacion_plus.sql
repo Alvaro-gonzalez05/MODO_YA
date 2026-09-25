@@ -89,9 +89,17 @@ begin
   -- ---- La renovación no le come días al que todavía tiene --------------------
   s := public.activar_plus(c, 2500, null);
   insert into _r values ('09 renovar no pisa los dias que quedaban',
-    case when s.desde = current_date + 29 and s.hasta = current_date + 59
+    case when s.desde = current_date + 29
+          and s.hasta = ((current_date + 29) + interval '1 month')::date
          then 'OK  se le suma un mes a lo que tenia'
          else format('MAL  %s -> %s', s.desde, s.hasta) end);
+
+  -- ---- El mismo día de cada mes, no cada 30 días -----------------------------
+  insert into _r values ('10 se renueva el mismo dia del mes',
+    (select case when extract(day from (d + interval '1 month')::date) = extract(day from d)
+                 then format('OK  el %s de cada mes', extract(day from d)::int)
+                 else 'MAL  se corre el dia' end
+       from (select date '2026-01-25' as d) x));
 
   -- ---- Limpieza --------------------------------------------------------------
   delete from public.suscripciones_plus where cliente_id in (a, b, c);

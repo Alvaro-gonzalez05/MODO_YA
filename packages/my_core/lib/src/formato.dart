@@ -9,6 +9,7 @@ abstract final class Formato {
   static final _hora = DateFormat('HH:mm', 'es_AR');
   static final _fechaHora = DateFormat("d 'de' MMMM, HH:mm", 'es_AR');
   static final _fechaCorta = DateFormat('dd/MM/yy', 'es_AR');
+  static final _fechaLarga = DateFormat("d 'de' MMMM", 'es_AR');
 
   /// `$3.500`
   static String pesos(num monto) => _moneda.format(monto).trim();
@@ -28,6 +29,9 @@ abstract final class Formato {
 
   /// `13/09/26`
   static String fechaCorta(DateTime d) => _fechaCorta.format(d);
+
+  /// `13 de septiembre`
+  static String fechaLarga(DateTime d) => _fechaLarga.format(d);
 
   /// Antiguedad legible: `hace 2 min`, `hace 3 h`.
   static String haceCuanto(DateTime d) {

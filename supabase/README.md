@@ -51,6 +51,7 @@ van en una migración nueva.
 | `0040_promociones.sql` | descuentos del local sobre su menú: todo, secciones o productos sueltos |
 | `0041_renovacion_de_plus.sql` | Plus se renueva solo con la tarjeta guardada, y el cliente lo corta cuando quiere |
 | `0042_promociones_con_el_local.sql` | `v_promociones` dice de qué local es cada una (pantalla de la administración) |
+| `0043_plus_se_renueva_el_mismo_dia.sql` | Plus se cobra el mismo día de cada mes, no cada 30 días |
 
 ## Decisiones de diseño
 
@@ -198,13 +199,16 @@ el cron **`renovar-plus`** (07:10 UTC, 04:10 de Argentina):
    Function `pagar-pedido` (acción `renovar_plus`), que es la única que puede
    cobrar. La URL y la clave de servicio salen de **Vault**, no del código:
    las carga `scripts/guardar_secretos.ps1` leyéndolas de la Management API.
-3. Cobrada, `activar_plus()` suma otros 30 días. Si la tarjeta rebota se anota
-   el motivo y **al tercer intento se deja de insistir**: el cliente renueva a
-   mano y ve el porqué en la pantalla de Plus.
+3. Cobrada, `activar_plus()` suma **un mes**, no 30 días: el que se suscribió un
+   25 se le cobra todos los 25 (0043). Si la tarjeta rebota se anota el motivo y
+   **al tercer intento se deja de insistir**: el cliente renueva a mano y ve el
+   porqué en la pantalla de Plus.
 
-El cliente prende y corta la renovación desde la app (`cortar_renovacion_plus`),
-y al prenderla de nuevo se le perdonan los rechazos anteriores.
-`tests/renovacion_plus.sql` cubre a quién le toca y a quién no.
+**La suscripción se renueva sola desde el día uno**: el cliente no prende nada.
+Lo único que tiene es la baja (`cortar_renovacion_plus`), que le deja los días
+que ya pagó y no le vuelve a cobrar; si se arrepiente, al reactivarla se le
+perdonan los rechazos anteriores. `tests/renovacion_plus.sql` cubre a quién le
+toca, a quién no, y que el día del mes no se corra.
 
 > Cobrar una tarjeta guardada sin pedir el código de seguridad es lo que
 > Mercado Pago llama pago recurrente: se pide un token con el `card_id` y se
