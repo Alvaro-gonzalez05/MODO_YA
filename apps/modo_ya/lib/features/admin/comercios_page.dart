@@ -50,6 +50,12 @@ class _AdminComerciosPageState extends ConsumerState<AdminComerciosPage> {
       onRefresh: () => ref.refresh(todosLosComerciosProvider.future),
       acciones: [
         MyBoton(
+          label: 'Promociones',
+          icon: Symbols.sell,
+          tipo: MyBotonTipo.secundario,
+          onPressed: () => context.go('/admin/locales/promociones'),
+        ),
+        MyBoton(
           label: 'Nuevo local',
           icon: Symbols.add_business,
           onPressed: () => context.go('/admin/locales/nuevo'),

@@ -1,0 +1,48 @@
+# Mantener viva la base
+#
+# El plan gratuito de Supabase pausa el proyecto despues de 7 dias sin
+# actividad, y despausarlo es a mano desde el panel. Si eso pasa un domingo a
+# la noche, la app queda muerta hasta que alguien se da cuenta.
+#
+# Este workflow le hace una consulta mínima a la API todos los dias. No escribe
+# nada: pide una sola fila de `ciudades`, que es publica.
+#
+# La URL y la clave salen de env/publico.json, que ya esta en el repo: la clave
+# publicable esta pensada para viajar dentro de la app, no es un secreto (lo
+# que protege los datos es el RLS).
+#
+# Ojo: GitHub apaga los workflows programados si el repositorio pasa 60 dias
+# sin commits. Avisa por mail antes; se reactiva con un click.
+
+name: Mantener viva la base
+
+on:
+  schedule:
+    # 11:20 UTC = 08:20 en Argentina. El horario es a proposito "raro": los
+    # cron de GitHub en punto se encolan y se atrasan.
+    - cron: '20 11 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Consulta a la base
+        run: |
+          url=$(jq -r .MY_SUPABASE_URL env/publico.json)
+          key=$(jq -r .MY_SUPABASE_KEY env/publico.json)
+
+          codigo=$(curl -s -o respuesta.txt -w '%{http_code}' \
+            -H "apikey: $key" -H "Authorization: Bearer $key" \
+            "$url/rest/v1/ciudades?select=id&limit=1")
+
+          echo "HTTP $codigo"
+          cat respuesta.txt
+          echo
+
+          if [ "$codigo" != "200" ]; then
+            echo "::error::La base no respondio bien (HTTP $codigo). ¿Se pauso el proyecto?"
+            exit 1
+          fi

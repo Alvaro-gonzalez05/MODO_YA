@@ -12,6 +12,7 @@ import 'features/admin/dashboard_page.dart';
 import 'features/admin/envios_page.dart';
 import 'features/admin/liquidaciones_page.dart';
 import 'features/admin/pedidos_pago_page.dart';
+import 'features/admin/promociones_admin_page.dart';
 import 'features/admin/repartidores_page.dart';
 import 'features/admin/tarifas_page.dart';
 import 'features/auth/cuenta_no_habilitada_page.dart';
@@ -201,7 +202,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(
               path: '/admin/locales',
               builder: (_, _) => const AdminComerciosPage(),
-              routes: [GoRoute(path: 'nuevo', builder: (_, _) => const AltaCuentaPage(esLocal: true))],
+              routes: [
+                GoRoute(path: 'nuevo', builder: (_, _) => const AltaCuentaPage(esLocal: true)),
+                GoRoute(path: 'promociones', builder: (_, _) => const AdminPromocionesPage()),
+              ],
             ),
           ]),
           StatefulShellBranch(routes: [

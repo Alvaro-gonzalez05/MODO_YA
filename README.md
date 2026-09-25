@@ -156,19 +156,25 @@ Para revisar pantallas sin abrir la app a mano: `tools/capturas/capturar.mjs`
 
 ## Qué hay en cada app
 
-**Cliente:** locales por rubro, menu con fotos y personalizacion (tamanos,
-agregados), carrito, direcciones con pin en el mapa, pedido, seguimiento con el
+**Cliente:** locales por rubro, ofertas del dia, menu con fotos y
+personalizacion (tamanos, agregados), carrito, direcciones con pin en el mapa,
+pago con tarjeta dentro de la app (tarjetas guardadas), MODO YA Plus (envio
+gratis en los locales adheridos, con renovacion automatica), seguimiento con el
 codigo de entrega que le dicta al rider.
 
 **Local:** pedidos que entran en vivo (aceptar, preparar, listo), editor de menu
-con fotos y opciones, horarios (incluso turnos que cruzan medianoche), pausa
-manual, cadeteria (pedir rider para pedidos por telefono) con seguimiento.
+con fotos y opciones, promociones (descuento en todo el menu o en lo que elija),
+campanas (publicidad y MODO YA Plus), horarios (incluso turnos que cruzan
+medianoche), pausa manual, cadeteria (pedir rider para pedidos por telefono) con
+seguimiento.
 
-**Administracion:** resumen con mapa en vivo, alta de locales y riders, pedidos
-por cobrar (provisorio), suspension, envios en curso, tarifas.
+**Administracion:** resumen con mapa en vivo, alta de locales y riders, cobros,
+liquidaciones por local y por rider, promociones de todos los locales,
+suspension, envios en curso, tarifas y carteles.
 
 **Rider:** conectarse con ubicacion, ofertas con cuenta regresiva, recorrido
-retiro/entrega con confirmacion por codigo, ganancias.
+retiro/entrega con confirmacion por codigo, cuanto tiene que cobrar en la
+puerta, ganancias.
 
 ## Pruebas
 

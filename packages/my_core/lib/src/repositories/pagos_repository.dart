@@ -48,11 +48,28 @@ class TarjetaGuardada {
 
 /// MODO YA Plus del cliente: hasta cuándo lo tiene y cuánto sale renovarlo.
 class EstadoPlus {
-  const EstadoPlus({required this.activo, required this.precio, this.hasta});
+  const EstadoPlus({
+    required this.activo,
+    required this.precio,
+    this.hasta,
+    this.renovar = false,
+    this.fallos = 0,
+    this.ultimoError,
+  });
 
   final bool activo;
   final int precio;
   final DateTime? hasta;
+
+  /// Si al vencerse se le vuelve a cobrar con la tarjeta guardada.
+  final bool renovar;
+
+  /// Cuántas veces rebotó la tarjeta al intentar renovar. A las 3 se deja de
+  /// intentar y hay que renovar a mano.
+  final int fallos;
+  final String? ultimoError;
+
+  bool get seRindio => renovar && fallos >= 3;
 
   factory EstadoPlus.sinDatos(int precio) => EstadoPlus(activo: false, precio: precio);
 }
@@ -223,8 +240,17 @@ class PagosRepository {
             activo: !hasta.isBefore(DateTime.now().subtract(const Duration(days: 1))),
             precio: Fila.entero({'p': precio}, 'p'),
             hasta: hasta,
+            renovar: Fila.booleano(f, 'renovar'),
+            fallos: Fila.entero(f, 'intentos_fallidos'),
+            ultimoError: Fila.textoOpcional(f, 'ultimo_error'),
           );
         },
+      );
+
+  /// Prende o corta la renovación automática. Al prenderla se le vuelve a dar
+  /// una chance a la tarjeta que venía rebotando.
+  Future<void> renovarPlusAutomaticamente(bool renovar) => intentar(
+        () => _db.rpc('cortar_renovacion_plus', params: {'p_renovar': renovar}),
       );
 
   /// Paga un mes de Plus con una tarjeta nueva.

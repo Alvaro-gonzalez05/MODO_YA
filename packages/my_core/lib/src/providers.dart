@@ -252,6 +252,11 @@ final promocionesDelComercioProvider = StreamProvider<List<Promocion>>((ref) {
   return ref.watch(promocionesRepositoryProvider).watchDelComercio(id);
 });
 
+/// Todas las promociones, para la administración.
+final promocionesDeTodosProvider = StreamProvider<List<Promocion>>(
+  (ref) => ref.watch(promocionesRepositoryProvider).watchTodas(),
+);
+
 /// MODO YA Plus del cliente.
 final miPlusProvider = StreamProvider<EstadoPlus>(
   (ref) => ref.watch(pagosRepositoryProvider).watchPlus(),

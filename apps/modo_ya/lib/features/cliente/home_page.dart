@@ -149,6 +149,42 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
             ],
           ),
         ),
+        // Ofertas del día: los locales que hoy tienen descuento en su menú.
+        // Solo cuando se está mirando todo: si filtró o buscó, molesta.
+        if (_comida == null && q.isEmpty) ...[
+          Builder(builder: (context) {
+            final ofertas = [...?locales.value?.where((c) => c.descuento != null)]
+              ..sort((a, b) {
+                final abierto = (b.abierto ? 1 : 0) - (a.abierto ? 1 : 0);
+                return abierto != 0 ? abierto : b.descuento!.compareTo(a.descuento!);
+              });
+            if (ofertas.isEmpty) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: MySpacing.md),
+                const MySectionHeader(
+                  title: 'Ofertas de hoy',
+                  subtitle: 'Descuentos que pusieron los locales',
+                ),
+                const SizedBox(height: MySpacing.sm),
+                SizedBox(
+                  height: 178,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    clipBehavior: Clip.none,
+                    itemCount: ofertas.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: MySpacing.sm),
+                    itemBuilder: (_, i) => MyApareceEn(
+                      retraso: Duration(milliseconds: 40 * i.clamp(0, 8)),
+                      child: _TarjetaOferta(comercio: ofertas[i]),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }),
+        ],
         const SizedBox(height: MySpacing.md),
         MySectionHeader(
           title: _comida == null ? 'Locales en Malargüe' : _comida!.nombre,
@@ -558,6 +594,74 @@ class _TarjetaLocal extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tarjeta chica del carrusel de ofertas: la foto, el descuento y poco más.
+///
+/// No repite la tarjeta grande a propósito: acá lo que vende es el número, y
+/// el local completo está más abajo en la lista de siempre.
+class _TarjetaOferta extends StatelessWidget {
+  const _TarjetaOferta({required this.comercio});
+
+  final Comercio comercio;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 186,
+      child: MyCard(
+        padding: EdgeInsets.zero,
+        onTap: () => context.go('/cliente/local/${comercio.id}'),
+        child: Opacity(
+          opacity: comercio.abierto ? 1 : 0.6,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 104,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    MyImagen(
+                      url: comercio.portadaUrl ?? comercio.logoUrl,
+                      radio: MyRadius.card,
+                      icono: Symbols.restaurant,
+                    ),
+                    Positioned(
+                      left: MySpacing.xs,
+                      top: MySpacing.xs,
+                      child: MyBadge('${comercio.descuento}% OFF', icon: Symbols.sell),
+                    ),
+                    if (!comercio.abierto)
+                      const Positioned(
+                        right: MySpacing.xs,
+                        top: MySpacing.xs,
+                        child: MyBadge('Cerrado', tone: MyBadgeTone.dark, dot: true),
+                      ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(MySpacing.sm, MySpacing.sm, MySpacing.sm, MySpacing.sm),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(comercio.nombre, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(
+                      comercio.rubro,
+                      style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

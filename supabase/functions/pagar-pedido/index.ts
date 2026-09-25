@@ -13,6 +13,8 @@
 //   * tarjetas: lista las tarjetas guardadas del cliente.
 //   * borrar_tarjeta: la saca de Mercado Pago y de la base.
 //   * plus: cobra un mes de MODO YA Plus y activa la suscripcion.
+//   * renovar_plus: la llama el cron de la base (service_role, no un usuario)
+//     para volver a cobrarle a los que se les vence hoy.
 //
 // Por que es una Edge Function y no una RPC: cobrar necesita el access token de
 // Mercado Pago, que no puede vivir dentro de una app que se instala. Aca existe
@@ -39,7 +41,7 @@ const MP_TOKEN = Deno.env.get('MP_ACCESS_TOKEN') ?? '';
 const SIMULADO = MP_TOKEN === '';
 
 interface Cuerpo {
-  accion?: 'pagar' | 'tarjetas' | 'borrar_tarjeta' | 'plus';
+  accion?: 'pagar' | 'tarjetas' | 'borrar_tarjeta' | 'plus' | 'renovar_plus';
   pedido_id?: string;
   /** Token de un solo uso que devuelve Mercado Pago en la app. */
   token?: string;
@@ -101,15 +103,113 @@ function motivo(detalle: string): string {
   return mapa[detalle] ?? 'El pago fue rechazado. Probá con otra tarjeta.';
 }
 
+/** Vuelve a cobrarle Plus a todos los que se les vence hoy.
+ *
+ * Con la tarjeta guardada no hay codigo de seguridad para pedir: Mercado Pago
+ * da un token a partir del `card_id`, que es como se cobran las suscripciones.
+ * Si la tarjeta rebota se anota el motivo; al tercer intento la base deja de
+ * incluirla y el cliente renueva a mano.
+ */
+// deno-lint-ignore no-explicit-any
+async function renovarPlus(servicio: any) {
+  const { data: pendientes, error } = await servicio.rpc('plus_por_renovar');
+  if (error) {
+    console.error('plus_por_renovar', error);
+    return responder({ error: 'No se pudo leer a quien renovarle.' }, 500);
+  }
+
+  let renovadas = 0;
+  let fallidas = 0;
+
+  for (const s of (pendientes ?? [])) {
+    // Se distingue "la tarjeta rebotó" de "cobramos y algo fallo despues": lo
+    // primero se le cuenta como intento, lo segundo no (seria contarle un
+    // rechazo que no existio, y encima ya pago).
+    let cobrado = false;
+    try {
+      let mpId: string;
+
+      if (SIMULADO) {
+        mpId = `simulado-renovacion-${crypto.randomUUID()}`;
+      } else {
+        // Token a partir de la tarjeta guardada (pago recurrente, sin CVV).
+        const token = await mp('/v1/card_tokens', {
+          method: 'POST',
+          body: JSON.stringify({ card_id: s.mp_card_id }),
+        });
+        const pago = await mp('/v1/payments', {
+          method: 'POST',
+          headers: { 'X-Idempotency-Key': `plus-renovacion-${s.suscripcion_id}` },
+          body: JSON.stringify({
+            transaction_amount: s.precio,
+            token: token.id,
+            installments: 1,
+            description: 'MODO YA Plus, renovación mensual',
+            statement_descriptor: 'MODO YA PLUS',
+            metadata: { cliente_id: s.cliente_id, concepto: 'plus_renovacion' },
+          }),
+        });
+        if (pago.status !== 'approved') throw new Error(motivo(pago.status_detail ?? ''));
+        mpId = String(pago.id);
+      }
+      cobrado = true;
+
+      const { data: pago } = await servicio
+        .from('pagos')
+        .insert({
+          metodo: 'mercado_pago', estado: 'acreditado', monto: s.precio,
+          mp_payment_id: mpId, cuotas: 1, acreditado_en: new Date().toISOString(),
+        })
+        .select().single();
+
+      const { error: alta } = await servicio.rpc('activar_plus', {
+        p_cliente: s.cliente_id,
+        p_precio: s.precio,
+        p_pago: pago?.id ?? null,
+      });
+      if (alta) throw new Error(alta.message);
+
+      renovadas++;
+    } catch (e) {
+      fallidas++;
+      const texto = e instanceof Error ? e.message : String(e);
+      if (cobrado) {
+        // Se le cobro y no se le pudo dar el mes: hay que arreglarlo a mano.
+        console.error('RENOVACION COBRADA SIN ACTIVAR', s.suscripcion_id, texto);
+      } else {
+        console.error('renovar plus', s.suscripcion_id, texto);
+        await servicio.rpc('plus_renovacion_fallo', {
+          p_suscripcion: s.suscripcion_id,
+          p_error: texto.slice(0, 300),
+        });
+      }
+    }
+  }
+
+  console.log(`renovar_plus: ${renovadas} renovadas, ${fallidas} fallidas`);
+  return responder({ renovadas, fallidas, simulado: SIMULADO });
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   const url = Deno.env.get('SUPABASE_URL')!;
-  const servicio = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const servicioKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const servicio = createClient(url, servicioKey);
+
+  const jwt = req.headers.get('Authorization')?.replace('Bearer ', '') ?? '';
+  const c = (await req.json().catch(() => ({}))) as Cuerpo;
+  const accion = c.accion ?? 'pagar';
+
+  // ---- Renovacion automatica (la dispara el cron, no una persona) ----------
+
+  if (accion === 'renovar_plus') {
+    if (jwt !== servicioKey) return responder({ error: 'No autorizado.' }, 401);
+    return await renovarPlus(servicio);
+  }
 
   // Identidad: se verifica aca adentro (la funcion se publica con
   // --no-verify-jwt para que funcione con claves nuevas y viejas).
-  const jwt = req.headers.get('Authorization')?.replace('Bearer ', '') ?? '';
   const { data: { user } } = await createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, {
     global: { headers: { Authorization: `Bearer ${jwt}` } },
   }).auth.getUser();
@@ -118,9 +218,6 @@ Deno.serve(async (req) => {
   const { data: cliente } = await servicio
     .from('clientes').select('id, nombre, mp_customer_id').eq('perfil_id', user.id).maybeSingle();
   if (!cliente) return responder({ error: 'Solo un cliente puede pagar un pedido.' }, 403);
-
-  const c = (await req.json().catch(() => ({}))) as Cuerpo;
-  const accion = c.accion ?? 'pagar';
 
   // ---- Tarjetas guardadas ---------------------------------------------------
 

@@ -49,6 +49,8 @@ van en una migración nueva.
 | `0038_publicidad_una_vez_por_dia.sql` | arreglo: la publicidad se cobra un solo día por día |
 | `0039_vista_de_campanias_y_alta_de_plus.sql` | `v_campanias` con lo gastado y lo disponible; alta de Plus |
 | `0040_promociones.sql` | descuentos del local sobre su menú: todo, secciones o productos sueltos |
+| `0041_renovacion_de_plus.sql` | Plus se renueva solo con la tarjeta guardada, y el cliente lo corta cuando quiere |
+| `0042_promociones_con_el_local.sql` | `v_promociones` dice de qué local es cada una (pantalla de la administración) |
 
 ## Decisiones de diseño
 
@@ -185,6 +187,29 @@ la mensualidad: es gasto suyo, no de MODO YA. `tests/campanias.sql` recorre el
 circuito entero (fondo, envío cubierto, publicidad diaria, cierre por falta de
 fondo y el descuento en la liquidación).
 
+## Plus se renueva solo
+
+Al vencerse, se le vuelve a cobrar con la tarjeta que dejó guardada. Lo maneja
+el cron **`renovar-plus`** (07:10 UTC, 04:10 de Argentina):
+
+1. `plus_por_renovar()` arma la lista del día: la última suscripción de cada
+   cliente que ya se venció, con `renovar = true` y una tarjeta guardada.
+2. Si hay alguien, `renovar_plus_del_dia()` le pega con `pg_net` a la Edge
+   Function `pagar-pedido` (acción `renovar_plus`), que es la única que puede
+   cobrar. La URL y la clave de servicio salen de **Vault**, no del código:
+   las carga `scripts/guardar_secretos.ps1` leyéndolas de la Management API.
+3. Cobrada, `activar_plus()` suma otros 30 días. Si la tarjeta rebota se anota
+   el motivo y **al tercer intento se deja de insistir**: el cliente renueva a
+   mano y ve el porqué en la pantalla de Plus.
+
+El cliente prende y corta la renovación desde la app (`cortar_renovacion_plus`),
+y al prenderla de nuevo se le perdonan los rechazos anteriores.
+`tests/renovacion_plus.sql` cubre a quién le toca y a quién no.
+
+> Cobrar una tarjeta guardada sin pedir el código de seguridad es lo que
+> Mercado Pago llama pago recurrente: se pide un token con el `card_id` y se
+> cobra con ese token. Hace falta tenerlo habilitado en la cuenta.
+
 ## Promociones del local
 
 El local baja el precio de **todo su menú**, de **las secciones que elija** o de
@@ -318,6 +343,16 @@ el motor elija al cadete más cercano *dentro del radio* (hay un segundo cadete 
 9 km que debe quedar afuera), que una transición inválida rebote y que un código
 de entrega equivocado no cierre el envío.
 
+**`tests/campanias.sql`** — campañas del local, envío gratis con Plus,
+publicidad cobrada una vez por día y lo que termina en la liquidación.
+
+**`tests/promociones.sql`** — descuentos del local: los tres alcances, los días,
+vencida y pausada, cuál gana cuando hay dos, el precio que realmente se cobra y
+cómo queda la liquidación.
+
+**`tests/renovacion_plus.sql`** — a quién le toca renovar Plus hoy (y a quién
+no), los tres intentos y el interruptor del cliente.
+
 **`tests/flujo_marketplace.sql`** — marketplace. Carrito con opciones → pago →
 aceptación → preparación → entrega. Además de los precios y la sincronía entre
 pedido y envío, comprueba las tres reglas de privacidad de arriba.
@@ -329,6 +364,19 @@ pedido y envío, comprueba las tres reglas de privacidad de arriba.
 > `authenticated` no puede tocar). Sin eso, un test de RLS pasa siempre y no
 > prueba nada. `flujo_completo.sql` ejercita las RPC, que validan por dentro,
 > pero **no** verifica RLS; el de marketplace sí.
+
+## Que no se pause el proyecto
+
+El plan gratuito de Supabase pausa el proyecto a los 7 días sin actividad, y
+despausarlo es a mano desde el panel. Los cron de la base corren *adentro* de
+Postgres y no cuentan: hace falta una petición que entre por la API.
+
+La hace el workflow **`.github/workflows/mantener-viva.yml`**, todos los días:
+pide una fila de `ciudades` con la clave publicable y falla ruidosamente si no
+responde 200. No escribe nada.
+
+> GitHub apaga los workflows programados si el repositorio pasa 60 días sin
+> commits (avisa por mail y se reactiva con un click).
 
 ## Pendiente
 

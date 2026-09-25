@@ -27,6 +27,7 @@ class Promocion {
     required this.comercioId,
     required this.nombre,
     required this.porcentaje,
+    this.comercioNombre = '',
     this.alcance = AlcancePromocion.todo,
     this.dias = const [],
     this.desde,
@@ -39,6 +40,9 @@ class Promocion {
 
   final String id;
   final String comercioId;
+
+  /// Solo lo usa la administración, que ve las de todos los locales.
+  final String comercioNombre;
   final String nombre;
   final int porcentaje;
   final AlcancePromocion alcance;
@@ -77,6 +81,7 @@ class Promocion {
   factory Promocion.fromRow(Map<String, dynamic> f) => Promocion(
         id: Fila.texto(f, 'id'),
         comercioId: Fila.texto(f, 'comercio_id'),
+        comercioNombre: Fila.texto(f, 'comercio_nombre'),
         nombre: Fila.texto(f, 'nombre'),
         porcentaje: Fila.entero(f, 'porcentaje'),
         alcance: AlcancePromocion.fromWire(f['alcance'] as String?),
@@ -129,6 +134,19 @@ class PromocionesRepository {
                 .from('v_promociones')
                 .select()
                 .eq('comercio_id', comercioId)
+                .order('creado_en', ascending: false))
+            .map(Promocion.fromRow)
+            .toList(),
+      );
+
+  /// Todas las promociones, de todos los locales: es lo que mira la
+  /// administración para saber quién está descontando qué.
+  Stream<List<Promocion>> watchTodas() => enVivo(
+        canal: 'promos-todas',
+        tablas: const ['promociones', 'promocion_secciones', 'promocion_productos'],
+        leer: () async => (await _db
+                .from('v_promociones')
+                .select()
                 .order('creado_en', ascending: false))
             .map(Promocion.fromRow)
             .toList(),
