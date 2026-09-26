@@ -1,7 +1,13 @@
 // pagar-pedido
 //
-// Cobra un pedido con tarjeta a traves de Mercado Pago (Checkout API) y, si el
-// pago sale aprobado, lo manda al local.
+// Cobra un pedido con tarjeta a traves de Mercado Pago (Checkout API, **API de
+// Orders**) y, si el pago sale aprobado, lo manda al local.
+//
+// Se usa Orders y no la vieja API de Payments porque Mercado Pago dejo Payments
+// en mantenimiento (solo correcciones de seguridad) y Orders es la que sostiene
+// de ahora en mas. Un cobro genera dos ids: la orden (ORD01...) y adentro el
+// pago (PAY01...). El de la orden es el que viaja en los webhooks, por eso se
+// guardan los dos.
 //
 // Los datos de la tarjeta NO pasan por aca: la app se los manda directo a
 // Mercado Pago, que devuelve un `token` de un solo uso. Aca llega ese token.
@@ -85,9 +91,58 @@ async function mp(ruta: string, init: RequestInit = {}) {
   return cuerpo;
 }
 
+/** Los importes de Orders viajan como texto con dos decimales ("10500.00"). */
+function importe(pesos: number): string {
+  return pesos.toFixed(2);
+}
+
+/** Crea una orden y devuelve lo unico que nos importa de la respuesta. */
+async function crearOrden(cuerpo: unknown, idempotencia: string) {
+  const orden = await mp('/v1/orders', {
+    method: 'POST',
+    headers: { 'X-Idempotency-Key': idempotencia },
+    body: JSON.stringify(cuerpo),
+  });
+
+  // El estado que vale es el del pago; el de la orden lo acompaña.
+  const pago = orden?.transactions?.payments?.[0] ?? {};
+  const estadoMp = String(pago.status ?? orden?.status ?? '');
+  const detalleMp = String(pago.status_detail ?? orden?.status_detail ?? '');
+
+  return {
+    ordenId: orden?.id ? String(orden.id) : null,
+    pagoId: pago?.id ? String(pago.id) : null,
+    // processed = aprobado. processing / action_required / created = todavia no
+    // se sabe (revision manual, 3DS). El resto es que no entro.
+    estado: estadoMp === 'processed'
+      ? 'acreditado' as const
+      : ['processing', 'action_required', 'created'].includes(estadoMp)
+        ? 'pendiente' as const
+        : 'rechazado' as const,
+    detalleMp,
+  };
+}
+
 /** Mensajes de Mercado Pago traducidos a algo que entienda el cliente. */
 function motivo(detalle: string): string {
   const mapa: Record<string, string> = {
+    // Nombres de la API de Orders.
+    insufficient_amount: 'La tarjeta no tiene fondos suficientes.',
+    card_insufficient_amount: 'La tarjeta no tiene fondos suficientes.',
+    amount_limit_exceeded: 'El monto supera el límite de la tarjeta.',
+    bad_filled_card_data: 'Revisá los datos de la tarjeta.',
+    invalid_card_token: 'No se pudo leer la tarjeta. Cargala de nuevo.',
+    card_disabled: 'La tarjeta está inhabilitada. Llamá a tu banco.',
+    high_risk: 'El banco no autorizó el pago. Probá con otra tarjeta.',
+    required_call_for_authorize: 'Tenés que autorizar este pago con tu banco.',
+    max_attempts_exceeded: 'Demasiados intentos. Probá con otra tarjeta.',
+    rejected_by_issuer: 'El banco rechazó el pago. Probá con otra tarjeta.',
+    invalid_installments: 'Esa cantidad de cuotas no está disponible.',
+    processing_error: 'No se pudo procesar la tarjeta. Probá de nuevo.',
+    '3ds_challenge_expired': 'Se venció el tiempo para validar con tu banco.',
+    failed: 'El pago fue rechazado. Probá con otra tarjeta.',
+
+    // Nombres de la API vieja (Payments), por si alguno sigue llegando.
     cc_rejected_insufficient_amount: 'La tarjeta no tiene fondos suficientes.',
     cc_rejected_bad_filled_card_number: 'Revisá el número de la tarjeta.',
     cc_rejected_bad_filled_date: 'Revisá la fecha de vencimiento.',
@@ -137,20 +192,26 @@ async function renovarPlus(servicio: any) {
           method: 'POST',
           body: JSON.stringify({ card_id: s.mp_card_id }),
         });
-        const pago = await mp('/v1/payments', {
-          method: 'POST',
-          headers: { 'X-Idempotency-Key': `plus-renovacion-${s.suscripcion_id}` },
-          body: JSON.stringify({
-            transaction_amount: s.precio,
-            token: token.id,
-            installments: 1,
-            description: 'MODO YA Plus, renovación mensual',
-            statement_descriptor: 'MODO YA PLUS',
-            metadata: { cliente_id: s.cliente_id, concepto: 'plus_renovacion' },
-          }),
-        });
-        if (pago.status !== 'approved') throw new Error(motivo(pago.status_detail ?? ''));
-        mpId = String(pago.id);
+        const r = await crearOrden({
+          type: 'online',
+          processing_mode: 'automatic',
+          total_amount: importe(s.precio),
+          external_reference: `plus-renovacion-${s.suscripcion_id}`,
+          transactions: {
+            payments: [{
+              amount: importe(s.precio),
+              payment_method: {
+                type: 'credit_card',
+                token: token.id,
+                installments: 1,
+                statement_descriptor: 'MODO YA PLUS',
+              },
+            }],
+          },
+        }, `plus-renovacion-${s.suscripcion_id}`);
+
+        if (r.estado !== 'acreditado') throw new Error(motivo(r.detalleMp));
+        mpId = r.pagoId ?? r.ordenId ?? '';
       }
       cobrado = true;
 
@@ -253,26 +314,33 @@ Deno.serve(async (req) => {
     if (SIMULADO) {
       const rechazar = (c.titular ?? '').trim().toUpperCase() === 'RECHAZADA';
       estado = rechazar ? 'rechazado' : 'acreditado';
-      detalle = rechazar ? motivo('cc_rejected_insufficient_amount') : null;
+      detalle = rechazar ? motivo('insufficient_amount') : null;
       mpId = `simulado-plus-${crypto.randomUUID()}`;
     } else {
-      const pago = await mp('/v1/payments', {
-        method: 'POST',
-        headers: { 'X-Idempotency-Key': `plus-${cliente.id}-${c.token.slice(-16)}` },
-        body: JSON.stringify({
-          transaction_amount: monto,
-          token: c.token,
-          installments: 1,
-          payment_method_id: c.metodo_pago_id,
-          description: 'MODO YA Plus, un mes',
-          statement_descriptor: 'MODO YA PLUS',
-          payer: { email: user.email },
-          metadata: { cliente_id: cliente.id, concepto: 'plus' },
-        }),
-      });
-      mpId = String(pago.id);
-      estado = pago.status === 'approved' ? 'acreditado' : 'rechazado';
-      detalle = estado === 'acreditado' ? null : motivo(pago.status_detail ?? '');
+      const r = await crearOrden({
+        type: 'online',
+        processing_mode: 'automatic',
+        total_amount: importe(monto),
+        external_reference: `plus-${cliente.id}`,
+        payer: { email: user.email },
+        transactions: {
+          payments: [{
+            amount: importe(monto),
+            payment_method: {
+              id: c.metodo_pago_id,
+              type: 'credit_card',
+              token: c.token,
+              installments: 1,
+              statement_descriptor: 'MODO YA PLUS',
+            },
+          }],
+        },
+      }, `plus-${cliente.id}-${c.token.slice(-16)}`);
+
+      mpId = r.pagoId ?? r.ordenId;
+      // Plus se cobra o no se cobra: si queda en revision no se le da el mes.
+      estado = r.estado === 'acreditado' ? 'acreditado' : 'rechazado';
+      detalle = estado === 'acreditado' ? null : motivo(r.detalleMp);
     }
 
     if (estado !== 'acreditado') {
@@ -316,13 +384,15 @@ Deno.serve(async (req) => {
   let estado: 'acreditado' | 'rechazado' | 'pendiente' = 'acreditado';
   let detalle: string | null = null;
   let mpPaymentId: string | null = null;
+  let mpOrderId: string | null = null;
 
   if (SIMULADO) {
     // Sin credenciales: se responde sin cobrar nada.
     const rechazar = (c.titular ?? '').trim().toUpperCase() === 'RECHAZADA';
     estado = rechazar ? 'rechazado' : 'acreditado';
-    detalle = rechazar ? motivo('cc_rejected_insufficient_amount') : 'Pago simulado (sin credenciales de Mercado Pago)';
+    detalle = rechazar ? motivo('insufficient_amount') : 'Pago simulado (sin credenciales de Mercado Pago)';
     mpPaymentId = `simulado-${crypto.randomUUID()}`;
+    mpOrderId = `simulado-orden-${crypto.randomUUID()}`;
   } else {
     // Cliente de Mercado Pago (para poder guardar tarjetas).
     let customerId = cliente.mp_customer_id as string | null;
@@ -336,28 +406,34 @@ Deno.serve(async (req) => {
       await servicio.from('clientes').update({ mp_customer_id: customerId }).eq('id', cliente.id);
     }
 
-    const pago = await mp('/v1/payments', {
-      method: 'POST',
-      // Si el cliente toca "Pagar" dos veces con la misma tarjeta, Mercado
-      // Pago cobra una sola vez. Con otra tarjeta el token cambia, asi que el
-      // reintento si se procesa.
-      headers: { 'X-Idempotency-Key': `pedido-${pedido.id}-${c.token.slice(-16)}` },
-      body: JSON.stringify({
-        transaction_amount: pedido.total,
-        token: c.token,
-        installments: cuotas,
-        payment_method_id: c.metodo_pago_id,
-        description: `MODO YA pedido ${pedido.codigo}`,
-        external_reference: pedido.id,
-        statement_descriptor: 'MODO YA',
-        payer: { email: user.email, type: customerId ? 'customer' : undefined, id: customerId ?? undefined },
-        metadata: { pedido_id: pedido.id, comercio_id: pedido.comercio_id },
-      }),
-    });
+    // Si el cliente toca "Pagar" dos veces con la misma tarjeta, Mercado Pago
+    // cobra una sola vez. Con otra tarjeta el token cambia, asi que el
+    // reintento si se procesa.
+    const r = await crearOrden({
+      type: 'online',
+      processing_mode: 'automatic',
+      total_amount: importe(pedido.total),
+      external_reference: pedido.id,
+      description: `MODO YA pedido ${pedido.codigo}`,
+      payer: customerId ? { email: user.email, customer_id: customerId } : { email: user.email },
+      transactions: {
+        payments: [{
+          amount: importe(pedido.total),
+          payment_method: {
+            id: c.metodo_pago_id,
+            type: 'credit_card',
+            token: c.token,
+            installments: cuotas,
+            statement_descriptor: 'MODO YA',
+          },
+        }],
+      },
+    }, `pedido-${pedido.id}-${c.token.slice(-16)}`);
 
-    mpPaymentId = String(pago.id);
-    estado = pago.status === 'approved' ? 'acreditado' : pago.status === 'in_process' ? 'pendiente' : 'rechazado';
-    detalle = estado === 'acreditado' ? null : motivo(pago.status_detail ?? '');
+    mpOrderId = r.ordenId;
+    mpPaymentId = r.pagoId ?? r.ordenId;
+    estado = r.estado;
+    detalle = estado === 'acreditado' ? null : motivo(r.detalleMp);
 
     // Guardar la tarjeta para la proxima (Mercado Pago la guarda, nosotros solo
     // la referencia y los ultimos cuatro numeros).
@@ -402,6 +478,7 @@ Deno.serve(async (req) => {
     p_estado: estado,
     p_cuotas: cuotas,
     p_detalle: detalle,
+    p_mp_order: mpOrderId,
   });
   if (error) {
     console.error('confirmar_pago_online', error);

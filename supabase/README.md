@@ -53,6 +53,7 @@ van en una migración nueva.
 | `0042_promociones_con_el_local.sql` | `v_promociones` dice de qué local es cada una (pantalla de la administración) |
 | `0043_plus_se_renueva_el_mismo_dia.sql` | Plus se cobra el mismo día de cada mes, no cada 30 días |
 | `0044_avisos_de_mercado_pago.sql` | buzón de webhooks de Mercado Pago (`mp_notificaciones`) |
+| `0045_orden_de_mercado_pago.sql` | el pago guarda también el id de la orden (API de Orders) |
 
 ## Decisiones de diseño
 
@@ -137,6 +138,22 @@ app se los manda directo a Mercado Pago (Checkout API) con la clave pública
 la Edge Function `pagar-pedido`, la única que tiene el secreto
 `MP_ACCESS_TOKEN`. De la tarjeta guardada solo queda la referencia de Mercado
 Pago y "Visa ••••4218" (`tarjetas_guardadas`).
+
+**Se cobra con la API de Orders** (`POST /v1/orders`), no con la vieja de
+Payments: Mercado Pago dejó Payments en mantenimiento y Orders es la que
+sostiene de ahora en más. Dos diferencias que importan al leer el código:
+
+- Los importes viajan **como texto con dos decimales** (`"13550.00"`), no como
+  número. Adentro seguimos con enteros en pesos y se formatea al salir.
+- Un cobro genera **dos ids**: la orden (`ORD01…`) y adentro el pago (`PAY01…`).
+  Se guardan los dos (`pagos.mp_order_id` y `pagos.mp_payment_id`) porque los
+  webhooks avisan con el de la orden y los reclamos se hacen con el del pago.
+
+El estado sale del pago, no de la orden: `processed` es aprobado, `processing` y
+`action_required` es que todavía no se sabe (revisión manual, 3DS), y cualquier
+otra cosa es que no entró. Los motivos de rechazo cambiaron de nombre
+(`insufficient_amount` en vez de `cc_rejected_insufficient_amount`); `motivo()`
+traduce los nuevos y deja los viejos por las dudas.
 
 El pedido nace en `pendiente_pago` y **no le llega al local hasta que el pago
 se aprueba**: si la tarjeta rebota, la cocina no llegó a empezar. Un rechazo no
