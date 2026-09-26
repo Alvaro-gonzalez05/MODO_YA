@@ -203,6 +203,24 @@ URL a cargar en Mercado Pago (Tus integraciones → la aplicación → Webhooks)
 https://wqahdncdqnzrusrmdyui.supabase.co/functions/v1/mp-webhook
 ```
 
+### Probar con credenciales de prueba
+
+Las de prueba salen del panel de Mercado Pago igual que las de producción. Dos
+cosas que se descubrieron probando y conviene saber antes de perder una tarde:
+
+- **La API de customers rechaza las credenciales de una cuenta de prueba**
+  (`401 Unauthorized use of live credentials`). O sea: **las tarjetas guardadas
+  solo se pueden probar en producción**. El cobro anda igual; lo que no se
+  puede ejercitar en el sandbox es guardar la tarjeta ni, por lo tanto, la
+  renovación automática de Plus.
+- El resultado del cobro lo decide **el nombre del titular**, no el número:
+  `APRO` aprueba, `FUND` rebota por fondos, `CONT` lo deja en revisión, `SECU`
+  es código inválido, `CALL` pide autorizar con el banco.
+
+Por eso `customerDe()` nunca frena el cobro: si no se puede crear el customer,
+se cobra igual y la tarjeta no queda guardada. Quedarse sin la comodidad de la
+próxima vez es molesto; no poder pagar es perder la venta.
+
 ## Liquidaciones
 
 La plata la cobra MODO YA (tarjeta en la app) o la junta el rider (efectivo).

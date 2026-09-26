@@ -144,6 +144,63 @@ async function crearOrden(cuerpo: unknown, idempotencia: string) {
   };
 }
 
+/** El cliente como "customer" de Mercado Pago, que es lo que permite guardar
+ *  tarjetas. Si ya lo era, se reusa.
+ *
+ * **Nunca frena el cobro.** Si Mercado Pago no deja crear el customer, se
+ * devuelve null y se cobra igual, sin guardar la tarjeta: quedarse sin la
+ * comodidad de la proxima vez es molesto, no poder pagar es perder la venta.
+ * (Pasa, por ejemplo, con credenciales de cuenta de prueba: la API de
+ * customers las rechaza con "Unauthorized use of live credentials".)
+ */
+// deno-lint-ignore no-explicit-any
+async function customerDe(servicio: any, cliente: any, email: string | undefined) {
+  if (cliente.mp_customer_id) return cliente.mp_customer_id as string;
+
+  try {
+    const buscado = await mp(`/v1/customers/search?email=${encodeURIComponent(email ?? '')}`);
+    const id = buscado?.results?.[0]?.id ??
+      (await mp('/v1/customers', {
+        method: 'POST',
+        body: JSON.stringify({ email, first_name: cliente.nombre }),
+      })).id;
+
+    await servicio.from('clientes').update({ mp_customer_id: id }).eq('id', cliente.id);
+    cliente.mp_customer_id = id;
+    return id as string;
+  } catch (e) {
+    console.error('no se pudo crear el customer (se cobra igual)', e);
+    return null;
+  }
+}
+
+/** Guarda la tarjeta en Mercado Pago y deja la referencia en la base.
+ *
+ * Nunca frena el flujo: el cobro ya salio, y quedarse sin la tarjeta guardada
+ * es una molestia para la proxima, no un problema de plata.
+ */
+// deno-lint-ignore no-explicit-any
+async function guardarTarjeta(servicio: any, cliente: any, customerId: string, c: Cuerpo) {
+  try {
+    const tarjeta = await mp(`/v1/customers/${customerId}/cards`, {
+      method: 'POST',
+      body: JSON.stringify({ token: c.token }),
+    });
+    await servicio.from('tarjetas_guardadas').insert({
+      cliente_id: cliente.id,
+      mp_card_id: tarjeta.id,
+      marca: tarjeta.payment_method?.id ?? c.marca ?? 'tarjeta',
+      ultimos4: tarjeta.last_four_digits ?? c.ultimos4,
+      vence_mes: tarjeta.expiration_month ?? c.vence_mes,
+      vence_anio: tarjeta.expiration_year ?? c.vence_anio,
+      titular: tarjeta.cardholder?.name ?? c.titular,
+      predeterminada: true,
+    });
+  } catch (e) {
+    console.error('guardar tarjeta', e);
+  }
+}
+
 /** Mensajes de Mercado Pago traducidos a algo que entienda el cliente. */
 function motivo(detalle: string): string {
   const mapa: Record<string, string> = {
@@ -340,12 +397,18 @@ Deno.serve(async (req) => {
       detalle = rechazar ? motivo('insufficient_amount') : null;
       mpId = `simulado-plus-${crypto.randomUUID()}`;
     } else {
+      // La suscripcion se renueva sola todos los meses, asi que la tarjeta
+      // tiene que quedar guardada: sin eso `plus_por_renovar()` no la ve y la
+      // renovacion no se puede cobrar nunca. Por eso se hace siempre, no solo
+      // si el cliente lo pide (suscribirse ES autorizar el cobro mensual).
+      const customerId = c.card_id ? null : await customerDe(servicio, cliente, user.email);
+
       const r = await crearOrden({
         type: 'online',
         processing_mode: 'automatic',
         total_amount: importe(monto),
         external_reference: `plus-${cliente.id}`,
-        payer: { email: user.email },
+        payer: customerId ? { email: user.email, customer_id: customerId } : { email: user.email },
         transactions: {
           payments: [{
             amount: importe(monto),
@@ -363,7 +426,15 @@ Deno.serve(async (req) => {
       mpId = r.pagoId ?? r.ordenId;
       // Plus se cobra o no se cobra: si queda en revision no se le da el mes.
       estado = r.estado === 'acreditado' ? 'acreditado' : 'rechazado';
-      detalle = estado === 'acreditado' ? null : motivo(r.detalleMp);
+      detalle = estado === 'acreditado'
+        ? null
+        : r.estado === 'pendiente'
+          ? 'El banco está revisando el pago. Probá de nuevo en un rato.'
+          : motivo(r.detalleMp);
+
+      if (estado === 'acreditado' && customerId) {
+        await guardarTarjeta(servicio, cliente, customerId, c);
+      }
     }
 
     if (estado !== 'acreditado') {
@@ -418,16 +489,7 @@ Deno.serve(async (req) => {
     mpOrderId = `simulado-orden-${crypto.randomUUID()}`;
   } else {
     // Cliente de Mercado Pago (para poder guardar tarjetas).
-    let customerId = cliente.mp_customer_id as string | null;
-    if (!customerId && c.guardar) {
-      const buscado = await mp(`/v1/customers/search?email=${encodeURIComponent(user.email ?? '')}`);
-      customerId = buscado?.results?.[0]?.id ??
-        (await mp('/v1/customers', {
-          method: 'POST',
-          body: JSON.stringify({ email: user.email, first_name: cliente.nombre }),
-        })).id;
-      await servicio.from('clientes').update({ mp_customer_id: customerId }).eq('id', cliente.id);
-    }
+    const customerId = c.guardar ? await customerDe(servicio, cliente, user.email) : null;
 
     // Si el cliente toca "Pagar" dos veces con la misma tarjeta, Mercado Pago
     // cobra una sola vez. Con otra tarjeta el token cambia, asi que el
@@ -467,24 +529,7 @@ Deno.serve(async (req) => {
     // Guardar la tarjeta para la proxima (Mercado Pago la guarda, nosotros solo
     // la referencia y los ultimos cuatro numeros).
     if (estado === 'acreditado' && c.guardar && customerId && !c.card_id) {
-      try {
-        const tarjeta = await mp(`/v1/customers/${customerId}/cards`, {
-          method: 'POST',
-          body: JSON.stringify({ token: c.token }),
-        });
-        await servicio.from('tarjetas_guardadas').insert({
-          cliente_id: cliente.id,
-          mp_card_id: tarjeta.id,
-          marca: tarjeta.payment_method?.id ?? c.marca ?? 'tarjeta',
-          ultimos4: tarjeta.last_four_digits ?? c.ultimos4,
-          vence_mes: tarjeta.expiration_month ?? c.vence_mes,
-          vence_anio: tarjeta.expiration_year ?? c.vence_anio,
-          titular: tarjeta.cardholder?.name ?? c.titular,
-          predeterminada: true,
-        });
-      } catch (e) {
-        console.error('guardar tarjeta', e); // el pago ya salio: no se cae por esto
-      }
+      await guardarTarjeta(servicio, cliente, customerId, c);
     }
   }
 

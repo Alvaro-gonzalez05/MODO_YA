@@ -254,6 +254,12 @@ class PagosRepository {
         },
       );
 
+  /// Los últimos cuatro dígitos, para mostrar "Visa ••••3704".
+  static String _ultimos4(String numero) {
+    final d = numero.replaceAll(RegExp(r'\D'), '');
+    return d.length >= 4 ? d.substring(d.length - 4) : d;
+  }
+
   /// Prende o corta la renovación automática. Al prenderla se le vuelve a dar
   /// una chance a la tarjeta que venía rebotando.
   Future<void> renovarPlusAutomaticamente(bool renovar) => intentar(
@@ -273,11 +279,17 @@ class PagosRepository {
     final token = await _tokenizar(
       numero: numero, titular: titular, mes: mes, anio: anio, codigo: codigo, documento: documento,
     );
+    // La tarjeta queda guardada siempre: suscribirse es autorizar el cobro de
+    // todos los meses, y sin tarjeta guardada la renovación no se puede cobrar.
     return _cobrar({
       'accion': 'plus',
       'token': token,
       'metodo_pago_id': marca,
       'titular': titular,
+      'marca': marca,
+      'ultimos4': _ultimos4(numero),
+      'vence_mes': mes,
+      'vence_anio': anio,
     });
   }
 
