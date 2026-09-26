@@ -73,8 +73,8 @@ function responder(cuerpo: unknown, status = 200) {
   });
 }
 
-/** Llama a Mercado Pago y devuelve el JSON, con el error legible si falla. */
-async function mp(ruta: string, init: RequestInit = {}) {
+/** Llama a Mercado Pago y devuelve la respuesta cruda, sin juzgarla. */
+async function mpCrudo(ruta: string, init: RequestInit = {}) {
   const r = await fetch(`${MP}${ruta}`, {
     ...init,
     headers: {
@@ -84,11 +84,17 @@ async function mp(ruta: string, init: RequestInit = {}) {
     },
   });
   const cuerpo = await r.json().catch(() => ({}));
+  if (!r.ok) console.error('mercado pago', ruta, r.status, JSON.stringify(cuerpo));
+  return { ok: r.ok, status: r.status, cuerpo };
+}
+
+/** Llama a Mercado Pago y devuelve el JSON, con el error legible si falla. */
+async function mp(ruta: string, init: RequestInit = {}) {
+  const r = await mpCrudo(ruta, init);
   if (!r.ok) {
-    console.error('mercado pago', ruta, r.status, JSON.stringify(cuerpo));
-    throw new Error(cuerpo?.message ?? `Mercado Pago respondio ${r.status}`);
+    throw new Error(r.cuerpo?.message ?? `Mercado Pago respondio ${r.status}`);
   }
-  return cuerpo;
+  return r.cuerpo;
 }
 
 /** Los importes de Orders viajan como texto con dos decimales ("10500.00"). */
@@ -96,13 +102,28 @@ function importe(pesos: number): string {
   return pesos.toFixed(2);
 }
 
-/** Crea una orden y devuelve lo unico que nos importa de la respuesta. */
+/** Crea una orden y devuelve lo unico que nos importa de la respuesta.
+ *
+ * Ojo con los codigos HTTP: una tarjeta rechazada vuelve como **402**, no como
+ * 200, pero con la orden entera adentro de `data`. Eso no es un error nuestro,
+ * es un "no" del banco y hay que contarselo al cliente. Si en cambio viene un
+ * 4xx **sin** orden (token vencido, credenciales mal, importe invalido), ahi si
+ * rompimos nosotros: se lanza para que quede en el log y no se le mienta al
+ * cliente diciendole que la tarjeta fallo.
+ */
 async function crearOrden(cuerpo: unknown, idempotencia: string) {
-  const orden = await mp('/v1/orders', {
+  const r = await mpCrudo('/v1/orders', {
     method: 'POST',
     headers: { 'X-Idempotency-Key': idempotencia },
     body: JSON.stringify(cuerpo),
   });
+
+  // En el caso feliz la orden viene en la raiz; cuando rebota, adentro de data.
+  const orden = r.ok ? r.cuerpo : (r.cuerpo?.data ?? null);
+  if (!orden) {
+    const detalle = r.cuerpo?.errors?.[0]?.message ?? r.cuerpo?.message;
+    throw new Error(detalle ?? `Mercado Pago respondio ${r.status}`);
+  }
 
   // El estado que vale es el del pago; el de la orden lo acompaña.
   const pago = orden?.transactions?.payments?.[0] ?? {};
@@ -141,6 +162,8 @@ function motivo(detalle: string): string {
     processing_error: 'No se pudo procesar la tarjeta. Probá de nuevo.',
     '3ds_challenge_expired': 'Se venció el tiempo para validar con tu banco.',
     failed: 'El pago fue rechazado. Probá con otra tarjeta.',
+    invalid_users_involved: 'No se pudo procesar el pago. Probá con otra tarjeta.',
+    cc_amount_rate_limit_exceeded: 'El monto supera el límite permitido.',
 
     // Nombres de la API vieja (Payments), por si alguno sigue llegando.
     cc_rejected_insufficient_amount: 'La tarjeta no tiene fondos suficientes.',
@@ -433,7 +456,13 @@ Deno.serve(async (req) => {
     mpOrderId = r.ordenId;
     mpPaymentId = r.pagoId ?? r.ordenId;
     estado = r.estado;
-    detalle = estado === 'acreditado' ? null : motivo(r.detalleMp);
+    detalle = estado === 'acreditado'
+      ? null
+      : estado === 'pendiente'
+        // El banco lo esta revisando: no fallo nada, hay que esperar. Decirle
+        // "rechazado" lo manda a pagar de nuevo y termina pagando dos veces.
+        ? 'El banco está revisando el pago. Te avisamos apenas se confirme.'
+        : motivo(r.detalleMp);
 
     // Guardar la tarjeta para la proxima (Mercado Pago la guarda, nosotros solo
     // la referencia y los ultimos cuatro numeros).
