@@ -29,7 +29,9 @@
 // Si la tarjeta rebota el pedido NO se cancela: queda esperando para que el
 // cliente pruebe con otra (lo cierra cerrar_pagos_vencidos a la media hora).
 //
-// MODO SIMULADO: sin MP_ACCESS_TOKEN configurado, no se llama a Mercado Pago y
+// MODO SIMULADO: sin MP_ACCESS_TOKEN configurado —o cuando la app manda un
+// token simulado porque se compilo sin clave publica— no se llama a Mercado
+// Pago y
 // se responde como si la tarjeta hubiera sido aprobada (rechazada si el nombre
 // del titular es "RECHAZADA", para poder probar ese camino). Sirve para mostrar
 // la pantalla antes de tener la cuenta; nunca cobra plata de verdad.
@@ -342,6 +344,12 @@ Deno.serve(async (req) => {
   const c = (await req.json().catch(() => ({}))) as Cuerpo;
   const accion = c.accion ?? 'pagar';
 
+  // Se simula si no hay credenciales **o si la app no las tenia cuando armo el
+  // token**. Una version instalada sin clave publica manda "token-simulado-…";
+  // si el servidor intentara cobrar eso contra Mercado Pago, fallaria y el
+  // cliente se quedaria sin poder pagar por una actualizacion que no hizo.
+  const simulado = SIMULADO || (c.token ?? '').startsWith('token-simulado');
+
   // ---- Renovacion automatica (la dispara el cron, no una persona) ----------
 
   if (accion === 'renovar_plus') {
@@ -372,7 +380,7 @@ Deno.serve(async (req) => {
     const { data: t } = await servicio
       .from('tarjetas_guardadas').select('*').eq('id', c.tarjeta_id!).eq('cliente_id', cliente.id).maybeSingle();
     if (!t) return responder({ error: 'La tarjeta no existe.' }, 404);
-    if (!SIMULADO && cliente.mp_customer_id) {
+    if (!simulado && cliente.mp_customer_id) {
       await mp(`/v1/customers/${cliente.mp_customer_id}/cards/${t.mp_card_id}`, { method: 'DELETE' })
         .catch((e) => console.error('borrar tarjeta', e));
     }
@@ -391,7 +399,7 @@ Deno.serve(async (req) => {
     let detalle: string | null = null;
     let mpId: string | null = null;
 
-    if (SIMULADO) {
+    if (simulado) {
       const rechazar = (c.titular ?? '').trim().toUpperCase() === 'RECHAZADA';
       estado = rechazar ? 'rechazado' : 'acreditado';
       detalle = rechazar ? motivo('insufficient_amount') : null;
@@ -438,7 +446,7 @@ Deno.serve(async (req) => {
     }
 
     if (estado !== 'acreditado') {
-      return responder({ aprobado: false, detalle, simulado: SIMULADO });
+      return responder({ aprobado: false, detalle, simulado });
     }
 
     const { data: pago } = await servicio
@@ -459,7 +467,7 @@ Deno.serve(async (req) => {
       return responder({ error: 'Se cobró la suscripción pero no se pudo activar. Escribinos.' }, 500);
     }
 
-    return responder({ aprobado: true, simulado: SIMULADO, suscripcion: sus });
+    return responder({ aprobado: true, simulado, suscripcion: sus });
   }
 
   // ---- Pagar ----------------------------------------------------------------
@@ -480,7 +488,7 @@ Deno.serve(async (req) => {
   let mpPaymentId: string | null = null;
   let mpOrderId: string | null = null;
 
-  if (SIMULADO) {
+  if (simulado) {
     // Sin credenciales: se responde sin cobrar nada.
     const rechazar = (c.titular ?? '').trim().toUpperCase() === 'RECHAZADA';
     estado = rechazar ? 'rechazado' : 'acreditado';
@@ -533,7 +541,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (SIMULADO && c.guardar && estado === 'acreditado' && c.ultimos4) {
+  if (simulado && c.guardar && estado === 'acreditado' && c.ultimos4) {
     await servicio.from('tarjetas_guardadas').insert({
       cliente_id: cliente.id,
       mp_card_id: `simulada-${c.ultimos4}-${Date.now()}`,
@@ -563,7 +571,7 @@ Deno.serve(async (req) => {
     estado,
     detalle,
     aprobado: estado === 'acreditado',
-    simulado: SIMULADO,
+    simulado,
     pedido: ped,
   });
 });

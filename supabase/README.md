@@ -160,9 +160,14 @@ se aprueba**: si la tarjeta rebota, la cocina no llegó a empezar. Un rechazo no
 cancela el pedido (se puede reintentar con otra tarjeta); los abandonados los
 cierra `cerrar_pagos_vencidos()` a la media hora.
 
-**Sin `MP_ACCESS_TOKEN` configurado, la función trabaja simulada**: aprueba sin
-cobrar nada (o rechaza si el titular es "RECHAZADA"). Sirve para probar la
-pantalla antes de tener la cuenta.
+**Se simula cuando no hay credenciales, y también cuando el token viene
+simulado**: aprueba sin cobrar nada (o rechaza si el titular es "RECHAZADA").
+
+Lo segundo importa más de lo que parece. Una versión de la app compilada sin
+clave pública arma un token `token-simulado-…`; si el servidor ya tiene
+credenciales e intentara cobrar eso contra Mercado Pago, fallaría y el cliente
+se quedaría sin poder pagar por una actualización que no hizo. Por eso el modo
+simulado se decide **por llamada**, no solo por la configuración del servidor.
 
 ## Avisos de Mercado Pago (webhooks)
 

@@ -205,13 +205,78 @@ el cliente. Tambien cadeteria, rechazos, reglas de opciones y tiempo real.
 - **Mapas:** las baldosas salen del servidor publico de OpenStreetMap, que no
   admite uso productivo. Hay que pasar al archivo propio `malargue.pmtiles`
   (un cambio en `packages/my_ui/lib/src/widgets/mapa.dart`).
-- **Pagos:** no esta decidido como se cobra. Mientras tanto, la administracion
-  confirma cada pago a mano desde la app.
+- **Pagos:** se cobra con tarjeta dentro de la app, pero contra el **sandbox**
+  de Mercado Pago. Ver "Estado de los pagos" mas abajo: es lo unico que separa
+  a MODO YA de estar cobrando de verdad.
 - **Ubicacion del rider en segundo plano:** hoy se manda con la app abierta.
 - **Mails:** la confirmacion de email esta desactivada (cualquiera se registra
   sin validar su correo). Falta SMTP propio para volver a activarla y para
   recuperar contrasenas (ver `docs/preguntas-para-la-clienta.md`).
 - **Fuentes:** se descargan en tiempo de ejecucion; conviene empaquetarlas.
+
+## Estado de los pagos
+
+**Al 28/09/2026: la app cobra de verdad, pero con plata de prueba.** Falta una
+sola cosa —las credenciales de produccion de Mercado Pago— y quien las tenga
+puede terminarlo sin escribir codigo.
+
+### Que esta hecho y probado
+
+El circuito entero corre contra Mercado Pago real, en modo sandbox, con la
+**API de Orders** (la vieja de Payments quedo en mantenimiento):
+
+| | Estado |
+|---|---|
+| Cobro de un pedido con tarjeta | Probado: aprobado, rechazado y en revision |
+| Alta de MODO YA Plus | Probado |
+| Renovacion mensual de Plus | Escrita y probada del lado de la base; el cobro no se pudo probar (ver abajo) |
+| Tarjetas guardadas | Escrito; **no se puede probar en sandbox** (ver abajo) |
+| Webhook (`mp-webhook`) | Publicado y probado con avisos firmados; nunca recibio uno real |
+
+### Que falta, en orden
+
+1. **Credenciales de produccion.** Hoy hay cargadas unas de una *cuenta de
+   prueba* de Mercado Pago. Con las de produccion:
+   - la clave publica va en `env/dev.json` **y** en `env/publico.json` (esta
+     ultima si se commitea: es publica por diseno y es la que compila los
+     instaladores);
+   - el access token va como secreto, con
+     `.\supabase\scripts\guardar_secreto.ps1 MP_ACCESS_TOKEN`.
+2. **El webhook no recibio ni un aviso.** La URL quedo cargada en el panel de
+   Mercado Pago y su clave secreta esta en el secreto `MP_WEBHOOK_SECRET`, pero
+   `mp_notificaciones` sigue vacia: ni del simulador ni de los pagos de prueba.
+   Hay que entrar al panel y ver si la URL quedo en otra aplicacion. **Mientras
+   el webhook no funcione, una devolucion hecha desde el panel de Mercado Pago
+   no llega a la base y la liquidacion de ese local queda mal.**
+3. **Cobros recurrentes (Card on File MIT).** Hay que pedirselos a Mercado Pago
+   para la cuenta. Sin eso, Plus no se renueva solo: rebota tres veces y el
+   cliente renueva a mano (el sistema ya lo contempla, pero conviene saberlo).
+4. **Cortar efectivo y transferencia**, que estan como "proximamente". Es una
+   linea en `MetodoPago.delCliente` (`packages/my_core/lib/src/models/estados.dart`)
+   **y tambien una migracion**, porque una version vieja ya instalada podria
+   seguir mandando `efectivo`.
+5. **Sacar la version** con `[obligatoria]` en el mensaje del tag, y hacer un
+   cobro real chico con devolucion para validar las dos puntas.
+
+### Dos cosas que cuestan una tarde si no se saben
+
+- **Las tarjetas guardadas no se pueden probar en sandbox.** La API de customers
+  de Mercado Pago rechaza las credenciales de una cuenta de prueba con
+  `401 Unauthorized use of live credentials`. El cobro anda igual; lo que no se
+  puede ejercitar hasta produccion es guardar la tarjeta ni, por lo tanto, la
+  renovacion automatica de Plus.
+- **El resultado del cobro de prueba lo decide el nombre del titular**, no el
+  numero de tarjeta: `APRO` aprueba, `FUND` rebota por fondos, `CONT` lo deja en
+  revision. Como el formulario exige nombre y apellido y Mercado Pago solo mira
+  la primera palabra, se escriben asi: `APRO PEREZ`, `FUND PEREZ`.
+
+### Por que la app publicada sigue andando
+
+`env/publico.json` no tiene clave publica, asi que los instaladores publicados
+arman un token simulado. Como el servidor **si** tiene credenciales, ese token
+no serviria para cobrar: la Edge Function detecta que el token es simulado y
+resuelve la llamada como simulada, en vez de intentar cobrarlo y dejar al
+cliente sin poder pagar por una actualizacion que no hizo.
 
 ## Del diseno que no se implemento a proposito
 
