@@ -55,7 +55,13 @@ funciona si el cliente no se va de esa pantalla.
 a "Mis pedidos" → el pedido queda "Esperando pago" sin forma de pagarlo. A la
 media hora lo cierra `cerrar_pagos_vencidos()`.
 
-### 4. Guardar tarifas resetea en silencio el precio de MODO YA Plus
+### 4. Guardar tarifas resetea en silencio el precio de MODO YA Plus — ARREGLADO
+
+> Arreglado en `0049_el_precio_de_plus_no_se_pierde.sql`: el parámetro ahora
+> existe y, si no viene, se conserva el valor del tarifario que se cierra (que
+> es lo que importaba: el bug no era mandar un valor equivocado, era no mandar
+> ninguno). Cubierto por `tests/tarifario.sql`.
+
 
 `admin_nuevo_tarifario` (`0016_permisos_por_columna.sql:212-220`) hace un
 `insert` con las columnas nombradas una por una, y **no incluye
@@ -68,7 +74,13 @@ por $4.000" → la administración toca cualquier cosa en `/admin/tarifas` y gua
 → el tarifario nuevo nace con 2500 → el precio de Plus baja a $2.500 sin que
 nadie lo pida ni se entere.
 
-### 5. El precio de Plus no se puede cambiar desde ninguna pantalla
+### 5. El precio de Plus no se puede cambiar desde ninguna pantalla — ARREGLADO
+
+> Arreglado junto con el 4: ahora es un campo más en Admin → Tarifas y reglas
+> ("MODO YA Plus · lo que paga el cliente por mes para no pagar envío"). Los
+> dos iban juntos: sin el 4, poner un precio desde la pantalla lo habría
+> borrado el siguiente guardado.
+
 
 `admin/tarifas_page.dart:61-122` expone seis campos y ninguno es el precio de
 Plus. El comentario de `0039:19` dice "lo fija la administración en el

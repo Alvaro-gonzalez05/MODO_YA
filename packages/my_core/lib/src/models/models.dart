@@ -76,6 +76,7 @@ class Tarifario {
     this.id,
     this.ciudadId,
     this.precioSuscripcionMensual,
+    this.precioPlusMensual = 2500,
   });
 
   final String? id;
@@ -86,7 +87,12 @@ class Tarifario {
   final int precioKmAdicional;
   final double radioBusquedaKm;
   final int segundosParaAceptar;
+
+  /// Mensualidad del local. Distinta del precio de Plus, que paga el cliente.
   final int? precioSuscripcionMensual;
+
+  /// Lo que paga el cliente por MODO YA Plus, cada mes.
+  final int precioPlusMensual;
 
   int get precioBase => gananciaRepartidorBase + comisionModoYa;
 
@@ -100,6 +106,7 @@ class Tarifario {
         radioBusquedaKm: Fila.decimal(f, 'radio_busqueda_km'),
         segundosParaAceptar: Fila.entero(f, 'segundos_para_aceptar'),
         precioSuscripcionMensual: Fila.enteroOpcional(f, 'precio_suscripcion_mensual'),
+        precioPlusMensual: Fila.entero(f, 'precio_plus_mensual', 2500),
       );
 
   Tarifario copyWith({
@@ -109,6 +116,7 @@ class Tarifario {
     int? precioKmAdicional,
     double? radioBusquedaKm,
     int? segundosParaAceptar,
+    int? precioPlusMensual,
   }) =>
       Tarifario(
         id: id,
@@ -120,6 +128,7 @@ class Tarifario {
         radioBusquedaKm: radioBusquedaKm ?? this.radioBusquedaKm,
         segundosParaAceptar: segundosParaAceptar ?? this.segundosParaAceptar,
         precioSuscripcionMensual: precioSuscripcionMensual,
+        precioPlusMensual: precioPlusMensual ?? this.precioPlusMensual,
       );
 }
 

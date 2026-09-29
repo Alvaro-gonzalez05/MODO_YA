@@ -55,6 +55,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  # Solo para los tests: apagar la descarga de fuentes en tiempo de ejecucion,
+  # que si no deja temporizadores de socket abiertos al terminar.
+  google_fonts: ^8.2.1
+
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your

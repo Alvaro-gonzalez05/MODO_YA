@@ -24,7 +24,8 @@ class _AdminTarifasPageState extends ConsumerState<AdminTarifasPage> {
       t.kmIncluidos != g.kmIncluidos ||
       t.precioKmAdicional != g.precioKmAdicional ||
       t.radioBusquedaKm != g.radioBusquedaKm ||
-      t.segundosParaAceptar != g.segundosParaAceptar;
+      t.segundosParaAceptar != g.segundosParaAceptar ||
+      t.precioPlusMensual != g.precioPlusMensual;
 
   Future<void> _guardar(Tarifario t) async {
     final ok = await confirmar(
@@ -85,6 +86,15 @@ class _AdminTarifasPageState extends ConsumerState<AdminTarifasPage> {
             pesos: true,
             paso: 100,
             onChanged: (v) => setState(() => _borrador = t.copyWith(precioKmAdicional: v)),
+          ),
+          _CampoNumero(
+            icon: Symbols.workspace_premium,
+            titulo: 'MODO YA Plus',
+            detalle: 'Lo que paga el cliente por mes para no pagar envío',
+            valor: t.precioPlusMensual,
+            pesos: true,
+            paso: 250,
+            onChanged: (v) => setState(() => _borrador = t.copyWith(precioPlusMensual: v)),
           ),
         ];
 

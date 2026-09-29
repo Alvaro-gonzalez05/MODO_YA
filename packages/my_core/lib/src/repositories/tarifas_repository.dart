@@ -34,6 +34,7 @@ class TarifasRepository {
           'p_radio_busqueda_km': t.radioBusquedaKm,
           'p_segundos_para_aceptar': t.segundosParaAceptar,
           'p_precio_suscripcion_mensual': t.precioSuscripcionMensual,
+          'p_precio_plus_mensual': t.precioPlusMensual,
         });
       });
 }

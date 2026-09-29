@@ -57,6 +57,7 @@ van en una migración nueva.
 | `0046_el_dia_es_el_de_malargue.sql` | **arreglo**: el día lo deciden `hoy()` y `dia()` (hora de Malargüe), no el UTC del servidor |
 | `0047_notificaciones.sql` | mensajes de la administración a un segmento de gente, con la bandeja de cada uno |
 | `0048_notificaciones_automaticas.sql` | carrito abandonado y clientes dormidos, y `{nombre}` en el texto |
+| `0049_el_precio_de_plus_no_se_pierde.sql` | **arreglo**: guardar tarifas devolvía el precio de Plus a $2.500 |
 
 ## Decisiones de diseño
 
@@ -505,6 +506,10 @@ cómo queda la liquidación.
 
 **`tests/renovacion_plus.sql`** — a quién le toca renovar Plus hoy (y a quién
 no), los tres intentos y el interruptor del cliente.
+
+**`tests/tarifario.sql`** — que guardar una tarifa no pise lo que no se tocó.
+El caso que importa es el tercero: cambiar la ganancia del rider **sin mandar**
+el precio de Plus tiene que dejarlo donde estaba, porque así llama una app vieja.
 
 **`tests/notificaciones.sql`** — notificaciones: a quién le llega cada segmento,
 que el alcance que se muestra sea el que se manda, que no se mande dos veces y
