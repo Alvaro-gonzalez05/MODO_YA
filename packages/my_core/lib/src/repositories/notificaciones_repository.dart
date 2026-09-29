@@ -25,6 +25,31 @@ enum SegmentoNotificacion {
       .firstWhere((e) => e.wire == v, orElse: () => SegmentoNotificacion.clientes);
 }
 
+/// Qué hace que la notificación salga sola.
+enum DisparadorNotificacion {
+  carritoAbandonado(
+    'carrito_abandonado',
+    'Carrito abandonado',
+    'Al que armó un pedido y no llegó a pagarlo. Sale antes de que el pedido se '
+        'cancele solo, y lo lleva derecho a pagarlo.',
+  ),
+  clienteInactivo(
+    'cliente_inactivo',
+    'Cliente dormido',
+    'Al que hace rato no pide. Se le escribe una vez y no se le vuelve a '
+        'insistir hasta pasado el período.',
+  );
+
+  const DisparadorNotificacion(this.wire, this.rotulo, this.detalle);
+
+  final String wire;
+  final String rotulo;
+  final String detalle;
+
+  static DisparadorNotificacion? fromWire(String? v) =>
+      v == null ? null : DisparadorNotificacion.values.where((e) => e.wire == v).firstOrNull;
+}
+
 /// Qué abre la notificación cuando la tocan.
 enum DestinoNotificacion {
   ninguno('ninguno', 'No abre nada'),
@@ -57,6 +82,10 @@ class Notificacion {
     this.alcance = 0,
     this.leidas = 0,
     this.creadoEn,
+    this.disparador,
+    this.activa = true,
+    this.minutosEspera = 10,
+    this.repetirCadaDias = 30,
   });
 
   final String id;
@@ -77,6 +106,19 @@ class Notificacion {
   final int leidas;
   final DateTime? creadoEn;
 
+  /// Nulo: la manda una persona. Si no, la manda el reloj cuando se cumple
+  /// la condición.
+  final DisparadorNotificacion? disparador;
+  final bool activa;
+
+  /// Carrito abandonado: cuánto se espera antes de escribirle.
+  final int minutosEspera;
+
+  /// Cliente dormido: cada cuánto, como mucho, se le vuelve a escribir.
+  final int repetirCadaDias;
+
+  bool get esAutomatica => disparador != null;
+
   factory Notificacion.fromRow(Map<String, dynamic> f) => Notificacion(
         id: Fila.texto(f, 'id'),
         titulo: Fila.texto(f, 'titulo'),
@@ -90,6 +132,10 @@ class Notificacion {
         alcance: Fila.entero(f, 'alcance'),
         leidas: Fila.entero(f, 'leidas'),
         creadoEn: Fila.fechaOpcional(f, 'creado_en'),
+        disparador: DisparadorNotificacion.fromWire(f['disparador'] as String?),
+        activa: Fila.booleano(f, 'activa', true),
+        minutosEspera: Fila.entero(f, 'minutos_espera', 10),
+        repetirCadaDias: Fila.entero(f, 'repetir_cada_dias', 30),
       );
 }
 
@@ -101,6 +147,7 @@ class MiNotificacion {
     required this.cuerpo,
     required this.destino,
     this.destinoId,
+    this.pedidoId,
     this.leida = false,
     this.creadoEn,
   });
@@ -110,16 +157,23 @@ class MiNotificacion {
   final String cuerpo;
   final DestinoNotificacion destino;
   final String? destinoId;
+
+  /// El pedido que motivó el aviso (carrito abandonado).
+  final String? pedidoId;
   final bool leida;
   final DateTime? creadoEn;
 
   /// La ruta que abre, o null si no lleva a ningún lado.
-  String? get ruta => switch (destino) {
-        DestinoNotificacion.ninguno => null,
-        DestinoNotificacion.inicio => '/cliente',
-        DestinoNotificacion.misPedidos => '/cliente/pedidos',
-        DestinoNotificacion.plus => '/cliente/plus',
-        DestinoNotificacion.local => destinoId == null ? null : '/cliente/local/$destinoId',
+  ///
+  /// El pedido manda sobre el destino elegido: si el aviso salió porque quedó
+  /// un pedido sin pagar, lo único que sirve es abrir el pago de *ese* pedido.
+  String? get ruta => switch ((pedidoId, destino)) {
+        (final String id, _) => '/cliente/pagar/$id',
+        (_, DestinoNotificacion.ninguno) => null,
+        (_, DestinoNotificacion.inicio) => '/cliente',
+        (_, DestinoNotificacion.misPedidos) => '/cliente/pedidos',
+        (_, DestinoNotificacion.plus) => '/cliente/plus',
+        (_, DestinoNotificacion.local) => destinoId == null ? null : '/cliente/local/$destinoId',
       };
 
   factory MiNotificacion.fromRow(Map<String, dynamic> f) => MiNotificacion(
@@ -128,6 +182,7 @@ class MiNotificacion {
         cuerpo: Fila.texto(f, 'cuerpo'),
         destino: DestinoNotificacion.fromWire(f['destino'] as String?),
         destinoId: f['destino_id'] as String?,
+        pedidoId: f['pedido_id'] as String?,
         leida: f['leida_en'] != null,
         creadoEn: Fila.fechaOpcional(f, 'creado_en'),
       );
@@ -202,6 +257,43 @@ class NotificacionesRepository {
         await _db.from('notificaciones').update(datos).eq('id', id);
         return id;
       });
+
+  /// Crea o edita la automática de un disparador. Hay una sola por disparador.
+  ///
+  /// No se "manda": queda prendida y el reloj la dispara cuando se cumple la
+  /// condición, todas las veces que haga falta.
+  Future<void> guardarAutomatica({
+    required DisparadorNotificacion disparador,
+    required String titulo,
+    required String cuerpo,
+    String? id,
+    bool activa = true,
+    int minutosEspera = 10,
+    int diasInactividad = 30,
+    int repetirCadaDias = 30,
+  }) =>
+      intentar(() async {
+        final datos = {
+          'titulo': titulo.trim(),
+          'cuerpo': cuerpo.trim(),
+          'disparador': disparador.wire,
+          'activa': activa,
+          'minutos_espera': minutosEspera,
+          'dias_inactividad': diasInactividad,
+          'repetir_cada_dias': repetirCadaDias,
+          'segmento': disparador == DisparadorNotificacion.clienteInactivo
+              ? SegmentoNotificacion.clientesInactivos.wire
+              : SegmentoNotificacion.clientes.wire,
+        };
+        if (id == null) {
+          await _db.from('notificaciones').insert(datos);
+        } else {
+          await _db.from('notificaciones').update(datos).eq('id', id);
+        }
+      });
+
+  Future<void> prender(String id, {required bool activa}) =>
+      intentar(() => _db.from('notificaciones').update({'activa': activa}).eq('id', id));
 
   /// La manda. Devuelve a cuánta gente le llegó.
   Future<int> enviar(String id) => intentar(() async {

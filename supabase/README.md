@@ -56,6 +56,7 @@ van en una migración nueva.
 | `0045_orden_de_mercado_pago.sql` | el pago guarda también el id de la orden (API de Orders) |
 | `0046_el_dia_es_el_de_malargue.sql` | **arreglo**: el día lo deciden `hoy()` y `dia()` (hora de Malargüe), no el UTC del servidor |
 | `0047_notificaciones.sql` | mensajes de la administración a un segmento de gente, con la bandeja de cada uno |
+| `0048_notificaciones_automaticas.sql` | carrito abandonado y clientes dormidos, y `{nombre}` en el texto |
 
 ## Decisiones de diseño
 
@@ -350,6 +351,39 @@ además de insertar el envío le pegue a FCM; estas tablas no cambian.
 
 `tests/notificaciones.sql` recorre los segmentos, el envío, que no se mande dos
 veces y que nadie vea la notificación de otro.
+
+### Las que salen solas
+
+Dos mensajes no conviene mandarlos a mano, porque llegan tarde o no llegan
+(0048). Una automatización **es** una notificación, con `disparador` cargado: se
+escribe una vez y se le van colgando envíos, así el panel muestra una sola fila
+("Carrito abandonado · salió 137 veces, abrieron 41") en vez de una por disparo.
+Hay como mucho una prendida por disparador, y lo garantiza un índice único.
+
+- **Carrito abandonado.** El cliente armó el pedido, eligió tarjeta y se fue de
+  la pantalla de pago. Como `cerrar_pagos_vencidos()` lo cancela a los 30
+  minutos, el aviso sale a los 10 (configurable hasta 25) para que **todavía
+  llegue a pagarlo**, y lleva derecho a la pantalla de pago de *ese* pedido —
+  que hoy no tiene ningún otro camino de vuelta. No se repite por el mismo
+  pedido: lo impide un índice único por `(notificacion_id, pedido_id)`.
+- **Cliente dormido.** Hace N días que no pide. Acá el riesgo no es llegar
+  tarde sino cansarlo, así que no se le vuelve a escribir hasta pasados
+  `repetir_cada_dias`.
+
+Las dispara el cron **`notificaciones-automaticas`** cada 5 minutos.
+
+`destinatarios()` exige `es_admin()`, que es lo correcto cuando la llama una
+pantalla; el cron no es nadie y esa verificación le daría siempre falso. Por eso
+la cuenta de quién entra en un segmento vive en `perfiles_del_segmento()` y
+`destinatarios()` es solo el permiso encima: una sola copia de la regla.
+
+**`{nombre}`** en el título o el cuerpo se reemplaza **al leer**, no al mandar:
+si la persona después corrige cómo se llama, el mensaje que todavía no abrió ya
+la trata bien.
+
+`tests/notificaciones_automaticas.sql` cubre las dos, con foco en lo que no
+tiene que pasar: que avise antes de tiempo, que le escriba al que sí pagó, que
+repita por el mismo pedido o que insista con el dormido antes del período.
 
 ## Fotos
 

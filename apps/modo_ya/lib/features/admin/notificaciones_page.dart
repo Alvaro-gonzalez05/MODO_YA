@@ -45,28 +45,26 @@ class AdminNotificacionesPage extends ConsumerWidget {
           valor: notis,
           onReintentar: () => ref.invalidate(notificacionesProvider),
           datos: (lista) {
-            if (lista.isEmpty) {
-              return MyCard(
-                child: MyEmptyState(
-                  icon: Symbols.notifications,
-                  title: 'Todavía no mandaste ninguna',
-                  message: 'Sirve para avisar de un cambio de horario, una promoción '
-                      'o para invitar a volver a alguien que hace rato no pide.',
-                  action: MyBoton(
-                    label: 'Escribir la primera',
-                    icon: Symbols.edit_square,
-                    onPressed: () => _redactar(context, ref),
-                  ),
-                ),
-              );
-            }
-
-            final borradores = lista.where((n) => !n.enviada).toList();
-            final enviadas = lista.where((n) => n.enviada).toList();
+            final automaticas = lista.where((n) => n.esAutomatica).toList();
+            final borradores = lista.where((n) => !n.esAutomatica && !n.enviada).toList();
+            final enviadas = lista.where((n) => !n.esAutomatica && n.enviada).toList();
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const MySectionHeader(
+                  title: 'Solas',
+                  subtitle: 'Salen sin que nadie las mande, cuando se cumple la condición',
+                ),
+                const SizedBox(height: MySpacing.sm),
+                for (final d in DisparadorNotificacion.values) ...[
+                  _Automatica(
+                    disparador: d,
+                    notificacion: automaticas.where((n) => n.disparador == d).firstOrNull,
+                  ),
+                  const SizedBox(height: MySpacing.xs),
+                ],
+                const SizedBox(height: MySpacing.lg),
                 if (borradores.isNotEmpty) ...[
                   const MySectionHeader(
                     title: 'Sin mandar',
@@ -90,6 +88,20 @@ class AdminNotificacionesPage extends ConsumerWidget {
                     const SizedBox(height: MySpacing.xs),
                   ],
                 ],
+                if (borradores.isEmpty && enviadas.isEmpty)
+                  MyCard(
+                    child: MyEmptyState(
+                      icon: Symbols.notifications,
+                      title: 'Todavía no mandaste ninguna a mano',
+                      message: 'Sirve para avisar de un cambio de horario o de una '
+                          'promoción que arranca. Para lo repetido están las de arriba.',
+                      action: MyBoton(
+                        label: 'Escribir la primera',
+                        icon: Symbols.edit_square,
+                        onPressed: () => _redactar(context, ref),
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: MySpacing.md),
                 Text(
                   'Por ahora la notificación se ve cuando la persona abre la app. '
@@ -102,6 +114,102 @@ class AdminNotificacionesPage extends ConsumerWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+/// Una notificación que sale sola. Siempre se muestran las dos, estén
+/// escritas o no: la pantalla tiene que contar qué puede hacer la app, no solo
+/// qué se hizo hasta ahora.
+class _Automatica extends ConsumerWidget {
+  const _Automatica({required this.disparador, this.notificacion});
+
+  final DisparadorNotificacion disparador;
+  final Notificacion? notificacion;
+
+  Future<void> _editar(BuildContext context, WidgetRef ref) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EditarAutomatica(disparador: disparador, notificacion: notificacion),
+    );
+    ref.invalidate(notificacionesProvider);
+  }
+
+  Future<void> _prender(BuildContext context, WidgetRef ref, bool v) async {
+    final n = notificacion;
+    if (n == null) return;
+    try {
+      await ref.read(notificacionesRepositoryProvider).prender(n.id, activa: v);
+      ref.invalidate(notificacionesProvider);
+    } catch (e) {
+      if (context.mounted) mostrarError(context, e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final n = notificacion;
+    final escrita = n != null;
+    final prendida = escrita && n.activa;
+
+    return MyCard(
+      padding: const EdgeInsets.all(MySpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                disparador == DisparadorNotificacion.carritoAbandonado
+                    ? Symbols.shopping_cart_off
+                    : Symbols.bedtime,
+                color: prendida ? MyColors.onSurface : MyColors.outline,
+                fill: prendida ? 1 : 0,
+              ),
+              const SizedBox(width: MySpacing.sm),
+              Expanded(child: Text(disparador.rotulo, style: MyType.labelLg)),
+              if (!escrita)
+                MyBadge('Sin escribir', tone: MyBadgeTone.neutral)
+              else
+                Switch(value: prendida, onChanged: (v) => _prender(context, ref, v)),
+            ],
+          ),
+          const SizedBox(height: MySpacing.xs),
+          Text(
+            disparador.detalle,
+            style: MyType.bodySm.copyWith(color: MyColors.secondary),
+          ),
+          if (escrita) ...[
+            const SizedBox(height: MySpacing.sm),
+            Text('«${n.titulo}»', style: MyType.labelMd, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ],
+          const SizedBox(height: MySpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  !escrita
+                      ? 'Todavía no sale'
+                      : disparador == DisparadorNotificacion.carritoAbandonado
+                          ? 'A los ${n.minutosEspera} min · salió ${n.alcance} veces, abrieron ${n.leidas}'
+                          : 'Sin pedir hace ${n.diasInactividad} días · salió ${n.alcance} veces, abrieron ${n.leidas}',
+                  style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              MyBoton(
+                label: escrita ? 'Editar' : 'Escribirla',
+                icon: escrita ? Symbols.edit : Symbols.add,
+                tipo: escrita ? MyBotonTipo.texto : MyBotonTipo.secundario,
+                onPressed: () => _editar(context, ref),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -324,6 +432,11 @@ class _RedactarState extends ConsumerState<_Redactar> {
               icon: Symbols.short_text,
               lineas: 3,
             ),
+            Text(
+              'Escribí {nombre} donde quieras que aparezca el nombre de cada uno.',
+              style: MyType.bodySm.copyWith(color: MyColors.secondary),
+            ),
+            const SizedBox(height: MySpacing.md),
 
             const MyOverline('A quién le llega'),
             const SizedBox(height: MySpacing.xs),
@@ -419,6 +532,161 @@ class _RedactarState extends ConsumerState<_Redactar> {
               icon: Symbols.save,
               tipo: MyBotonTipo.secundario,
               onPressed: _completa ? () => _guardar(mandar: false) : null,
+            ),
+            const SizedBox(height: MySpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Escribir la notificación que sale sola: el texto y cuándo sale.
+class _EditarAutomatica extends ConsumerStatefulWidget {
+  const _EditarAutomatica({required this.disparador, this.notificacion});
+
+  final DisparadorNotificacion disparador;
+  final Notificacion? notificacion;
+
+  @override
+  ConsumerState<_EditarAutomatica> createState() => _EditarAutomaticaState();
+}
+
+class _EditarAutomaticaState extends ConsumerState<_EditarAutomatica> {
+  late final _titulo = TextEditingController(
+    text: widget.notificacion?.titulo ??
+        (widget.disparador == DisparadorNotificacion.carritoAbandonado
+            ? '{nombre}, te quedó un pedido sin pagar'
+            : '{nombre}, te extrañamos'),
+  );
+  late final _cuerpo = TextEditingController(
+    text: widget.notificacion?.cuerpo ??
+        (widget.disparador == DisparadorNotificacion.carritoAbandonado
+            ? 'Terminá de pagarlo antes de que se cancele.'
+            : 'Hace rato no pedís. Mirá lo que hay hoy en MODO YA.'),
+  );
+  late var _minutos = widget.notificacion?.minutosEspera ?? 10;
+  late var _dias = widget.notificacion?.diasInactividad ?? 30;
+  late var _repetir = widget.notificacion?.repetirCadaDias ?? 30;
+
+  bool get _esCarrito => widget.disparador == DisparadorNotificacion.carritoAbandonado;
+  bool get _completa => _titulo.text.trim().isNotEmpty && _cuerpo.text.trim().isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _titulo.addListener(() => setState(() {}));
+    _cuerpo.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _titulo.dispose();
+    _cuerpo.dispose();
+    super.dispose();
+  }
+
+  Future<void> _guardar() async {
+    try {
+      await ref.read(notificacionesRepositoryProvider).guardarAutomatica(
+            id: widget.notificacion?.id,
+            disparador: widget.disparador,
+            titulo: _titulo.text,
+            cuerpo: _cuerpo.text,
+            activa: widget.notificacion?.activa ?? true,
+            minutosEspera: _minutos,
+            diasInactividad: _dias,
+            repetirCadaDias: _repetir,
+          );
+      if (mounted) {
+        Navigator.of(context).pop();
+        mostrarAviso(context, 'Lista: sale sola de acá en más');
+      }
+    } catch (e) {
+      if (mounted) mostrarError(context, e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, scroll) => Container(
+        decoration: BoxDecoration(
+          color: MyColors.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(MyRadius.hero)),
+        ),
+        child: ListView(
+          controller: scroll,
+          padding: const EdgeInsets.all(MySpacing.lg),
+          children: [
+            Text(widget.disparador.rotulo, style: MyType.headlineSm),
+            const SizedBox(height: MySpacing.xs),
+            Text(
+              widget.disparador.detalle,
+              style: MyType.bodySm.copyWith(color: MyColors.secondary),
+            ),
+            const SizedBox(height: MySpacing.md),
+
+            _VistaPrevia(titulo: _titulo.text, cuerpo: _cuerpo.text),
+            const SizedBox(height: MySpacing.lg),
+
+            MyCampo(controller: _titulo, label: 'Título', icon: Symbols.title),
+            MyCampo(controller: _cuerpo, label: 'Mensaje', icon: Symbols.short_text, lineas: 3),
+            Text(
+              'Escribí {nombre} donde quieras que aparezca el nombre de cada uno.',
+              style: MyType.bodySm.copyWith(color: MyColors.secondary),
+            ),
+            const SizedBox(height: MySpacing.md),
+
+            if (_esCarrito) ...[
+              const MyOverline('Esperar antes de escribirle'),
+              const SizedBox(height: MySpacing.xs),
+              Wrap(
+                spacing: MySpacing.xs,
+                runSpacing: MySpacing.xs,
+                children: [
+                  for (final m in const [5, 10, 15, 20])
+                    MyChip('$m min', selected: _minutos == m, onTap: () => setState(() => _minutos = m)),
+                ],
+              ),
+              const SizedBox(height: MySpacing.xs),
+              Text(
+                'El pedido sin pagar se cancela solo a los 30 minutos, así que el '
+                'aviso tiene que salir antes para que todavía llegue a pagarlo.',
+                style: MyType.bodySm.copyWith(color: MyColors.secondary),
+              ),
+            ] else ...[
+              const MyOverline('Se considera dormido a los'),
+              const SizedBox(height: MySpacing.xs),
+              Wrap(
+                spacing: MySpacing.xs,
+                runSpacing: MySpacing.xs,
+                children: [
+                  for (final d in const [15, 30, 60, 90])
+                    MyChip('$d días', selected: _dias == d, onTap: () => setState(() => _dias = d)),
+                ],
+              ),
+              const SizedBox(height: MySpacing.md),
+              const MyOverline('No volver a escribirle antes de'),
+              const SizedBox(height: MySpacing.xs),
+              Wrap(
+                spacing: MySpacing.xs,
+                runSpacing: MySpacing.xs,
+                children: [
+                  for (final d in const [15, 30, 60, 90])
+                    MyChip('$d días', selected: _repetir == d, onTap: () => setState(() => _repetir = d)),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: MySpacing.lg),
+            MyBotonAccion(
+              label: 'Guardar',
+              icon: Symbols.save,
+              onPressed: _completa ? _guardar : null,
             ),
             const SizedBox(height: MySpacing.md),
           ],
