@@ -322,7 +322,7 @@ class MyDockScaffold extends StatelessWidget {
       appBar: appBar,
       body: Stack(
         children: [
-          Positioned.fill(child: body),
+          Positioned.fill(child: MyCambioDePestania(indice: currentIndex, child: body)),
           Align(
             alignment: Alignment.bottomCenter,
             child: MyDock(

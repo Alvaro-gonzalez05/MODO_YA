@@ -141,6 +141,58 @@ class MyEntradaEscalonada extends StatelessWidget {
   }
 }
 
+/// Fundido corto al cambiar de pestana del dock, con el mismo lenguaje que la
+/// transicion de las pantallas que se abren encima (`_TransicionModoYa` en
+/// theme.dart). Sin esto el dock corta en seco y es lo unico de la app que
+/// cambia sin transicion.
+///
+/// El hijo se pasa tal cual, sin `key` nueva: el shell de rutas usa un
+/// `IndexedStack` que guarda el estado de cada pestana (donde venia el scroll,
+/// que habia escrito), y remontarlo lo perderia. Aca solo se anima alrededor.
+class MyCambioDePestania extends StatefulWidget {
+  const MyCambioDePestania({super.key, required this.indice, required this.child});
+
+  /// La pestana activa: cuando cambia, se vuelve a reproducir la entrada.
+  final int indice;
+  final Widget child;
+
+  @override
+  State<MyCambioDePestania> createState() => _MyCambioDePestaniaState();
+}
+
+class _MyCambioDePestaniaState extends State<MyCambioDePestania>
+    with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+    value: 1,
+  );
+  late final _curva = CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
+  late final _desplazamiento =
+      Tween<Offset>(begin: const Offset(0, 0.015), end: Offset.zero).animate(_curva);
+
+  @override
+  void didUpdateWidget(MyCambioDePestania viejo) {
+    super.didUpdateWidget(viejo);
+    if (viejo.indice != widget.indice) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _curva.dispose();
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _curva,
+      child: SlideTransition(position: _desplazamiento, child: widget.child),
+    );
+  }
+}
+
 /// Circulo de paso (rubro, estado de pedido) que anima color, tamano e icono
 /// cuando cambia de inactivo a activo/hecho, con un pequeno "pop" al llegar.
 class MyPasoCirculo extends StatelessWidget {

@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../theme.dart';
 import '../tokens.dart';
 import '../typography.dart';
+import 'animaciones.dart';
 import 'hoja_secciones.dart';
 import 'marca.dart';
 import 'navigation.dart';
@@ -111,7 +112,7 @@ class MyAppShell extends StatelessWidget {
                   usuarioDetalle: usuarioDetalle,
                   acciones: accionesUsuario,
                 ),
-                Expanded(child: body),
+                Expanded(child: MyCambioDePestania(indice: indice, child: body)),
               ],
             ),
           ),
@@ -129,7 +130,7 @@ class MyAppShell extends StatelessWidget {
       backgroundColor: MyColors.surface,
       body: Stack(
         children: [
-          Positioned.fill(child: body),
+          Positioned.fill(child: MyCambioDePestania(indice: indice, child: body)),
           if (mostrarDock)
             Align(
               alignment: Alignment.bottomCenter,
