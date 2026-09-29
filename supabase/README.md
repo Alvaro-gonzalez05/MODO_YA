@@ -54,6 +54,7 @@ van en una migración nueva.
 | `0043_plus_se_renueva_el_mismo_dia.sql` | Plus se cobra el mismo día de cada mes, no cada 30 días |
 | `0044_avisos_de_mercado_pago.sql` | buzón de webhooks de Mercado Pago (`mp_notificaciones`) |
 | `0045_orden_de_mercado_pago.sql` | el pago guarda también el id de la orden (API de Orders) |
+| `0046_el_dia_es_el_de_malargue.sql` | **arreglo**: el día lo deciden `hoy()` y `dia()` (hora de Malargüe), no el UTC del servidor |
 
 ## Decisiones de diseño
 
@@ -69,6 +70,14 @@ mueven solas.
 
 **Los importes son `integer` en pesos enteros.** No hay centavos en el producto
 y evitamos por completo los errores de punto flotante.
+
+**El día es el de Malargüe, no el del servidor.** La base corre en UTC, tres
+horas adelante: de 21:00 a medianoche, `current_date` ya devuelve el día
+siguiente y `timestamptz::date` castea con esa misma zona. Cualquier fecha que
+signifique "qué día es para el negocio" sale de `hoy()`, y el día de un momento
+dado de `dia(timestamptz)` (0046). Antes, una promo creada de noche no regía
+hasta el otro día y la cena del último día de un período se liquidaba en el
+siguiente.
 
 **La ciudad es una fila, no una constante.** Abrir una ciudad nueva es un
 `insert`. Lo mismo con `tipo_servicio`: hoy solo se usa `delivery`, pero taxi y

@@ -19,8 +19,8 @@ declare
   liq_com public.liquidaciones_comercio;
   liq_rep public.liquidaciones;
   fila record;
-  desde date := current_date - 7;
-  hasta date := current_date;
+  desde date := public.hoy() - 7;
+  hasta date := public.hoy();
 begin
   select id into ciudad from public.ciudades where nombre = 'Malargue';
   select id into tar from public.tarifarios where vigente_hasta is null limit 1;
@@ -136,7 +136,7 @@ begin
   -- ---- Un local sin movimientos no aparece -------------------------------------
   insert into _r values ('8. sin movimientos no figura',
     case when not exists (
-      select 1 from public.pendiente_de_liquidar_comercios(current_date + 30, current_date + 37))
+      select 1 from public.pendiente_de_liquidar_comercios(public.hoy() + 30, public.hoy() + 37))
          then 'OK  periodo vacio, lista vacia' else 'MAL' end);
 
   -- ---- Limpieza -----------------------------------------------------------------

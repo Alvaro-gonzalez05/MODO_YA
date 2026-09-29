@@ -71,7 +71,7 @@ begin
 
   -- ---- El cliente con Plus --------------------------------------------------
   insert into public.suscripciones_plus (cliente_id, desde, hasta, precio)
-  values (cli, current_date - 1, current_date + 29, 2500);
+  values (cli, public.hoy() - 1, public.hoy() + 29, 2500);
 
   perform set_config('request.jwt.claims', json_build_object('sub', u_cli)::text, true);
   cot := public.cotizar_para_cliente(com, dir);
@@ -150,7 +150,7 @@ begin
     (select case when cargos = envio_base + 9000 and ventas = 20000
                  then format('OK  vendio $20.000 y se le descuentan $%s', envio_base + 9000)
                  else format('MAL  ventas=%s cargos=%s', ventas, cargos) end
-       from public.pendiente_de_liquidar_comercios(current_date - 1, current_date)
+       from public.pendiente_de_liquidar_comercios(public.hoy() - 1, public.hoy())
       where comercio_id = com));
 
   perform set_config('request.jwt.claims', null, true);

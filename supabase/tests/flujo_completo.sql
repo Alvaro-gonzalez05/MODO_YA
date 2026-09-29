@@ -16,6 +16,7 @@ declare
   of     public.ofertas;
   cod    text;
   n      int;
+  envio_esperado integer;
 begin
   select id into ciudad from public.ciudades where nombre = 'Malargue';
 
@@ -65,10 +66,18 @@ begin
            env.codigo, env.estado, env.distancia_km, env.ganancia_repartidor,
            env.comision, env.total));
 
-  -- El precio no lo manda la app: lo calculo el servidor.
+  -- El precio no lo manda la app: lo calcula el servidor con el tarifario
+  -- vigente (lo cambia la administracion, no se fija en la prueba).
+  select total into envio_esperado from public.cotizar(
+    ciudad,
+    (select ubicacion from public.comercios where id = com),
+    extensions.ST_SetSRID(extensions.ST_MakePoint(-69.5852,-35.4769),4326)::extensions.geography);
+
   insert into _r values ('2. precio del servidor',
-    case when env.total = 3500 then 'OK  $3.500 (3000+500)'
-         else 'MAL  esperaba 3500, dio ' || env.total end);
+    case when env.total = envio_esperado
+         then format('OK  $%s del tarifario (%s + %s)',
+                     envio_esperado, env.ganancia_repartidor, env.comision)
+         else format('MAL  esperaba %s, dio %s', envio_esperado, env.total) end);
 
   -- ---- Confirma y arranca la busqueda --------------------------------------
   env := public.confirmar_envio(env.id);

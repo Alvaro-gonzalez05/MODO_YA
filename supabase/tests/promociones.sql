@@ -134,7 +134,7 @@ begin
 
   -- ---- Vencida y pausada -----------------------------------------------------
   update public.promociones
-     set dias = '{}', desde = current_date - 3, hasta = current_date - 1
+     set dias = '{}', desde = public.hoy() - 3, hasta = public.hoy() - 1
    where id = promo;
   insert into _r values ('09 vencida no rige',
     case when not public.promocion_vigente(promo) then 'OK  se termino ayer' else 'MAL' end);
@@ -174,7 +174,7 @@ begin
     (select case when ventas = 26000
                  then 'OK  vendio $26.000, no $32.000'
                  else format('MAL  ventas=%s', ventas) end
-       from public.pendiente_de_liquidar_comercios(current_date - 1, current_date)
+       from public.pendiente_de_liquidar_comercios(public.hoy() - 1, public.hoy())
       where comercio_id = com));
   perform set_config('request.jwt.claims', null, true);
 

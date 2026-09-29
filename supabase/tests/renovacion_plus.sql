@@ -32,11 +32,11 @@ begin
          (c, 'card-c', 'visa', '1111', 12, 2030, 'PRUEBA', true);
 
   insert into public.suscripciones_plus (cliente_id, desde, hasta, precio, renovar)
-  values (a, current_date - 31, current_date - 1, 2500, true) returning id into sus_a;
+  values (a, public.hoy() - 31, public.hoy() - 1, 2500, true) returning id into sus_a;
   insert into public.suscripciones_plus (cliente_id, desde, hasta, precio, renovar)
-  values (b, current_date - 31, current_date - 1, 2500, true);
+  values (b, public.hoy() - 31, public.hoy() - 1, 2500, true);
   insert into public.suscripciones_plus (cliente_id, desde, hasta, precio, renovar)
-  values (c, current_date - 1, current_date + 29, 2500, true);
+  values (c, public.hoy() - 1, public.hoy() + 29, 2500, true);
 
   -- ---- A quién le toca -------------------------------------------------------
   insert into _r values ('01 vencido y con tarjeta',
@@ -89,8 +89,8 @@ begin
   -- ---- La renovación no le come días al que todavía tiene --------------------
   s := public.activar_plus(c, 2500, null);
   insert into _r values ('09 renovar no pisa los dias que quedaban',
-    case when s.desde = current_date + 29
-          and s.hasta = ((current_date + 29) + interval '1 month')::date
+    case when s.desde = public.hoy() + 29
+          and s.hasta = ((public.hoy() + 29) + interval '1 month')::date
          then 'OK  se le suma un mes a lo que tenia'
          else format('MAL  %s -> %s', s.desde, s.hasta) end);
 
