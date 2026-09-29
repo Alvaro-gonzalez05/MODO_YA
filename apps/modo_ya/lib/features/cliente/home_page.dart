@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import '../../comun/notificaciones.dart';
 import 'carrito.dart';
 import 'comidas.dart';
 import 'cuenta_cliente_page.dart';
@@ -85,6 +86,8 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
             ),
           ),
         ),
+        const SizedBox(width: MySpacing.xs),
+        const MiCampanita(),
         const SizedBox(width: MySpacing.xs),
         GestureDetector(
           onTap: () => mostrarCuentaCliente(context, ref),

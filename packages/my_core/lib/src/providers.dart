@@ -6,6 +6,7 @@ import 'models/models.dart';
 import 'repositories/campanias_repository.dart';
 import 'repositories/carteles_repository.dart';
 import 'repositories/liquidaciones_repository.dart';
+import 'repositories/notificaciones_repository.dart';
 import 'repositories/pagos_repository.dart';
 import 'repositories/catalogo_repository.dart';
 import 'repositories/comercios_repository.dart';
@@ -36,6 +37,7 @@ final pagosRepositoryProvider = Provider((_) => const PagosRepository());
 final liquidacionesRepositoryProvider = Provider((_) => const LiquidacionesRepository());
 final campaniasRepositoryProvider = Provider((_) => const CampaniasRepository());
 final promocionesRepositoryProvider = Provider((_) => const PromocionesRepository());
+final notificacionesRepositoryProvider = Provider((_) => const NotificacionesRepository());
 
 // ---- Comunes ----------------------------------------------------------------
 
@@ -255,6 +257,21 @@ final promocionesDelComercioProvider = StreamProvider<List<Promocion>>((ref) {
 /// Todas las promociones, para la administración.
 final promocionesDeTodosProvider = StreamProvider<List<Promocion>>(
   (ref) => ref.watch(promocionesRepositoryProvider).watchTodas(),
+);
+
+/// Todas las notificaciones, para la administración.
+final notificacionesProvider = StreamProvider<List<Notificacion>>(
+  (ref) => ref.watch(notificacionesRepositoryProvider).watchTodas(),
+);
+
+/// La bandeja de quien está usando la app (la campanita).
+final misNotificacionesProvider = StreamProvider<List<MiNotificacion>>(
+  (ref) => ref.watch(notificacionesRepositoryProvider).watchMias(),
+);
+
+/// Cuántas tiene sin leer, para el globito.
+final noLeidasProvider = Provider<int>(
+  (ref) => ref.watch(misNotificacionesProvider).value?.where((n) => !n.leida).length ?? 0,
 );
 
 /// MODO YA Plus del cliente.

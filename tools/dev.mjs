@@ -20,14 +20,19 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { createReadStream, existsSync, mkdirSync, readdirSync, rmSync, statSync, watch } from 'node:fs';
 import { createServer } from 'node:http';
-import { networkInterfaces } from 'node:os';
+import { networkInterfaces, tmpdir } from 'node:os';
 import { extname, join, normalize, resolve } from 'node:path';
 
 const app = process.argv[2] ?? 'modo_ya';
 const puerto = Number(process.argv[3] ?? 5051);
 const origen = resolve(import.meta.dirname, '..');
-const copia = 'D:/dev/modoya-dev';
-const temporales = 'D:/dev/tmp';
+
+// D: es el disco de trabajo de la PC donde se escribio esto. En una PC que no
+// lo tenga (o para elegir otro lado) se usa MODOYA_DEV_DIR, y si no el
+// temporal del sistema: lo unico que importa es que no sea C:\Users\...
+const base = process.env.MODOYA_DEV_DIR ?? (existsSync('D:/') ? 'D:/dev' : join(tmpdir(), 'modoya'));
+const copia = join(base, 'modoya-dev');
+const temporales = join(base, 'tmp');
 const web = normalize(join(copia, 'apps', app, 'build', 'web'));
 
 mkdirSync(temporales, { recursive: true });
@@ -40,7 +45,28 @@ const limpiarTemporales = () => {
   }
 };
 
-// ---- Copia a D: -------------------------------------------------------------
+// ---- Donde esta Flutter -----------------------------------------------------
+//
+// Si esta en el PATH alcanza con "flutter". En una PC donde no lo este (pasa
+// seguido en Windows) se busca en las instalaciones tipicas, o se fuerza con
+// la variable FLUTTER_BIN.
+function buscarFlutter() {
+  if (process.env.FLUTTER_BIN) return process.env.FLUTTER_BIN;
+  const donde = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['flutter'], { encoding: 'utf8' });
+  if (donde.status === 0) return 'flutter';
+  const candidatos = [
+    'C:/src/flutter/bin/flutter.bat',
+    join(process.env.LOCALAPPDATA ?? '', 'flutter', 'bin', 'flutter.bat'),
+    join(process.env.USERPROFILE ?? '', 'flutter', 'bin', 'flutter.bat'),
+  ];
+  return candidatos.find((c) => existsSync(c)) ?? 'flutter';
+}
+
+const flutter = buscarFlutter();
+// spawn va con shell: un .bat necesita shell, y la ruta puede tener espacios.
+const flutterCmd = flutter.includes(' ') ? `"${flutter}"` : flutter;
+
+// ---- Copia al disco de trabajo ----------------------------------------------
 
 function sincronizar() {
   // robocopy /MIR: solo copia lo que cambio. Codigos < 8 son exito.
@@ -64,7 +90,7 @@ function compilar() {
   sincronizar();
   const inicio = Date.now();
   console.log(`\n>> Compilando ${app}...`);
-  const f = spawn('flutter', ['build', 'web', '--release', '--dart-define-from-file=../../env/dev.json'], {
+  const f = spawn(flutterCmd, ['build', 'web', '--release', '--dart-define-from-file=../../env/dev.json'], {
     cwd: join(copia, 'apps', app),
     shell: true,
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -126,7 +152,7 @@ const avisarRecarga = () => { for (const r of navegadores) r.write('data: recarg
 const ips = Object.values(networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4' && !i.internal).map((i) => i.address);
 console.log(`>> MODO YA (${app}) en http://localhost:${puerto}`);
 for (const ip of ips) console.log(`>> Desde el celular (misma wifi): http://${ip}:${puerto}`);
-console.log('>> Compila en D:\\dev\\modoya-dev. Cada cambio tarda ~1 minuto en verse.');
+console.log(`>> Compila en ${copia}. Cada cambio tarda ~1 minuto en verse.`);
 
 compilar();
 

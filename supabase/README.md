@@ -55,6 +55,7 @@ van en una migración nueva.
 | `0044_avisos_de_mercado_pago.sql` | buzón de webhooks de Mercado Pago (`mp_notificaciones`) |
 | `0045_orden_de_mercado_pago.sql` | el pago guarda también el id de la orden (API de Orders) |
 | `0046_el_dia_es_el_de_malargue.sql` | **arreglo**: el día lo deciden `hoy()` y `dia()` (hora de Malargüe), no el UTC del servidor |
+| `0047_notificaciones.sql` | mensajes de la administración a un segmento de gente, con la bandeja de cada uno |
 
 ## Decisiones de diseño
 
@@ -325,6 +326,31 @@ porcentaje vigente, que la vidriera muestra como "20% OFF".
 `tests/promociones.sql` recorre el circuito entero (13 comprobaciones: alcances,
 días, vencimiento, pausa, cuál gana, el precio cobrado y la liquidación).
 
+## Notificaciones
+
+La administración escribe un mensaje y elige a quién le llega: todos, los
+clientes, los que hoy tienen Plus, los que hace N días que no piden, los locales
+o los riders. `destinatarios()` resuelve el segmento y `enviar_notificacion()`
+deja **una fila por destinatario** en `notificacion_envios`.
+
+Es fila por persona, y no "un mensaje para todos", por tres razones: cada uno ve
+solo lo suyo (RLS), se sabe quién la abrió (`leida_en`, que es lo que muestra
+`v_notificaciones_admin` como "llegó a 140, la abrieron 12"), y el día que haya
+push cada fila ya sabe a quién mandárselo.
+
+El mismo `alcance_de()` que muestra "le llega a 143 personas" antes de mandar es
+el que se usa al mandar: el número que se ve no puede separarse del que se usa.
+Una notificación enviada no se manda dos veces ni se edita; `alcance` queda
+congelado, porque es a cuánta gente le llegó *ese día*.
+
+**Cómo llega, hoy:** dentro de la app, en la campanita del cliente, en vivo por
+Realtime. **Push al celular con la app cerrada:** pendiente, necesita un proyecto
+de Firebase. Cuando esté, se suma una tabla de tokens y una Edge Function que
+además de insertar el envío le pegue a FCM; estas tablas no cambian.
+
+`tests/notificaciones.sql` recorre los segmentos, el envío, que no se mande dos
+veces y que nadie vea la notificación de otro.
+
 ## Fotos
 
 | Bucket | Acceso | Ruta |
@@ -445,6 +471,10 @@ cómo queda la liquidación.
 
 **`tests/renovacion_plus.sql`** — a quién le toca renovar Plus hoy (y a quién
 no), los tres intentos y el interruptor del cliente.
+
+**`tests/notificaciones.sql`** — notificaciones: a quién le llega cada segmento,
+que el alcance que se muestra sea el que se manda, que no se mande dos veces y
+que un cliente no vea ni la notificación de otro ni la lista de destinatarios.
 
 **`tests/flujo_marketplace.sql`** — marketplace. Carrito con opciones → pago →
 aceptación → preparación → entrega. Además de los precios y la sincronía entre

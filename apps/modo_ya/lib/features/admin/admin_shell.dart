@@ -40,6 +40,7 @@ class AdminShell extends ConsumerWidget {
         const MyDestino(icon: Symbols.route, label: 'Envíos'),
         const MyDestino(icon: Symbols.tune, label: 'Tarifas y reglas'),
         const MyDestino(icon: Symbols.campaign, label: 'Carteles'),
+        const MyDestino(icon: Symbols.notifications, label: 'Notificaciones'),
       ],
       indice: navigationShell.currentIndex,
       onSelect: (i) => navigationShell.goBranch(i, initialLocation: i == navigationShell.currentIndex),
