@@ -27,9 +27,9 @@
       "runtimeArgs": [
         "tools/servir.mjs",
         "apps/modo_ya/build/web",
-        "5061"
+        "5071"
       ],
-      "port": 5061
+      "port": 5071
     },
     {
       "name": "repartidor-web",
@@ -37,9 +37,9 @@
       "runtimeArgs": [
         "tools/servir.mjs",
         "apps/repartidor/build/web",
-        "5062"
+        "5072"
       ],
-      "port": 5062
+      "port": 5072
     }
   ]
 }

@@ -6,6 +6,7 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import '../../comun/menu_usuario.dart';
+import '../../comun/notificaciones.dart';
 
 /// Contenedor de las pantallas del local: barra lateral en la PC, dock en el
 /// celular. Avisa de los pedidos nuevos esté donde esté: el timbre suena en
@@ -71,6 +72,7 @@ class ComercioShell extends ConsumerWidget {
             ),
       version: versionVisible,
       mostrarDock: enRaiz,
+      accionBarra: const MiCampanita(),
       body: navigationShell,
       ),
     );

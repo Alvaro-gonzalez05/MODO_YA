@@ -6,6 +6,7 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import '../../comun/menu_usuario.dart';
+import '../../comun/notificaciones.dart';
 
 export '../../comun/estados_ui.dart';
 
@@ -54,6 +55,7 @@ class AdminShell extends ConsumerWidget {
       ),
       version: versionVisible,
       mostrarDock: enRaiz,
+      accionBarra: const MiCampanita(),
       body: navigationShell,
     );
   }

@@ -6,6 +6,7 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import '../../comun/menu_usuario.dart';
+import '../../comun/notificaciones.dart';
 import 'carrito.dart';
 import 'cuenta_cliente_page.dart';
 
@@ -62,6 +63,9 @@ class ClienteShell extends ConsumerWidget {
       ),
       version: versionVisible,
       mostrarDock: enRaiz,
+      // En el celular la campanita va en la cabecera del inicio; en la PC esa
+      // cabecera no existe y sin esto no habria manera de ver las novedades.
+      accionBarra: const MiCampanita(),
       body: navigationShell,
     );
   }

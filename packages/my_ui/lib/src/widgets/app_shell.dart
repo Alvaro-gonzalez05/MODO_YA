@@ -60,7 +60,13 @@ class MyAppShell extends StatelessWidget {
     this.version,
     this.mostrarDock = true,
     this.maxEnDock = 5,
+    this.accionBarra,
   });
+
+  /// Va en la barra superior de escritorio, antes del sol/luna. En el celular
+  /// esa barra no existe, así que la pantalla lo pone en su propia cabecera
+  /// (la campanita del cliente, por ejemplo).
+  final Widget? accionBarra;
 
   final List<MyDestino> destinos;
   final int indice;
@@ -111,6 +117,7 @@ class MyAppShell extends StatelessWidget {
                   usuarioNombre: usuarioNombre,
                   usuarioDetalle: usuarioDetalle,
                   acciones: accionesUsuario,
+                  extra: accionBarra,
                 ),
                 Expanded(child: MyCambioDePestania(indice: indice, child: body)),
               ],
@@ -418,12 +425,14 @@ class _BarraSuperior extends StatelessWidget {
     required this.usuarioNombre,
     required this.usuarioDetalle,
     required this.acciones,
+    required this.extra,
   });
 
   final Widget? estado;
   final String usuarioNombre;
   final String? usuarioDetalle;
   final List<MyAccionUsuario> acciones;
+  final Widget? extra;
 
   @override
   Widget build(BuildContext context) {
@@ -444,6 +453,10 @@ class _BarraSuperior extends StatelessWidget {
             Expanded(
               child: Align(alignment: Alignment.centerLeft, child: estado ?? const SizedBox()),
             ),
+            if (extra != null) ...[
+              extra!,
+              const SizedBox(width: MySpacing.md),
+            ],
             const _BotonTema(),
             const SizedBox(width: MySpacing.md),
             MenuAnchor(
