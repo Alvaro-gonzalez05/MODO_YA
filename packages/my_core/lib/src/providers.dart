@@ -259,6 +259,11 @@ final promocionesDeTodosProvider = StreamProvider<List<Promocion>>(
   (ref) => ref.watch(promocionesRepositoryProvider).watchTodas(),
 );
 
+/// Los mandados que pidió el cliente de la sesión.
+final misMandadosProvider = StreamProvider<List<Envio>>(
+  (ref) => ref.watch(enviosRepositoryProvider).watchMisMandados(),
+);
+
 /// Los riders que el local puede elegir como suyos.
 final ridersParaElegirProvider = StreamProvider<List<RiderParaElegir>>(
   (ref) => ref.watch(repartidoresRepositoryProvider).watchParaElegir(),

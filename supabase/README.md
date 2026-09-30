@@ -60,6 +60,7 @@ van en una migración nueva.
 | `0049_el_precio_de_plus_no_se_pierde.sql` | **arreglo**: guardar tarifas devolvía el precio de Plus a $2.500 |
 | `0050_varios_recordatorios.sql` | el carrito abandonado puede insistir en varios momentos |
 | `0051_rider_propio_del_local.sql` | al local se le ofrecen sus envíos primero a sus riders de confianza |
+| `0052_mandados_del_cliente.sql` | el cliente puede pedir un rider para que le retire algo y se lo lleve |
 
 ## Decisiones de diseño
 
@@ -307,6 +308,33 @@ toca, a quién no, y que el día del mes no se corra.
 > Cobrar una tarjeta guardada sin pedir el código de seguridad es lo que
 > Mercado Pago llama pago recurrente: se pide un token con el `card_id` y se
 > cobra con ese token. Hace falta tenerlo habilitado en la cuenta.
+
+## Mandados del cliente
+
+Un cliente puede pedir un rider sin que haya un local de por medio: "retirame
+esto de acá y llevalo allá" (0052). Por eso `envios.comercio_id` dejó de ser
+obligatorio y apareció `cliente_id`: un envío es **de un local o de un cliente**,
+y una restricción impide que sea de los dos o de ninguno.
+
+**El rider no adelanta plata.** Solo retira y entrega algo que ya está pago o
+listo. Que ponga plata de su bolsillo abre otro problema (topes, qué pasa si el
+cliente no aparece) y se dejó afuera a propósito.
+
+Qué hay que retirar va en `origen_referencia`, que es justo lo que el rider
+necesita leer al llegar al punto de retiro.
+
+El mandado se paga **al rider, en efectivo, al entregar**: `cobrar_al_entregar`
+sale con el total y `cobro_metodo` en efectivo, o sea el mismo cobro en mano que
+el rider ya sabe hacer. No hay pasarela de por medio.
+
+`crear_mandado()` **crea el envío y arranca la búsqueda en una sola llamada**, a
+diferencia del envío del local, que lo hace en dos RPC sin transacción y puede
+dejar uno trabado en `cotizado` si falla la segunda (hallazgo 10 de
+`docs/hallazgos-de-la-revision.md`).
+
+`tests/mandados.sql` cubre la cotización, que exija decir qué retirar, que el
+precio lo ponga el servidor, que salga a buscar rider, que un cliente no vea ni
+cancele el mandado de otro, y que no entre un envío sin local ni cliente.
 
 ## El rider propio del local
 

@@ -75,6 +75,70 @@ class EnviosRepository {
         return Cotizacion.fromJson(Map<String, dynamic>.from(r as Map));
       });
 
+  /// Cuánto sale un mandado, antes de pedirlo.
+  Future<({int total, double distanciaKm, int minutos})> cotizarMandado({
+    required double origenLat,
+    required double origenLng,
+    required double destinoLat,
+    required double destinoLng,
+  }) =>
+      intentar(() async {
+        final r = await _db.rpc('cotizar_mandado', params: {
+          'p_origen_lat': origenLat,
+          'p_origen_lng': origenLng,
+          'p_destino_lat': destinoLat,
+          'p_destino_lng': destinoLng,
+        }) as List;
+        final f = Map<String, dynamic>.from(r.first as Map);
+        return (
+          total: Fila.entero(f, 'total'),
+          distanciaKm: Fila.decimal(f, 'distancia_km'),
+          minutos: Fila.entero(f, 'minutos_estimados'),
+        );
+      });
+
+  /// El cliente pide un rider para un mandado: retirar algo y llevárselo.
+  ///
+  /// Una sola llamada crea el envío y arranca la búsqueda, para que no pueda
+  /// quedar uno a medio confirmar si se corta entre medio.
+  Future<String> pedirMandado({
+    required String origenCalle,
+    required double origenLat,
+    required double origenLng,
+    required String destinoCalle,
+    required double destinoLat,
+    required double destinoLng,
+    required String queRetirar,
+    String? destinoReferencia,
+  }) =>
+      intentar(() async {
+        final creado = await _db.rpc('crear_mandado', params: {
+          'p_origen_calle': origenCalle,
+          'p_origen_lat': origenLat,
+          'p_origen_lng': origenLng,
+          'p_destino_calle': destinoCalle,
+          'p_destino_lat': destinoLat,
+          'p_destino_lng': destinoLng,
+          'p_que_retirar': queRetirar.trim(),
+          'p_destino_referencia': destinoReferencia,
+        });
+        return Fila.texto(Map<String, dynamic>.from(creado as Map), 'id');
+      });
+
+  /// Los mandados del cliente que está usando la app.
+  Stream<List<Envio>> watchMisMandados() => enVivo(
+        canal: 'mis-mandados',
+        tablas: const ['envios'],
+        leer: () async => (await _db
+                .from('v_envios')
+                .select()
+                .not('cliente_id', 'is', null)
+                .order('creado_en', ascending: false)
+                .limit(30))
+            .map(Envio.fromRow)
+            .toList(),
+      );
+
   /// Crea el envio y arranca la busqueda de rider.
   Future<String> crearYBuscar({
     required String calle,

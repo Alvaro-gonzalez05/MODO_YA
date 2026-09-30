@@ -122,6 +122,39 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
               ? const _Carteles(key: ValueKey('carteles'))
               : _BannerCarrito(key: const ValueKey('carrito'), carrito: carrito),
         ),
+        const SizedBox(height: MySpacing.md),
+        MyCard(
+          onTap: () => context.go('/cliente/mandados'),
+          padding: const EdgeInsets.all(MySpacing.sm),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: MyColors.primary,
+                  borderRadius: BorderRadius.circular(MyRadius.card),
+                ),
+                child: Icon(Symbols.sports_motorsports, fill: 1, color: MyColors.onPrimary),
+              ),
+              const SizedBox(width: MySpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('¿Necesitás un mandado?', style: MyType.labelLg),
+                    Text(
+                      'Un rider te retira algo y te lo lleva',
+                      style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Symbols.chevron_right, color: MyColors.outline),
+            ],
+          ),
+        ),
         const SizedBox(height: MySpacing.lg),
         const MySectionHeader(title: '¿Qué comemos?'),
         const SizedBox(height: MySpacing.sm),

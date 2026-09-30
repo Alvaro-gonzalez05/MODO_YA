@@ -25,7 +25,9 @@ import 'features/cliente/cuenta_cliente_page.dart';
 import 'features/cliente/direcciones_page.dart';
 import 'features/cliente/home_page.dart';
 import 'features/cliente/local_page.dart';
+import 'features/cliente/mis_mandados_page.dart';
 import 'features/cliente/mis_pedidos_page.dart';
+import 'features/cliente/pedir_mandado_page.dart';
 import 'features/cliente/pago_page.dart';
 import 'features/cliente/plus_page.dart';
 import 'features/cliente/pedido_seguimiento_page.dart';
@@ -117,6 +119,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(path: 'pagar/:id', builder: (_, st) => PagoPage(pedidoId: st.pathParameters['id']!)),
                 GoRoute(path: 'plus', builder: (_, _) => const PlusPage()),
                 GoRoute(path: 'direcciones', builder: (_, _) => const DireccionesPage()),
+                GoRoute(
+                  path: 'mandados',
+                  builder: (_, _) => const MisMandadosPage(),
+                  routes: [
+                    GoRoute(path: 'nuevo', builder: (_, _) => const PedirMandadoPage()),
+                  ],
+                ),
               ],
             ),
           ]),
