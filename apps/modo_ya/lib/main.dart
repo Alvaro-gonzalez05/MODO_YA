@@ -34,6 +34,10 @@ Future<void> main() async {
         ),
       );
 
+  // Firebase, para las notificaciones con la app cerrada. Es opcional: si
+  // falla, la app arranca igual y los avisos se ven en la campanita.
+  await MyPush.iniciar();
+
   try {
     await Backend.inicializar();
   } catch (e) {
@@ -55,13 +59,40 @@ class AppModoYa extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Anota el celular para las notificaciones mientras haya sesión.
+    ref.watch(pushProvider);
+
+    final router = ref.watch(routerProvider);
+
+    // Tocar una notificación abre la pantalla que corresponde. El pedido manda
+    // sobre el destino: si el aviso salió porque quedó un pedido sin pagar, lo
+    // único que sirve es abrir el pago de ese pedido.
+    ref.listen(pushDestinoProvider, (_, valor) {
+      final datos = valor.value;
+      if (datos == null) return;
+      final pedido = datos['pedido_id'];
+      if (pedido != null && pedido.isNotEmpty) {
+        router.go('/cliente/pagar/$pedido');
+        return;
+      }
+      final ruta = switch (datos['destino']) {
+        'inicio' => '/cliente',
+        'mis_pedidos' => '/cliente/pedidos',
+        'plus' => '/cliente/plus',
+        'local' when (datos['destino_id'] ?? '').isNotEmpty =>
+          '/cliente/local/${datos['destino_id']}',
+        _ => null,
+      };
+      if (ruta != null) router.go(ruta);
+    });
+
     return MaterialApp.router(
       title: 'MODO YA',
       debugShowCheckedModeBanner: false,
       theme: MyTheme.claro,
       darkTheme: MyTheme.oscuro,
       themeMode: ref.watch(temaProvider),
-      routerConfig: ref.watch(routerProvider),
+      routerConfig: router,
       // Aviso de version nueva, encima de todas las pantallas.
       builder: (context, child) => MyAvisoActualizacion(
         app: 'modo_ya',

@@ -32,6 +32,10 @@ Future<void> main() async {
         ),
       );
 
+  // Firebase, para las notificaciones con la app cerrada. Es opcional: si
+  // falla, la app arranca igual y los avisos se ven en la campanita.
+  await MyPush.iniciar();
+
   try {
     await Backend.inicializar();
   } catch (e) {

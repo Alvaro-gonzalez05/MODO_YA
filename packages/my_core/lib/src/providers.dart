@@ -16,6 +16,7 @@ import 'repositories/pedidos_repository.dart';
 import 'repositories/promociones_repository.dart';
 import 'repositories/repartidores_repository.dart';
 import 'repositories/tarifas_repository.dart';
+import 'push.dart';
 import 'sesion.dart';
 
 // ---- Repositorios -----------------------------------------------------------
@@ -38,6 +39,27 @@ final liquidacionesRepositoryProvider = Provider((_) => const LiquidacionesRepos
 final campaniasRepositoryProvider = Provider((_) => const CampaniasRepository());
 final promocionesRepositoryProvider = Provider((_) => const PromocionesRepository());
 final notificacionesRepositoryProvider = Provider((_) => const NotificacionesRepository());
+
+/// Anota el celular para recibir notificaciones cuando alguien entra, y lo
+/// olvida cuando sale.
+///
+/// Va atado a la sesión y no al arranque de la app: antes de saber quién es no
+/// hay a quién anotarle el token, y si no se borrara al salir, el que preste el
+/// celular recibiría las notificaciones del dueño anterior.
+final pushProvider = Provider<void>((ref) {
+  ref.listen<AsyncValue<Sesion?>>(sesionActualProvider, (antes, ahora) {
+    final habia = antes?.value != null;
+    final hay = ahora.value != null;
+    if (hay && !habia) MyPush.registrar();
+    if (habia && !hay) MyPush.olvidar();
+  }, fireImmediately: true);
+});
+
+/// Lo que traía la última notificación que se tocó, para que la app navegue.
+/// Null hasta que se toque alguna.
+final pushDestinoProvider = StreamProvider<Map<String, String>?>(
+  (ref) => MyPush.alTocar.stream,
+);
 
 // ---- Comunes ----------------------------------------------------------------
 
