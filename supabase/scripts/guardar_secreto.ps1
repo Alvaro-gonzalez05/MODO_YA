@@ -6,6 +6,12 @@
     .\supabase\scripts\guardar_secreto.ps1 MP_ACCESS_TOKEN
     .\supabase\scripts\guardar_secreto.ps1 MP_WEBHOOK_SECRET
 
+  Si el secreto tiene varias lineas (la clave de servicio de Firebase es un
+  JSON entero), no se puede pegar: Read-Host corta en el primer Enter. Para eso
+  se lee del archivo, sin mostrarlo. Conviene borrar el archivo despues:
+
+    .\supabase\scripts\guardar_secreto.ps1 FCM_SERVICE_ACCOUNT -DesdeArchivo "$env:USERPROFILE\Downloads\modo-ya-firebase-adminsdk.json"
+
   Con -Listar muestra que secretos hay cargados (solo los nombres):
 
     .\supabase\scripts\guardar_secreto.ps1 -Listar
@@ -19,6 +25,7 @@
 #>
 param(
   [Parameter(Position = 0)][string]$Nombre,
+  [string]$DesdeArchivo,
   [switch]$Listar,
   [switch]$Borrar
 )
@@ -48,10 +55,18 @@ if ($Borrar) {
   return
 }
 
-# -AsSecureString: no se ve al tipear y no queda en el historial de PowerShell.
-$seguro = Read-Host "Pegá el valor de $Nombre" -AsSecureString
-$valor = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-  [Runtime.InteropServices.Marshal]::SecureStringToBSTR($seguro))
+if ($DesdeArchivo) {
+  # Un secreto de varias lineas (la clave de servicio de Firebase es un JSON
+  # entero) no se puede pegar en el prompt: Read-Host corta en el primer Enter.
+  # Se lee del archivo tal cual, sin mostrarlo.
+  if (-not (Test-Path $DesdeArchivo)) { throw "No encuentro el archivo: $DesdeArchivo" }
+  $valor = [System.IO.File]::ReadAllText((Resolve-Path $DesdeArchivo), [System.Text.Encoding]::UTF8)
+} else {
+  # -AsSecureString: no se ve al tipear y no queda en el historial de PowerShell.
+  $seguro = Read-Host "Pegá el valor de $Nombre (si tiene varias líneas, usá -DesdeArchivo)" -AsSecureString
+  $valor = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+    [Runtime.InteropServices.Marshal]::SecureStringToBSTR($seguro))
+}
 
 if ([string]::IsNullOrWhiteSpace($valor)) { throw 'No pegaste nada' }
 $valor = $valor.Trim()
@@ -63,11 +78,13 @@ if ($Nombre -eq 'MP_ACCESS_TOKEN') {
   else { Write-Host 'No parece un access token de Mercado Pago (no empieza con TEST- ni APP_USR-).' -ForegroundColor Red }
 }
 
+$largo = $valor.Length
+
 Invoke-RestMethod -Uri $api -Method Post -Headers $h -ContentType 'application/json' `
   -Body (ConvertTo-Json @(@{ name = $Nombre; value = $valor })) | Out-Null
 
 $valor = $null
 [GC]::Collect()
 
-Write-Host "guardado: $Nombre (largo $($seguro.Length) caracteres)"
+Write-Host "guardado: $Nombre (largo $largo caracteres)"
 Write-Host 'Las Edge Functions lo toman en la proxima llamada. No hace falta republicar.'

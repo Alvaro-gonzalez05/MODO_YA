@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1004665051006",
+    "project_id": "modo-ya",
+    "storage_bucket": "modo-ya.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1004665051006:android:50cb01ddcf8e766ebd052f",
+        "android_client_info": {
+          "package_name": "com.modoya.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZzkaRSifCnc_jH5nqmTjmeYXyvIc-9mc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1004665051006:android:93c63dd9d000d90fbd052f",
+        "android_client_info": {
+          "package_name": "com.modoya.modo_ya_repartidor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZzkaRSifCnc_jH5nqmTjmeYXyvIc-9mc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
