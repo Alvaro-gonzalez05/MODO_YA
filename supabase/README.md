@@ -61,6 +61,7 @@ van en una migración nueva.
 | `0050_varios_recordatorios.sql` | el carrito abandonado puede insistir en varios momentos |
 | `0051_rider_propio_del_local.sql` | al local se le ofrecen sus envíos primero a sus riders de confianza |
 | `0052_mandados_del_cliente.sql` | el cliente puede pedir un rider para que le retire algo y se lo lleve |
+| `0053_push_al_celular.sql` | tokens de celular y el cron que empuja lo que quedó sin mandar |
 
 ## Decisiones de diseño
 
@@ -396,10 +397,42 @@ el que se usa al mandar: el número que se ve no puede separarse del que se usa.
 Una notificación enviada no se manda dos veces ni se edita; `alcance` queda
 congelado, porque es a cuánta gente le llegó *ese día*.
 
-**Cómo llega, hoy:** dentro de la app, en la campanita del cliente, en vivo por
-Realtime. **Push al celular con la app cerrada:** pendiente, necesita un proyecto
-de Firebase. Cuando esté, se suma una tabla de tokens y una Edge Function que
-además de insertar el envío le pegue a FCM; estas tablas no cambian.
+**Cómo llega:** dentro de la app en la campanita (en vivo por Realtime), y al
+celular con la app cerrada por push (0053).
+
+### El push
+
+**Firebase entra solo como el caño.** Los datos siguen enteros en Supabase y la
+app los lee de acá; FCM se usa únicamente porque es lo único que despierta un
+Android con la app cerrada, ya que el sistema operativo mantiene una sola
+conexión para todas las apps en vez de una por app.
+
+Dos secretos hacen falta: `FCM_SERVICE_ACCOUNT` en los secretos de las Edge
+Functions (el JSON entero de la cuenta de servicio de Firebase) y los
+`google-services.json` en `apps/*/android/app/`. Esos últimos **sí van al
+repo**: viajan dentro del APK, cualquiera los saca de ahí, y la clave
+`AIzaSy...` que traen es un identificador de la app, no un secreto. Lo que la
+protege son las restricciones de la clave en Google Cloud (apps Android +
+solo la API de FCM), no esconderla.
+
+El envío sale **por cron y no al insertar la fila** (`empujar-notificaciones`,
+cada minuto, llama a la Edge Function `enviar-push`). Si el push falla —sin
+señal, token vencido, Google caído— la fila queda con `push_enviado_en` nulo y
+se reintenta sola. Colgado del insert, un fallo se perdería sin que nadie se
+entere. Solo se miran las últimas 6 horas: una notificación de anteayer que no
+salió ya no sirve empujarla.
+
+El texto sale de `v_notificaciones`, la misma vista que lee la app, así el
+`{nombre}` se reemplaza en un solo lugar y el push dice exactamente lo mismo que
+la campanita.
+
+Un token que FCM rechaza por `UNREGISTERED` (desinstaló la app o limpió los
+datos) **se borra**: si no, la tabla se llena de celulares muertos y cada vuelta
+se gastan llamadas en ellos.
+
+**Solo Android por ahora.** iOS necesita cuenta de desarrollador de Apple y
+certificados; Windows no lo soporta FCM, y ahí importa menos porque la app está
+abierta mientras se usa y recibe todo en vivo por Realtime.
 
 `tests/notificaciones.sql` recorre los segmentos, el envío, que no se mande dos
 veces y que nadie vea la notificación de otro.
