@@ -259,6 +259,11 @@ final promocionesDeTodosProvider = StreamProvider<List<Promocion>>(
   (ref) => ref.watch(promocionesRepositoryProvider).watchTodas(),
 );
 
+/// Los riders que el local puede elegir como suyos.
+final ridersParaElegirProvider = StreamProvider<List<RiderParaElegir>>(
+  (ref) => ref.watch(repartidoresRepositoryProvider).watchParaElegir(),
+);
+
 /// Todas las notificaciones, para la administración.
 final notificacionesProvider = StreamProvider<List<Notificacion>>(
   (ref) => ref.watch(notificacionesRepositoryProvider).watchTodas(),

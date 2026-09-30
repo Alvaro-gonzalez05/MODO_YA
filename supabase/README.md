@@ -58,6 +58,8 @@ van en una migración nueva.
 | `0047_notificaciones.sql` | mensajes de la administración a un segmento de gente, con la bandeja de cada uno |
 | `0048_notificaciones_automaticas.sql` | carrito abandonado y clientes dormidos, y `{nombre}` en el texto |
 | `0049_el_precio_de_plus_no_se_pierde.sql` | **arreglo**: guardar tarifas devolvía el precio de Plus a $2.500 |
+| `0050_varios_recordatorios.sql` | el carrito abandonado puede insistir en varios momentos |
+| `0051_rider_propio_del_local.sql` | al local se le ofrecen sus envíos primero a sus riders de confianza |
 
 ## Decisiones de diseño
 
@@ -305,6 +307,27 @@ toca, a quién no, y que el día del mes no se corra.
 > Cobrar una tarjeta guardada sin pedir el código de seguridad es lo que
 > Mercado Pago llama pago recurrente: se pide un token con el `card_id` y se
 > cobra con ese token. Hace falta tenerlo habilitado en la cuenta.
+
+## El rider propio del local
+
+Un local con un cadete de confianza lo marca en Mi local → Mis riders y sus
+envíos **se le ofrecen primero a él** (0051).
+
+Es lo único que cambia. **La plata queda igual**: MODO YA cobra su comisión y le
+liquida al rider como a cualquier otro, así no hay dos formas de cobrar el mismo
+servicio ni un caso aparte en la liquidación.
+
+Es preferencia, no exclusividad: si no contesta a tiempo, `ofrecer_al_siguiente`
+sigue con el resto. Un envío no puede quedar trabado porque el cadete de
+confianza dejó el celular en la mochila.
+
+El rider del local **no pasa por el filtro de radio**. El radio existe para no
+ofrecerle un envío a alguien que está lejos y va a tardar; si el local lo eligió
+a propósito, que esté a cuatro cuadras o a tres kilómetros lo decide el local.
+
+`tests/rider_propio.sql` comprueba las cuatro cosas: sin vínculo gana el más
+cercano, con vínculo gana el del local aunque esté a 9 km, si rechaza el envío
+sigue buscando, y la cotización no cambió.
 
 ## Promociones del local
 

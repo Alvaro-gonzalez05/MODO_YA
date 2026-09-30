@@ -35,6 +35,30 @@ class CuentaLocalPage extends ConsumerWidget {
             final datos = _Datos(comercio: comercio);
             final ubicacion = _Ubicacion(comercio: comercio);
             final horarios = _ResumenHorarios(comercioId: comercio.id);
+            final riders = MyCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Mis riders', style: MyType.headlineSm),
+                  const SizedBox(height: MySpacing.xxs),
+                  Text(
+                    '¿Tenés un cadete de confianza? Marcalo y tus envíos se le '
+                    'ofrecen a él primero. Si no puede, los toma cualquier otro.',
+                    style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                  ),
+                  const SizedBox(height: MySpacing.md),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: MyBoton(
+                      label: 'Elegir mis riders',
+                      icon: Symbols.sports_motorsports,
+                      tipo: MyBotonTipo.secundario,
+                      onPressed: () => context.go('/local/cuenta/riders'),
+                    ),
+                  ),
+                ],
+              ),
+            );
             final seguridad = MyCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -72,7 +96,7 @@ class CuentaLocalPage extends ConsumerWidget {
             if (context.esMovil) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [perfil, espacio, datos, espacio, ubicacion, espacio, horarios, espacio, seguridad],
+                children: [perfil, espacio, datos, espacio, ubicacion, espacio, horarios, espacio, riders, espacio, seguridad],
               );
             }
             return Row(
@@ -88,7 +112,7 @@ class CuentaLocalPage extends ConsumerWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [ubicacion, espacio, horarios],
+                    children: [ubicacion, espacio, horarios, espacio, riders],
                   ),
                 ),
               ],

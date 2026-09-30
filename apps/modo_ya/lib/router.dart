@@ -37,6 +37,7 @@ import 'features/comercio/historial_page.dart';
 import 'features/comercio/horarios_page.dart';
 import 'features/comercio/inicio_page.dart';
 import 'features/comercio/menu_page.dart';
+import 'features/comercio/mis_riders_page.dart';
 import 'features/comercio/pedidos_local_page.dart';
 import 'features/comercio/producto_form_page.dart';
 import 'features/comercio/promociones_page.dart';
@@ -176,7 +177,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(
               path: '/local/cuenta',
               builder: (_, _) => const CuentaLocalPage(),
-              routes: [GoRoute(path: 'horarios', builder: (_, _) => const HorariosPage())],
+              routes: [
+                GoRoute(path: 'horarios', builder: (_, _) => const HorariosPage()),
+                GoRoute(path: 'riders', builder: (_, _) => const MisRidersPage()),
+              ],
             ),
           ]),
         ],
