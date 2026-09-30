@@ -193,7 +193,7 @@ class _Automatica extends ConsumerWidget {
                   !escrita
                       ? 'Todavía no sale'
                       : disparador == DisparadorNotificacion.carritoAbandonado
-                          ? 'A los ${n.minutosEspera} min · salió ${n.alcance} veces, abrieron ${n.leidas}'
+                          ? 'A los ${n.recordatorios.join(", ")} min · salió ${n.alcance} veces, abrieron ${n.leidas}'
                           : 'Sin pedir hace ${n.diasInactividad} días · salió ${n.alcance} veces, abrieron ${n.leidas}',
                   style: MyType.bodySm.copyWith(color: MyColors.secondary),
                   maxLines: 1,
@@ -565,7 +565,9 @@ class _EditarAutomaticaState extends ConsumerState<_EditarAutomatica> {
             ? 'Terminá de pagarlo antes de que se cancele.'
             : 'Hace rato no pedís. Mirá lo que hay hoy en MODO YA.'),
   );
-  late var _minutos = widget.notificacion?.minutosEspera ?? 10;
+  late final _minutos = {...?widget.notificacion?.recordatorios} .isEmpty
+      ? <int>{10}
+      : {...?widget.notificacion?.recordatorios};
   late var _dias = widget.notificacion?.diasInactividad ?? 30;
   late var _repetir = widget.notificacion?.repetirCadaDias ?? 30;
 
@@ -594,7 +596,7 @@ class _EditarAutomaticaState extends ConsumerState<_EditarAutomatica> {
             titulo: _titulo.text,
             cuerpo: _cuerpo.text,
             activa: widget.notificacion?.activa ?? true,
-            minutosEspera: _minutos,
+            recordatorios: _minutos.toList()..sort(),
             diasInactividad: _dias,
             repetirCadaDias: _repetir,
           );
@@ -642,20 +644,37 @@ class _EditarAutomaticaState extends ConsumerState<_EditarAutomatica> {
             const SizedBox(height: MySpacing.md),
 
             if (_esCarrito) ...[
-              const MyOverline('Esperar antes de escribirle'),
+              const MyOverline('Cuándo se le recuerda'),
               const SizedBox(height: MySpacing.xs),
               Wrap(
                 spacing: MySpacing.xs,
                 runSpacing: MySpacing.xs,
                 children: [
-                  for (final m in const [5, 10, 15, 20])
-                    MyChip('$m min', selected: _minutos == m, onTap: () => setState(() => _minutos = m)),
+                  for (final m in const [5, 10, 15, 20, 25])
+                    MyChip(
+                      '$m min',
+                      selected: _minutos.contains(m),
+                      // Siempre tiene que quedar al menos uno: una automatica
+                      // sin ningun momento no avisaria nunca.
+                      onTap: () => setState(() {
+                        if (!_minutos.remove(m)) _minutos.add(m);
+                        if (_minutos.isEmpty) _minutos.add(m);
+                      }),
+                    ),
                 ],
               ),
               const SizedBox(height: MySpacing.xs),
               Text(
-                'El pedido sin pagar se cancela solo a los 30 minutos, así que el '
-                'aviso tiene que salir antes para que todavía llegue a pagarlo.',
+                _minutos.length == 1
+                    ? 'Un solo aviso. Podés marcar varios para insistir.'
+                    : 'Le van a llegar ${_minutos.length} avisos, uno por cada momento marcado.',
+                style: MyType.labelMd,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'El pedido sin pagar se cancela solo a los 30 minutos, así que '
+                'todos los recordatorios entran antes: después avisarían por algo '
+                'que ya no existe.',
                 style: MyType.bodySm.copyWith(color: MyColors.secondary),
               ),
             ] else ...[

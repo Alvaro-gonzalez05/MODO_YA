@@ -75,7 +75,7 @@ void main() {
         titulo: '{nombre}, te quedó un pedido sin pagar',
         cuerpo: 'Terminá de pagarlo.',
         disparador: DisparadorNotificacion.carritoAbandonado,
-        minutosEspera: 10,
+        recordatorios: const [5, 12],
         alcance: 37,
         leidas: 9,
       );
@@ -87,7 +87,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(Switch), findsOneWidget);
-      expect(find.text('A los 10 min · salió 37 veces, abrieron 9'), findsOneWidget);
+      expect(find.text('A los 5, 12 min · salió 37 veces, abrieron 9'), findsOneWidget);
       // La que no esta escrita sigue ofreciendose.
       expect(find.text('Sin escribir'), findsOneWidget);
     });

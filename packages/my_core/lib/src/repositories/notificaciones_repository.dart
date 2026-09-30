@@ -84,7 +84,7 @@ class Notificacion {
     this.creadoEn,
     this.disparador,
     this.activa = true,
-    this.minutosEspera = 10,
+    this.recordatorios = const [10],
     this.repetirCadaDias = 30,
   });
 
@@ -111,8 +111,9 @@ class Notificacion {
   final DisparadorNotificacion? disparador;
   final bool activa;
 
-  /// Carrito abandonado: cuánto se espera antes de escribirle.
-  final int minutosEspera;
+  /// Carrito abandonado: a los cuántos minutos sale cada recordatorio. Todos
+  /// menores a 30, que es cuando el pedido sin pagar se cancela solo.
+  final List<int> recordatorios;
 
   /// Cliente dormido: cada cuánto, como mucho, se le vuelve a escribir.
   final int repetirCadaDias;
@@ -134,7 +135,10 @@ class Notificacion {
         creadoEn: Fila.fechaOpcional(f, 'creado_en'),
         disparador: DisparadorNotificacion.fromWire(f['disparador'] as String?),
         activa: Fila.booleano(f, 'activa', true),
-        minutosEspera: Fila.entero(f, 'minutos_espera', 10),
+        recordatorios: ((f['recordatorios'] as List?) ?? const [10])
+            .map((e) => (e as num).toInt())
+            .toList()
+          ..sort(),
         repetirCadaDias: Fila.entero(f, 'repetir_cada_dias', 30),
       );
 }
@@ -268,7 +272,7 @@ class NotificacionesRepository {
     required String cuerpo,
     String? id,
     bool activa = true,
-    int minutosEspera = 10,
+    List<int> recordatorios = const [10],
     int diasInactividad = 30,
     int repetirCadaDias = 30,
   }) =>
@@ -278,7 +282,7 @@ class NotificacionesRepository {
           'cuerpo': cuerpo.trim(),
           'disparador': disparador.wire,
           'activa': activa,
-          'minutos_espera': minutosEspera,
+          'recordatorios': (recordatorios.toSet().toList()..sort()),
           'dias_inactividad': diasInactividad,
           'repetir_cada_dias': repetirCadaDias,
           'segmento': disparador == DisparadorNotificacion.clienteInactivo
