@@ -132,6 +132,11 @@ begin
                 where notificacion_id = n_carrito.id and pedido_id = ped1.id) = 20
          then 'OK  el de los 20, no el de los 10' else 'MAL' end);
 
+  -- Y en la vuelta siguiente no tiene que salir el de los 10 que se salteo:
+  -- llegaria despues del de los 20, fuera de orden (arreglado en 0054).
+  insert into _r values ('05g el salteado no sale tarde',
+    case when public.avisar_carritos_abandonados() = 0 then 'OK  no manda el viejo' else 'MAL  mando el de los 10 despues del de los 20' end);
+
   insert into _r values ('06 el aviso lleva al pago de ese pedido',
     case when (select pedido_id from public.notificacion_envios
                 where notificacion_id = n_carrito.id and perfil_id = u_c1) = ped1.id

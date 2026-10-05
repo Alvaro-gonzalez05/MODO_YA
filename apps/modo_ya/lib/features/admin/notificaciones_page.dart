@@ -104,9 +104,8 @@ class AdminNotificacionesPage extends ConsumerWidget {
                   ),
                 const SizedBox(height: MySpacing.md),
                 Text(
-                  'Por ahora la notificación se ve cuando la persona abre la app. '
-                  'El aviso en la pantalla del celular con la app cerrada necesita '
-                  'conectar Firebase, y queda para cuando esté.',
+                  'La notificación aparece en la campanita y, en Android, también '
+                  'en la pantalla del celular aunque la app esté cerrada.',
                   style: MyType.bodySm.copyWith(color: MyColors.secondary),
                 ),
               ],
@@ -315,6 +314,7 @@ class _RedactarState extends ConsumerState<_Redactar> {
   late var _segmento = widget.borrador?.segmento ?? SegmentoNotificacion.clientes;
   late var _dias = widget.borrador?.diasInactividad ?? 30;
   late var _destino = widget.borrador?.destino ?? DestinoNotificacion.ninguno;
+  late var _destinoId = widget.borrador?.destinoId;
 
   int? _alcance;
   var _calculando = false;
@@ -352,7 +352,12 @@ class _RedactarState extends ConsumerState<_Redactar> {
     }
   }
 
-  bool get _completa => _titulo.text.trim().isNotEmpty && _cuerpo.text.trim().isNotEmpty;
+  // "Un local" sin elegir cuál no se puede guardar: la base lo rechaza
+  // (notificaciones_local_con_id).
+  bool get _completa =>
+      _titulo.text.trim().isNotEmpty &&
+      _cuerpo.text.trim().isNotEmpty &&
+      (_destino != DestinoNotificacion.local || _destinoId != null);
 
   Future<void> _guardar({required bool mandar}) async {
     if (!_completa) return;
@@ -364,6 +369,7 @@ class _RedactarState extends ConsumerState<_Redactar> {
         segmento: _segmento,
         diasInactividad: _dias,
         destino: _destino,
+        destinoId: _destinoId,
       );
 
       if (!mandar) {
@@ -487,15 +493,43 @@ class _RedactarState extends ConsumerState<_Redactar> {
               runSpacing: MySpacing.xs,
               children: [
                 for (final d in DestinoNotificacion.values)
-                  // "Un local" necesita elegir cuál: queda para cuando haga falta.
-                  if (d != DestinoNotificacion.local)
-                    MyChip(
-                      d.rotulo,
-                      selected: _destino == d,
-                      onTap: () => setState(() => _destino = d),
-                    ),
+                  MyChip(
+                    d.rotulo,
+                    selected: _destino == d,
+                    onTap: () => setState(() => _destino = d),
+                  ),
               ],
             ),
+            if (_destino == DestinoNotificacion.local) ...[
+              const SizedBox(height: MySpacing.sm),
+              const MyOverline('Cuál local'),
+              const SizedBox(height: MySpacing.xs),
+              MyAsync(
+                valor: ref.watch(todosLosComerciosProvider),
+                onReintentar: () => ref.invalidate(todosLosComerciosProvider),
+                datos: (comercios) {
+                  final abiertos = comercios.where((c) => c.aprobacion.puedeOperar).toList();
+                  if (abiertos.isEmpty) {
+                    return Text(
+                      'Todavía no hay locales aprobados.',
+                      style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                    );
+                  }
+                  return Wrap(
+                    spacing: MySpacing.xs,
+                    runSpacing: MySpacing.xs,
+                    children: [
+                      for (final c in abiertos)
+                        MyChip(
+                          c.nombre,
+                          selected: _destinoId == c.id,
+                          onTap: () => setState(() => _destinoId = c.id),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ],
 
             const SizedBox(height: MySpacing.lg),
             MyCard(

@@ -213,6 +213,11 @@ Deno.serve(async () => {
       continue;
     }
 
+    // Si con algun celular fallo por algo pasajero (Google caido, sin red) y no
+    // llego a ninguno, la fila queda pendiente y se reintenta en la proxima
+    // vuelta: marcarla igual la perderia, que es justo lo que el cron evita.
+    let reintentar = false;
+    let llego = false;
     for (const token of suyos) {
       const r = await mandar(cuenta.project_id, token, texto.titulo, texto.cuerpo, {
         envio_id: p.id,
@@ -221,8 +226,10 @@ Deno.serve(async () => {
         pedido_id: texto.pedido_id ?? '',
       });
       if (r === 'token_muerto') muertos.push(token);
+      if (r === 'error') reintentar = true;
+      if (r === 'ok') llego = true;
     }
-    empujados.push(p.id);
+    if (llego || !reintentar) empujados.push(p.id);
   }
 
   if (empujados.length) {

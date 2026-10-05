@@ -54,6 +54,10 @@ Future<void> main() async {
 /// Los riders tienen su propia app (apps/repartidor): necesitan ubicacion en
 /// segundo plano, un permiso que las tiendas revisan mucho y que no tiene
 /// sentido pedirle a un cliente.
+/// La pantalla que pidió abrir una notificación tocada antes de que cargara la
+/// sesión.
+String? _rutaPendiente;
+
 class AppModoYa extends ConsumerWidget {
   const AppModoYa({super.key});
 
@@ -71,19 +75,32 @@ class AppModoYa extends ConsumerWidget {
       final datos = valor.value;
       if (datos == null) return;
       final pedido = datos['pedido_id'];
-      if (pedido != null && pedido.isNotEmpty) {
-        router.go('/cliente/pagar/$pedido');
-        return;
+      final ruta = pedido != null && pedido.isNotEmpty
+          ? '/cliente/pagar/$pedido'
+          : switch (datos['destino']) {
+              'inicio' => '/cliente',
+              'mis_pedidos' => '/cliente/pedidos',
+              'plus' => '/cliente/plus',
+              'local' when (datos['destino_id'] ?? '').isNotEmpty =>
+                '/cliente/local/${datos['destino_id']}',
+              _ => null,
+            };
+      if (ruta == null) return;
+      // Con la app cerrada del todo, el toque llega antes de saber quién es: el
+      // router todavía está en /cargando y lo pisaría con el inicio. Se guarda
+      // y se abre cuando la sesión termina de cargar.
+      if (ref.read(sesionActualProvider).value == null) {
+        _rutaPendiente = ruta;
+      } else {
+        router.go(ruta);
       }
-      final ruta = switch (datos['destino']) {
-        'inicio' => '/cliente',
-        'mis_pedidos' => '/cliente/pedidos',
-        'plus' => '/cliente/plus',
-        'local' when (datos['destino_id'] ?? '').isNotEmpty =>
-          '/cliente/local/${datos['destino_id']}',
-        _ => null,
-      };
-      if (ruta != null) router.go(ruta);
+    });
+    ref.listen(sesionActualProvider, (_, sesion) {
+      final ruta = _rutaPendiente;
+      if (ruta == null || sesion.value == null) return;
+      _rutaPendiente = null;
+      // Después de que el router resuelva su propia redirección al inicio.
+      Future.microtask(() => router.go(ruta));
     });
 
     return MaterialApp.router(

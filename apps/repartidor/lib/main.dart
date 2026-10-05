@@ -56,6 +56,10 @@ class AppRepartidor extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Anota el celular para las notificaciones mientras haya sesión. Sin esto
+    // lo que la administración les manda a los riders no les llega por push.
+    ref.watch(pushProvider);
+
     return MaterialApp.router(
       title: 'MODO YA Rider',
       debugShowCheckedModeBanner: false,

@@ -57,8 +57,25 @@ class MyPush {
     }
   }
 
+  /// Lo que se tocó cuando todavía no escuchaba nadie.
+  static Map<String, String>? _sinEscuchar;
+
   static void _avisar(RemoteMessage m) {
-    alTocar.add(m.data.map((k, v) => MapEntry(k, '$v')));
+    final datos = m.data.map((k, v) => MapEntry(k, '$v'));
+    // Con la app cerrada del todo el toque llega en `iniciar()`, antes de
+    // `runApp`: un stream broadcast sin oyentes lo tiraría.
+    if (alTocar.hasListener) {
+      alTocar.add(datos);
+    } else {
+      _sinEscuchar = datos;
+    }
+  }
+
+  /// El toque que llegó antes de que la app escuchara, una sola vez.
+  static Map<String, String>? tomarPendiente() {
+    final d = _sinEscuchar;
+    _sinEscuchar = null;
+    return d;
   }
 
   /// Pide permiso y registra el celular. Se llama al iniciar sesión, no al

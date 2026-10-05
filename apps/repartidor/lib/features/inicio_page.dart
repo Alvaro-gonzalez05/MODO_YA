@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import 'notificaciones.dart';
 import 'oferta_sheet.dart';
 import 'ubicacion.dart';
 
@@ -39,7 +40,9 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
       await mostrarExito(
         context,
         titulo: '¡Servicio tuyo!',
-        mensaje: 'Andá a buscarlo a ${oferta.envio.comercioNombre}.',
+        mensaje: oferta.envio.esMandado
+            ? 'Andá a retirarlo a ${oferta.envio.origen.calle}.'
+            : 'Andá a buscarlo a ${oferta.envio.comercioNombre}.',
         icono: Symbols.sports_motorsports,
       );
       if (mounted) context.push('/servicio/${oferta.envio.id}');
@@ -92,7 +95,12 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
 
     return Column(
       children: [
-        MyTopBar(zona: 'Malargüe', onPerfil: () => context.go('/perfil')),
+        MyTopBar(
+          zona: 'Malargüe',
+          onPerfil: () => context.go('/perfil'),
+          // Lo que manda la administración a los riders.
+          trailing: const MiCampanita(),
+        ),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(MySpacing.screenEdge, MySpacing.xs, MySpacing.screenEdge, MySpacing.dockClearance),
@@ -144,7 +152,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const MyOverline('Servicio en curso'),
-                            Text('${enCurso.codigo} - ${enCurso.comercioNombre}', style: MyType.headlineSm),
+                            Text('${enCurso.codigo} - ${enCurso.nombreRetiro}', style: MyType.headlineSm),
                             Text(enCurso.estado.label, style: MyType.bodySm),
                           ],
                         ),
