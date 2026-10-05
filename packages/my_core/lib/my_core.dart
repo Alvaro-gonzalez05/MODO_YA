@@ -26,5 +26,6 @@ export 'src/repositories/pedidos_repository.dart';
 export 'src/repositories/notificaciones_repository.dart';
 export 'src/repositories/promociones_repository.dart';
 export 'src/repositories/repartidores_repository.dart';
+export 'src/repositories/solicitudes_rider_repository.dart';
 export 'src/repositories/tarifas_repository.dart';
 export 'src/sesion.dart';

@@ -15,6 +15,7 @@ import 'repositories/envios_repository.dart';
 import 'repositories/pedidos_repository.dart';
 import 'repositories/promociones_repository.dart';
 import 'repositories/repartidores_repository.dart';
+import 'repositories/solicitudes_rider_repository.dart';
 import 'repositories/tarifas_repository.dart';
 import 'push.dart';
 import 'sesion.dart';
@@ -57,9 +58,12 @@ final pushProvider = Provider<void>((ref) {
 
 /// Lo que traía la última notificación que se tocó, para que la app navegue.
 /// Null hasta que se toque alguna.
-final pushDestinoProvider = StreamProvider<Map<String, String>?>(
-  (ref) => MyPush.alTocar.stream,
-);
+final pushDestinoProvider = StreamProvider<Map<String, String>?>((ref) async* {
+  // La que abrió la app desde cerrada llegó antes de que hubiera oyentes.
+  final pendiente = MyPush.tomarPendiente();
+  if (pendiente != null) yield pendiente;
+  yield* MyPush.alTocar.stream;
+});
 
 // ---- Comunes ----------------------------------------------------------------
 
@@ -318,3 +322,11 @@ final tarjetasGuardadasProvider = StreamProvider<List<TarjetaGuardada>>(
 
 /// Todo lo que forma un menú: si cambia cualquiera, se vuelve a leer.
 const _tablasMenu = ['secciones_menu', 'productos', 'opciones_producto', 'opcion_items'];
+
+final solicitudesRiderRepositoryProvider = Provider((_) => const SolicitudesRiderRepository());
+
+/// Las solicitudes de alta de rider: las del local, o todas para la
+/// administración (lo decide el RLS).
+final solicitudesRiderProvider = StreamProvider<List<SolicitudRider>>(
+  (ref) => ref.watch(solicitudesRiderRepositoryProvider).watch(),
+);

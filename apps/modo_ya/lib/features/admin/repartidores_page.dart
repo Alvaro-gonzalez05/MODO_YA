@@ -7,6 +7,7 @@ import 'package:my_ui/my_ui.dart';
 
 import '../../comun/credenciales.dart';
 import 'admin_shell.dart';
+import 'solicitudes_rider.dart';
 
 enum _Filtro { todos, conectados, enServicio, suspendidos }
 
@@ -56,6 +57,8 @@ class _AdminRepartidoresPageState extends ConsumerState<AdminRepartidoresPage> {
         ),
       ],
       children: [
+        // Las altas que pidieron los locales, arriba: esperan una decisión.
+        const SolicitudesPendientes(),
         MyAsync(
           valor: riders,
           onReintentar: () => ref.invalidate(todosLosRepartidoresProvider),

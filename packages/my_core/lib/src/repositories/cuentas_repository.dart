@@ -89,11 +89,15 @@ class CuentasRepository {
       });
 
   /// Crea un rider: rider.juan.perez@modoya.com.
+  ///
+  /// Con [solicitudId] es la aprobación de lo que pidió un local: el rider
+  /// queda vinculado a ese local en el mismo paso.
   Future<AltaCuenta> crearRepartidor({
     String? email,
     required String nombre,
     required String telefono,
     required Vehiculo vehiculo,
+    String? solicitudId,
   }) =>
       _llamar({
         'rol': 'repartidor',
@@ -101,6 +105,7 @@ class CuentasRepository {
         'nombre': nombre.trim(),
         'telefono': telefono.trim(),
         'vehiculo': vehiculo.wire,
+        'solicitud_id': ?solicitudId,
       });
 
   /// Nueva contrasena temporal para un local o un rider que se la olvido. Sus

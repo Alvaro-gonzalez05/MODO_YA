@@ -62,6 +62,8 @@ van en una migración nueva.
 | `0051_rider_propio_del_local.sql` | al local se le ofrecen sus envíos primero a sus riders de confianza |
 | `0052_mandados_del_cliente.sql` | el cliente puede pedir un rider para que le retire algo y se lo lleve |
 | `0053_push_al_celular.sql` | tokens de celular y el cron que empuja lo que quedó sin mandar |
+| `0054_recordatorio_viejo_no_sale_tarde.sql` | **arreglo**: un recordatorio salteado del carrito abandonado ya no sale después, fuera de orden |
+| `0055_solicitud_de_rider_del_local.sql` | el local pide el alta de un rider nuevo con su documentación |
 
 ## Decisiones de diseño
 
@@ -357,6 +359,20 @@ a propósito, que esté a cuatro cuadras o a tres kilómetros lo decide el local
 `tests/rider_propio.sql` comprueba las cuatro cosas: sin vínculo gana el más
 cercano, con vínculo gana el del local aunque esté a 9 km, si rechaza el envío
 sigue buscando, y la cotización no cambió.
+
+### Pedir el alta de un rider nuevo
+
+Si el cadete del local todavía no tiene cuenta, el local la pide desde Mis
+riders con nombre, teléfono, vehículo y una foto por cada documento que exige
+`documentos_exigidos` para ese vehículo (0055). Las fotos van al bucket privado
+`documentos`, en `solicitudes/<solicitud_id>/`, porque el rider todavía no
+tiene id; las ve el local que la pidió y la administración.
+
+La administración la revisa en Riders. **Aprobar** llama a
+`admin-crear-usuario` con `solicitud_id`: crea la cuenta, marca la solicitud
+aprobada y vincula el rider al local en el mismo paso; si algo de eso falla, se
+borra el usuario recién creado. **No aprobar** (`admin_rechazar_solicitud_rider`)
+exige un motivo, que es lo que ve el local.
 
 ## Promociones del local
 

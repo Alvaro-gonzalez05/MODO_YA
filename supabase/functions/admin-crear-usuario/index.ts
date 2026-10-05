@@ -53,6 +53,11 @@ interface Alta {
 
   // Solo repartidor
   vehiculo?: Vehiculo;
+  /**
+   * La solicitud de un local que se esta aprobando (0055). El rider queda
+   * vinculado a ese local y la solicitud, aprobada, en el mismo paso.
+   */
+  solicitud_id?: string;
 }
 
 interface Restablecer {
@@ -269,6 +274,30 @@ Deno.serve(async (req) => {
       .select('id')
       .single();
     if (errRep) throw errRep;
+
+    if (alta.solicitud_id) {
+      // Solo se aprueba si seguia pendiente: dos clicks no crean dos riders
+      // para la misma solicitud (el segundo falla aca y se borra su usuario).
+      const { data: sol, error: errSol } = await admin
+        .from('solicitudes_rider')
+        .update({
+          estado: 'aprobada',
+          repartidor_id: rep.id,
+          resuelta_por: sesion.user.id,
+          resuelta_en: new Date().toISOString(),
+        })
+        .eq('id', alta.solicitud_id)
+        .eq('estado', 'pendiente')
+        .select('comercio_id')
+        .maybeSingle();
+      if (errSol) throw errSol;
+      if (!sol) throw new Error('La solicitud no existe o ya se resolvio');
+
+      const { error: errVin } = await admin
+        .from('comercio_riders')
+        .insert({ comercio_id: sol.comercio_id, repartidor_id: rep.id });
+      if (errVin) throw errVin;
+    }
 
     return responder(201, {
       usuario_id: usuarioId,

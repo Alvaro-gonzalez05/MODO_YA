@@ -5,6 +5,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import 'solicitar_rider.dart';
+
 /// Los riders de confianza del local.
 ///
 /// Marcar a alguien acá solo cambia **a quién se le ofrece primero** el envío.
@@ -50,6 +52,9 @@ class MisRidersPage extends ConsumerWidget {
       anchoMaximo: 700,
       onRefresh: () async => ref.invalidate(ridersParaElegirProvider),
       children: [
+        // Arriba de la lista: sirve también cuando todavía no hay ningún rider.
+        const SolicitudesDelLocal(),
+        const SizedBox(height: MySpacing.lg),
         MyAsync(
           valor: riders,
           onReintentar: () => ref.invalidate(ridersParaElegirProvider),
@@ -60,7 +65,8 @@ class MisRidersPage extends ConsumerWidget {
                   icon: Symbols.sports_motorsports,
                   title: 'Todavía no hay riders en Malargüe',
                   message: 'Cuando la administración apruebe riders, vas a poder '
-                      'elegir cuáles hacen tus envíos.',
+                      'elegir cuáles hacen tus envíos. Si ya tenés un cadete, '
+                      'pedí su alta acá arriba.',
                 ),
               );
             }
