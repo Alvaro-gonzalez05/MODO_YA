@@ -52,7 +52,7 @@ class ServiciosPage extends ConsumerWidget {
                                     ],
                                   ),
                                   const SizedBox(height: MySpacing.xxs),
-                                  Text(e.comercioNombre, style: MyType.headlineSm),
+                                  Text(e.nombreRetiro, style: MyType.headlineSm),
                                   Text('-> ${e.destino.calle}', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
                                   Text('${Formato.fechaCorta(e.creadoEn)} ${Formato.hora(e.creadoEn)}',
                                       style: MyType.bodySm.copyWith(color: MyColors.secondary)),

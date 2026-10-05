@@ -348,6 +348,13 @@ class Envio {
 
   bool get hayQueCobrar => cobrarAlEntregar > 0;
 
+  /// Lo pidió un cliente sin local de por medio (0052): no hay local donde
+  /// avisar que llegó, y qué retirar va en `origen.referencia`.
+  bool get esMandado => comercioId.isEmpty;
+
+  /// Cómo se nombra el punto de retiro: el local, o "Mandado".
+  String get nombreRetiro => esMandado ? 'Mandado' : comercioNombre;
+
   /// "Cobrar $12.500 en efectivo" / "... con posnet".
   String get textoCobro =>
       'Cobrar ${Formato.pesos(cobrarAlEntregar)} ${cobroMetodo == MetodoPago.tarjeta ? 'con posnet (tarjeta)' : 'en efectivo'}';

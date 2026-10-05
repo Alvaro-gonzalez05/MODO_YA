@@ -121,6 +121,32 @@ class _Fila extends StatelessWidget {
             ),
           const SizedBox(height: 2),
           _Tramo(icono: Symbols.home_pin, texto: 'Lleva a ${e.destino.calle}'),
+          // Sin el código el rider no puede cerrar la entrega: confirmar_entrega
+          // lo exige. Lo dicta el cliente o quien reciba en su nombre.
+          if (e.codigoEntrega != null && enCurso) ...[
+            const SizedBox(height: MySpacing.sm),
+            MyCard(
+              color: MyColors.primaryFixed,
+              shadows: const [],
+              padding: const EdgeInsets.all(MySpacing.sm),
+              child: Column(
+                children: [
+                  const MyOverline('Código de entrega'),
+                  const SizedBox(height: MySpacing.xs),
+                  SelectableText(
+                    e.codigoEntrega!.split('').join('  '),
+                    style: MyType.displayLg.copyWith(color: MyColors.tertiary),
+                  ),
+                  Text(
+                    'Dictáselo al rider cuando te lo entregue. Si lo recibe otra '
+                    'persona, pasáselo antes.',
+                    style: MyType.bodySm,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: MySpacing.sm),
           Row(
             children: [

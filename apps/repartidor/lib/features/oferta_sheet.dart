@@ -118,7 +118,7 @@ class _OfertaSheetState extends State<OfertaSheet> {
             ],
             const SizedBox(height: MySpacing.lg),
             MyStatRow(tiles: [
-              MyStatTile(icon: Symbols.near_me, value: Formato.km(o.distanciaAlRetiroKm), label: 'Hasta el local'),
+              MyStatTile(icon: Symbols.near_me, value: Formato.km(o.distanciaAlRetiroKm), label: envio.esMandado ? 'Hasta el retiro' : 'Hasta el local'),
               MyStatTile(icon: Symbols.route, value: Formato.km(envio.cotizacion.distanciaKm), label: 'Viaje'),
               MyStatTile(icon: Symbols.schedule, value: '${envio.cotizacion.minutosEstimados}', label: 'Min est.'),
             ]),
@@ -137,8 +137,12 @@ class _OfertaSheetState extends State<OfertaSheet> {
               stops: [
                 MyRouteStop(
                   overline: 'Retiro',
-                  title: envio.comercioNombre,
-                  subtitle: envio.origen.calle,
+                  title: envio.nombreRetiro,
+                  // En un mandado, qué retirar es lo que decide si le sirve.
+                  subtitle: [
+                    envio.origen.calle,
+                    if (envio.esMandado && envio.origen.referencia != null) envio.origen.referencia!,
+                  ].join(' - '),
                   icon: Symbols.restaurant,
                 ),
                 MyRouteStop(

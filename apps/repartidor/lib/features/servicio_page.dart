@@ -41,7 +41,11 @@ class _Contenido extends ConsumerWidget {
   final Envio envio;
 
   ({String label, IconData icon, EstadoEnvio siguiente})? get _accion => switch (envio.estado) {
+        EstadoEnvio.asignado when envio.esMandado =>
+          (label: 'Llegué al retiro', icon: Symbols.pin_drop, siguiente: EstadoEnvio.enLocal),
         EstadoEnvio.asignado => (label: 'Llegue al local', icon: Symbols.storefront, siguiente: EstadoEnvio.enLocal),
+        EstadoEnvio.enLocal when envio.esMandado =>
+          (label: 'Ya lo retiré', icon: Symbols.package_2, siguiente: EstadoEnvio.retirado),
         EstadoEnvio.enLocal => (label: 'Retire el pedido', icon: Symbols.package_2, siguiente: EstadoEnvio.retirado),
         EstadoEnvio.retirado => (label: 'Salgo para el cliente', icon: Symbols.navigation, siguiente: EstadoEnvio.enCamino),
         _ => null,
@@ -75,7 +79,9 @@ class _Contenido extends ConsumerWidget {
     final accion = _accion;
     // Los datos del cliente recien cuando el pedido esta en la mano: antes no
     // hacen falta.
-    final mostrarCliente = envio.estado.index >= EstadoEnvio.retirado.index;
+    // En un mandado no hay local que lo atienda: si no encuentra qué retirar,
+    // al único que puede llamar es al cliente.
+    final mostrarCliente = envio.esMandado || envio.estado.index >= EstadoEnvio.retirado.index;
     final vaAlLocal = envio.estado.index < EstadoEnvio.retirado.index;
     final o = envio.origen;
     final d = envio.destino;
@@ -100,12 +106,18 @@ class _Contenido extends ConsumerWidget {
                     ),
                     const SizedBox(height: MySpacing.md),
                     Text(
-                      vaAlLocal ? 'Anda a ${envio.comercioNombre}' : 'Llevalo a ${d.calle}',
+                      vaAlLocal
+                          ? 'Andá a ${envio.esMandado ? o.calle : envio.comercioNombre}'
+                          : 'Llevalo a ${d.calle}',
                       style: MyType.headlineLg.copyWith(color: Colors.white),
                     ),
                     Text(
                       switch (envio.estado) {
+                        EstadoEnvio.asignado when envio.esMandado =>
+                          'Retirá: ${o.referencia ?? 'lo que te indique el cliente'}.',
                         EstadoEnvio.asignado => 'Retira el pedido en ${o.calle}.',
+                        EstadoEnvio.enLocal when envio.esMandado =>
+                          'Retirá: ${o.referencia ?? 'lo que te indique el cliente'}.',
                         EstadoEnvio.enLocal => 'Avisale al local que llegaste y retira el pedido.',
                         EstadoEnvio.retirado => 'Tenés el pedido. Salí para el domicilio.',
                         EstadoEnvio.enCamino => 'Al llegar, pedile el código de 4 números al cliente.',
@@ -138,7 +150,7 @@ class _Contenido extends ConsumerWidget {
                 stops: [
                   MyRouteStop(
                     overline: 'Retiro',
-                    title: envio.comercioNombre,
+                    title: envio.nombreRetiro,
                     subtitle: [o.calle, if (o.referencia != null) o.referencia!].join(' - '),
                     icon: Symbols.restaurant,
                   ),

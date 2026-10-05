@@ -83,7 +83,7 @@ class GananciasPage extends ConsumerWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('${e.codigo} - ${e.comercioNombre}', style: MyType.labelLg),
+                                  Text('${e.codigo} - ${e.nombreRetiro}', style: MyType.labelLg),
                                   Text(
                                     '${Formato.fechaCorta(e.entregadoEn ?? e.creadoEn)} ${Formato.hora(e.entregadoEn ?? e.creadoEn)} - ${Formato.km(e.cotizacion.distanciaKm)}',
                                     style: MyType.bodySm.copyWith(color: MyColors.secondary),
