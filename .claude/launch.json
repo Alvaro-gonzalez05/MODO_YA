@@ -32,6 +32,16 @@
       "port": 5071
     },
     {
+      "name": "landing",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/servir.mjs",
+        "landing",
+        "5073"
+      ],
+      "port": 5073
+    },
+    {
       "name": "repartidor-web",
       "runtimeExecutable": "node",
       "runtimeArgs": [

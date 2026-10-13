@@ -13,6 +13,7 @@ import 'repositories/comercios_repository.dart';
 import 'repositories/cuentas_repository.dart';
 import 'repositories/envios_repository.dart';
 import 'repositories/pedidos_repository.dart';
+import 'repositories/preinscripciones_repository.dart';
 import 'repositories/promociones_repository.dart';
 import 'repositories/repartidores_repository.dart';
 import 'repositories/solicitudes_rider_repository.dart';
@@ -329,4 +330,12 @@ final solicitudesRiderRepositoryProvider = Provider((_) => const SolicitudesRide
 /// administración (lo decide el RLS).
 final solicitudesRiderProvider = StreamProvider<List<SolicitudRider>>(
   (ref) => ref.watch(solicitudesRiderRepositoryProvider).watch(),
+);
+
+final preinscripcionesRepositoryProvider = Provider((_) => const PreinscripcionesRepository());
+
+/// Los formularios de la landing (locales y riders que quieren sumarse). Solo
+/// los ve la administración.
+final preinscripcionesProvider = StreamProvider<List<Preinscripcion>>(
+  (ref) => ref.watch(preinscripcionesRepositoryProvider).watch(),
 );

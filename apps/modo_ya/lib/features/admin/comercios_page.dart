@@ -7,6 +7,7 @@ import 'package:my_ui/my_ui.dart';
 
 import '../../comun/credenciales.dart';
 import 'admin_shell.dart';
+import 'preinscripciones.dart';
 
 enum _Filtro { todos, abiertos, suspendidos, sinUbicacion }
 
@@ -62,6 +63,8 @@ class _AdminComerciosPageState extends ConsumerState<AdminComerciosPage> {
         ),
       ],
       children: [
+        // Los que se anotaron en la página web antes del lanzamiento.
+        const PreinscripcionesWeb(tipo: TipoPreinscripcion.local),
         MyAsync(
           valor: comercios,
           onReintentar: () => ref.invalidate(todosLosComerciosProvider),

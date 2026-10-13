@@ -18,6 +18,9 @@ class DashboardPage extends ConsumerWidget {
     final riders = ref.watch(todosLosRepartidoresProvider).value ?? const <Repartidor>[];
     final activos = ref.watch(enviosActivosProvider).value ?? const <Envio>[];
     final porCobrar = ref.watch(pedidosPendientesDePagoProvider).value ?? const <Pedido>[];
+    final preinscriptos = (ref.watch(preinscripcionesProvider).value ?? const <Preinscripcion>[])
+        .where((p) => p.estado == EstadoPreinscripcion.pendiente)
+        .toList();
 
     final operativos = comercios.where((c) => c.aprobacion.puedeOperar).toList();
     final abiertos = operativos.where((c) => c.abierto).length;
@@ -70,6 +73,8 @@ class DashboardPage extends ConsumerWidget {
       sinUbicacion: comercios.where((c) => c.aprobacion.puedeOperar && !c.direccion.tieneCoordenadas).toList(),
       pendientes: comercios.where((c) => c.aprobacion == EstadoAprobacion.pendiente).length +
           riders.where((r) => r.aprobacion == EstadoAprobacion.pendiente).length,
+      localesWeb: preinscriptos.where((p) => p.tipo == TipoPreinscripcion.local).length,
+      ridersWeb: preinscriptos.where((p) => p.tipo == TipoPreinscripcion.rider).length,
     );
 
     return MyPagina(
@@ -187,12 +192,18 @@ class _RequiereAtencion extends StatelessWidget {
     required this.buscandoSinLibres,
     required this.sinUbicacion,
     required this.pendientes,
+    required this.localesWeb,
+    required this.ridersWeb,
   });
 
   final int porCobrar;
   final int buscandoSinLibres;
   final List<Comercio> sinUbicacion;
   final int pendientes;
+
+  /// Pre-inscripciones de la página web que nadie contactó todavía.
+  final int localesWeb;
+  final int ridersWeb;
 
   @override
   Widget build(BuildContext context) {
@@ -231,6 +242,22 @@ class _RequiereAtencion extends StatelessWidget {
           detalle: 'Esperan que las apruebes.',
           accion: 'Revisar',
           onTap: () => context.go('/admin/locales'),
+        ),
+      if (localesWeb > 0)
+        _Alerta(
+          icono: Symbols.add_business,
+          titulo: localesWeb == 1 ? 'Un local se anotó en la web' : '$localesWeb locales se anotaron en la web',
+          detalle: 'Esperan que los contactes por WhatsApp.',
+          accion: 'Ver',
+          onTap: () => context.go('/admin/locales'),
+        ),
+      if (ridersWeb > 0)
+        _Alerta(
+          icono: Symbols.sports_motorsports,
+          titulo: ridersWeb == 1 ? 'Un rider se anotó en la web' : '$ridersWeb riders se anotaron en la web',
+          detalle: 'Esperan que los contactes por WhatsApp.',
+          accion: 'Ver',
+          onTap: () => context.go('/admin/riders'),
         ),
     ];
 
