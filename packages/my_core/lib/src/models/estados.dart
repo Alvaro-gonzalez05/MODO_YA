@@ -123,9 +123,17 @@ enum MetodoPago {
   final String wire;
   final String label;
 
-  /// Lo que el cliente puede elegir al pedir. Mercado Pago online, cuando
-  /// haya pasarela.
-  static const delCliente = [mercadoPago, efectivo, tarjeta, transferencia];
+  /// Lo que el cliente puede elegir al pedir: solo tarjeta en la app.
+  ///
+  /// Efectivo y transferencia se cortaron (migración 0058). Transferencia
+  /// además estaba rota: prometía un alias que no existe, el pedido entraba a
+  /// la cocina como pagado y el rider no cobraba nada. Los valores siguen en
+  /// el enum porque los pedidos viejos los referencian y porque el mandado se
+  /// le paga al rider en efectivo.
+  ///
+  /// La base lo valida igual: una app vieja sin actualizar todavía muestra las
+  /// cuatro opciones.
+  static const delCliente = [mercadoPago];
 
   String get detalle => switch (this) {
         mercadoPago => 'Pagás ahora, en la app. Podés guardar la tarjeta',

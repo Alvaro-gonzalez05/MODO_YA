@@ -21,7 +21,10 @@ class CarritoPage extends ConsumerStatefulWidget {
 
 class _CarritoPageState extends ConsumerState<CarritoPage> {
   late final _nota = TextEditingController(text: ref.read(carritoProvider).nota);
-  MetodoPago? _metodo;
+  // Si queda un solo medio de pago, no tiene sentido hacerlo elegir algo que
+  // ya está decidido: viene marcado.
+  MetodoPago? _metodo =
+      MetodoPago.delCliente.length == 1 ? MetodoPago.delCliente.first : null;
 
   @override
   void dispose() {

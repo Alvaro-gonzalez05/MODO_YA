@@ -16,7 +16,7 @@ flujo puede cumplir.
 
 ## Alta
 
-### 1. "Transferencia" promete un alias que nunca se muestra
+### 1. "Transferencia" promete un alias que nunca se muestra — ARREGLADO
 
 `packages/my_core/lib/src/models/estados.dart:134` dice
 `transferencia => 'Te pasamos el alias al confirmar'`. No existe ningún CBU ni
@@ -29,6 +29,9 @@ instante (`0040_promociones.sql:288`).
 **Reproducir:** carrito → "Transferencia" → Confirmar. El pedido entra a la
 cocina como pagado, el rider no cobra nada, y el cliente nunca supo a dónde
 transferir.
+
+**Arreglado (0058):** transferencia y efectivo salieron de la pantalla del
+cliente y de `crear_pedido`. En la app solo se paga con tarjeta.
 
 ### 2. Se le promete al cliente un reembolso que ningún flujo puede hacer
 

@@ -82,7 +82,7 @@ begin
          else 'MAL  ' || cot::text end);
 
   ped := public.crear_pedido(com, dir,
-    jsonb_build_array(jsonb_build_object('producto_id', prod, 'cantidad', 1)), null, 'efectivo');
+    jsonb_build_array(jsonb_build_object('producto_id', prod, 'cantidad', 1)), null, 'mercado_pago');
 
   insert into _r values ('03 el cliente no paga envio',
     case when ped.costo_envio = 0 and ped.envio_cubierto = envio_base and ped.total = 10000
@@ -103,7 +103,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u_cli2)::text, true);
   cot := public.cotizar_para_cliente(com, dir2);
   ped2 := public.crear_pedido(com, dir2,
-    jsonb_build_array(jsonb_build_object('producto_id', prod, 'cantidad', 1)), null, 'efectivo');
+    jsonb_build_array(jsonb_build_object('producto_id', prod, 'cantidad', 1)), null, 'mercado_pago');
 
   insert into _r values ('06 sin Plus paga el envio',
     case when not (cot->>'envio_gratis')::boolean and (cot->>'local_adherido')::boolean
@@ -125,7 +125,11 @@ begin
          then 'OK  sigue en $9.000' else 'MAL  cobro de mas' end);
 
   -- ---- Rendimiento -----------------------------------------------------------
-  update public.pedidos set estado = 'aceptado' where id in (ped.id, ped2.id);
+    -- Desde 0058 el pedido nace esperando el pago (solo tarjeta): se aprueba
+  -- antes de avanzarlo, igual que lo haria la pasarela.
+  update public.pedidos set estado = 'pagado', pagado_en = now()
+   where id in (ped.id, ped2.id);
+update public.pedidos set estado = 'aceptado' where id in (ped.id, ped2.id);
   update public.pedidos set estado = 'en_preparacion' where id in (ped.id, ped2.id);
   update public.pedidos set estado = 'listo' where id in (ped.id, ped2.id);
   update public.pedidos set estado = 'en_camino' where id in (ped.id, ped2.id);

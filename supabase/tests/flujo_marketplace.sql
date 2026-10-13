@@ -98,7 +98,7 @@ begin
       )
     ),
     'Tocar timbre',
-    'efectivo'
+    'mercado_pago'
   );
   pago_id := ped.pago_id;
 
@@ -146,20 +146,20 @@ begin
     insert into _r values ('4. cliente no toca precios', 'OK  RLS lo bloqueo');
   end;
 
-  -- ---- Le llega al local sin esperar a la administracion -------------------
-  insert into _r values ('5. directo al local',
-    case when ped.estado = 'pagado' and ped.metodo_pago = 'efectivo'
+  -- ---- Con tarjeta el local no lo ve hasta que el pago aprueba -------------
+  insert into _r values ('5. espera el pago',
+    case when ped.estado = 'pendiente_pago' and ped.metodo_pago = 'mercado_pago'
           and (select estado from public.pagos where id = pago_id) = 'pendiente'
-         then 'OK  nace "Nuevo" con el cobro pendiente'
+         then 'OK  el local no cocina nada hasta que la tarjeta apruebe'
          else format('MAL  estado=%s metodo=%s', ped.estado, ped.metodo_pago) end);
 
-  -- ---- La administracion registra el cobro: no mueve el pedido -------------
-  perform set_config('request.jwt.claims', json_build_object('sub',u_adm)::text, true);
-  ped := public.marcar_pedido_pagado(ped.id, 'efectivo', 'TEST-REF-1');
-  insert into _r values ('5b. cobro registrado',
+  -- ---- Aprueba la tarjeta: recien ahi entra al local -----------------------
+  ped := public.confirmar_pago_online(
+    ped.id, 'PAY-TEST-1', 'acreditado'::public.estado_pago, 1::smallint, null, 'ORD-TEST-1');
+  insert into _r values ('5b. aprobado, entra al local',
     case when ped.estado = 'pagado'
           and (select estado from public.pagos where id = pago_id) = 'acreditado'
-         then 'OK  pago acreditado, el pedido sigue igual'
+         then 'OK  pago acreditado y el pedido le llego al local'
          else 'MAL  estado=' || ped.estado end);
 
   -- ---- El comercio lo acepta: nace el envio --------------------------------
@@ -169,9 +169,11 @@ begin
   insert into _r values ('6. aceptar_pedido',
     format('pedido=%s envio=%s estado_envio=%s', ped.estado, env.codigo, env.estado));
 
-  insert into _r values ('6b. rider cobra el efectivo',
-    case when env.cobrar_al_entregar = ped.total and env.cobro_metodo = 'efectivo'
-         then format('OK  el envio dice cobrar $%s en efectivo', ped.total)
+  -- Pago con tarjeta: el rider no cobra nada en la puerta. El cobro en mano
+  -- sigue existiendo solo para los mandados (tests/mandados.sql).
+  insert into _r values ('6b. con tarjeta el rider no cobra',
+    case when env.cobrar_al_entregar = 0 and env.cobro_metodo is null
+         then 'OK  ya esta pago, el rider solo entrega'
          else format('MAL  cobrar=%s metodo=%s', env.cobrar_al_entregar, env.cobro_metodo) end);
 
   insert into _r values ('7. cotizacion congelada',

@@ -76,7 +76,7 @@ begin
   -- ---- Lo que realmente se cobra ---------------------------------------------
   perform set_config('request.jwt.claims', json_build_object('sub', u_cli)::text, true);
   ped := public.crear_pedido(com, dir,
-    jsonb_build_array(jsonb_build_object('producto_id', muzza, 'cantidad', 2)), null, 'efectivo');
+    jsonb_build_array(jsonb_build_object('producto_id', muzza, 'cantidad', 2)), null, 'mercado_pago');
   perform set_config('request.jwt.claims', null, true);
 
   insert into _r values ('03 el pedido cobra el precio con descuento',
@@ -91,7 +91,7 @@ begin
   ped2 := public.crear_pedido(com, dir,
     jsonb_build_array(jsonb_build_object(
       'producto_id', muzza, 'cantidad', 1,
-      'opciones', jsonb_build_array(agregado))), null, 'efectivo');
+      'opciones', jsonb_build_array(agregado))), null, 'mercado_pago');
   perform set_config('request.jwt.claims', null, true);
 
   insert into _r values ('04 el agregado se cobra entero',
@@ -164,7 +164,11 @@ begin
   perform set_config('request.jwt.claims', null, true);
 
   -- ---- La liquidación cuenta lo que se vendió de verdad -----------------------
-  update public.pedidos set estado = 'aceptado' where id in (ped.id, ped2.id);
+    -- Desde 0058 el pedido nace esperando el pago (solo tarjeta): se aprueba
+  -- antes de avanzarlo, igual que lo haria la pasarela.
+  update public.pedidos set estado = 'pagado', pagado_en = now()
+   where id in (ped.id, ped2.id);
+update public.pedidos set estado = 'aceptado' where id in (ped.id, ped2.id);
   update public.pedidos set estado = 'en_preparacion' where id in (ped.id, ped2.id);
   update public.pedidos set estado = 'listo' where id in (ped.id, ped2.id);
   update public.pedidos set estado = 'en_camino' where id in (ped.id, ped2.id);

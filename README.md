@@ -251,10 +251,9 @@ El circuito entero corre contra Mercado Pago real, en modo sandbox, con la
 3. **Cobros recurrentes (Card on File MIT).** Hay que pedirselos a Mercado Pago
    para la cuenta. Sin eso, Plus no se renueva solo: rebota tres veces y el
    cliente renueva a mano (el sistema ya lo contempla, pero conviene saberlo).
-4. **Cortar efectivo y transferencia**, que estan como "proximamente". Es una
-   linea en `MetodoPago.delCliente` (`packages/my_core/lib/src/models/estados.dart`)
-   **y tambien una migracion**, porque una version vieja ya instalada podria
-   seguir mandando `efectivo`.
+4. ~~Cortar efectivo y transferencia~~ **HECHO** (0058). En la app solo se
+   paga con tarjeta, y la base lo valida igual por si una version vieja manda
+   `efectivo`. Los mandados no se tocaron: se siguen pagando al rider en mano.
 5. **Sacar la version** con `[obligatoria]` en el mensaje del tag, y hacer un
    cobro real chico con devolucion para validar las dos puntas.
 

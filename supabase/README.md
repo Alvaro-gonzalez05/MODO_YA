@@ -65,6 +65,9 @@ van en una migración nueva.
 | `0054_recordatorio_viejo_no_sale_tarde.sql` | **arreglo**: un recordatorio salteado del carrito abandonado ya no sale después, fuera de orden |
 | `0055_solicitud_de_rider_del_local.sql` | el local pide el alta de un rider nuevo con su documentación |
 | `0056_doble_pedido_del_mismo_local.sql` | un rider lleva dos pedidos del mismo local en el mismo viaje |
+| `0057_preinscripciones_de_la_landing.sql` | la landing guarda quién quiere sumar su local o ser rider |
+| `0058_solo_tarjeta.sql` | en la app solo se paga con tarjeta: fuera efectivo y transferencia |
+| `0059_un_solo_evento_pagado.sql` | **arreglo**: la auditoría del pedido mostraba "pagado" dos veces |
 
 ## Decisiones de diseño
 
@@ -173,6 +176,11 @@ El estado sale del pago, no de la orden: `processed` es aprobado, `processing` y
 otra cosa es que no entró. Los motivos de rechazo cambiaron de nombre
 (`insufficient_amount` en vez de `cc_rejected_insufficient_amount`); `motivo()`
 traduce los nuevos y deja los viejos por las dudas.
+
+**Es el único medio de pago.** Efectivo y transferencia se cortaron (0058): se
+valida en `crear_pedido` y no solo en la pantalla, porque una app vieja ya
+instalada sigue ofreciéndolos. Los mandados son aparte — se le siguen pagando
+al rider en efectivo, y pasan por `crear_mandado()`, no por acá.
 
 El pedido nace en `pendiente_pago` y **no le llega al local hasta que el pago
 se aprueba**: si la tarjeta rebota, la cocina no llegó a empezar. Un rechazo no
