@@ -69,6 +69,7 @@ van en una migración nueva.
 | `0058_solo_tarjeta.sql` | en la app solo se paga con tarjeta: fuera efectivo y transferencia |
 | `0059_un_solo_evento_pagado.sql` | **arreglo**: la auditoría del pedido mostraba "pagado" dos veces |
 | `0060_reembolso_del_pedido_rechazado.sql` | el local rechaza un pedido cobrado: se devuelve todo y se le cobra la penalidad |
+| `0061_el_rider_se_baja_sin_matar_el_pedido.sql` | el rider se baja y el envío vuelve a buscar; cancelar un pedido cobrado devuelve la plata |
 
 ## Decisiones de diseño
 
@@ -280,6 +281,38 @@ mira una persona: puede que haya que resolverlo por afuera.
 
 Un pedido que **nunca llegó a cobrarse** no deja nada pendiente ni genera
 penalidad. `tests/reembolsos.sql` cubre las dos cosas.
+
+## Si el rider se baja
+
+Un rider que ya aceptó **no cancela el envío: se baja** (`abandonar_envio`). El
+envío vuelve a `buscando_repartidor`, sale a ofrecerse en el acto y el pedido
+sigue su curso. Nadie pierde plata, solo se demora.
+
+Antes el rider estaba entre los que podían cancelar, y un envío cancelado es
+terminal: no vuelve a la búsqueda. Como el trigger que sincroniza envío y pedido
+solo mira "retirado" y "entregado", el pedido quedaba en `listo`, pago, sin
+envío y sin que nadie lo volviera a buscar. No pasaba porque la app del rider no
+tiene botón de cancelar, pero la base lo permitía: alcanzaba con llamar la RPC.
+
+**Solo puede bajarse antes de retirar** (`asignado` o `en_local`). Con la comida
+encima ya no es un problema de asignación y lo resuelve una persona.
+
+Al que se baja no hace falta excluirlo a mano: `repartidores_cercanos` ya saltea
+a quien tuvo una oferta de ese envío. Cada bajada queda en `abandonos_envio`,
+con el motivo y en qué estado estaba — que es el registro con el que después se
+le podrá cobrar.
+
+Esto obligó a abrir dos transiciones que no existían (`asignado` y `en_local`
+hacia `buscando_repartidor`), por la misma razón por la que no existían: hasta
+ahora el envío solo avanzaba o se moría.
+
+**Si el envío se cancela de verdad** y el pedido sigue vivo, se cancela también
+el pedido. Y **cancelar un pedido cobrado ahora devuelve el 100%**, igual que
+rechazarlo, pero sin penalidad al local: acá el local no rechazó nada. La
+pantalla del cliente venía prometiendo esa devolución desde el día uno.
+
+`tests/abandono_de_envio.sql` cubre las dos puntas: que el pedido no se muera
+cuando el rider se baja, y que la plata quede por devolver cuando se cancela.
 
 ## Liquidaciones
 
