@@ -47,3 +47,6 @@ apps/*/windows/flutter/ephemeral/
 
 # Caches de Kotlin/Gradle
 apps/*/android/.kotlin/
+
+# Ajustes personales de Claude Code
+.claude/settings.local.json
