@@ -260,6 +260,13 @@ final cargosDeComercioProvider = StreamProvider.family<List<CargoComercio>, Stri
   (ref, id) => ref.watch(liquidacionesRepositoryProvider).watchCargos(id),
 );
 
+/// El detalle de lo que se le va a pagar a un rider en un período.
+typedef RangoDeRider = ({String repartidorId, DateTime desde, DateTime hasta});
+
+final detalleDeRiderProvider =
+    FutureProvider.family<List<RenglonDeRider>, RangoDeRider>((ref, r) =>
+        ref.watch(liquidacionesRepositoryProvider).detalleDeRider(r.repartidorId, r.desde, r.hasta));
+
 /// Cargos de un rider, para la administración y para el propio rider.
 final cargosDeRiderProvider = StreamProvider.family<List<CargoRider>, String>(
   (ref, id) => ref.watch(liquidacionesRepositoryProvider).watchCargosRider(id),

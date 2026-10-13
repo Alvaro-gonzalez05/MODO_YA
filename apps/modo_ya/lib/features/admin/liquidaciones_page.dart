@@ -4,6 +4,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import 'hoja_de_liquidacion.dart';
+
 import '../../comun/formulario_emergente.dart';
 
 /// Liquidaciones: qué le queda a cada local y a cada rider en un período.
@@ -272,6 +274,9 @@ class _Riders extends ConsumerWidget {
             children: [
               for (final p in lista) ...[
                 MyCard(
+                  // En el celular la hoja entra desde abajo, pero es el mismo
+                  // detalle: tocar la tarjeta lo abre.
+                  onTap: () => mostrarHojaDeRider(context, p, periodo.desde, periodo.hasta),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -313,7 +318,21 @@ class _Riders extends ConsumerWidget {
             for (final p in lista)
               MyFila(
                 celdas: [
-                  Text(p.rider, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  // El nombre abre la hoja con el renglón por renglón: el
+                  // resumen no alcanza para discutirlo con el rider.
+                  MyPressable(
+                    onTap: () => mostrarHojaDeRider(context, p, periodo.desde, periodo.hasta),
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(p.rider, style: MyType.labelLg,
+                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
+                        const SizedBox(width: MySpacing.xxs),
+                        Icon(Symbols.chevron_right, size: 18, color: MyColors.secondary),
+                      ],
+                    ),
+                  ),
                   Text('${p.envios}', style: MyType.bodyMd),
                   Text(Formato.pesos(p.ganancias), style: MyType.bodyMd),
                   Text(Formato.pesos(p.efectivo), style: MyType.bodyMd.copyWith(color: MyColors.secondary)),

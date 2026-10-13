@@ -69,6 +69,41 @@ class PendienteRider {
       );
 }
 
+/// Un envío que entra en la liquidación de un rider.
+class RenglonDeRider {
+  const RenglonDeRider({
+    required this.envioId,
+    required this.codigo,
+    required this.entregado,
+    required this.comercio,
+    required this.destino,
+    required this.ganancia,
+    required this.efectivo,
+  });
+
+  final String envioId;
+  final String codigo;
+  final DateTime entregado;
+
+  /// "Mandado" cuando no hay local de por medio.
+  final String comercio;
+  final String destino;
+  final int ganancia;
+
+  /// Lo que juntó en la puerta y tiene que rendir.
+  final int efectivo;
+
+  factory RenglonDeRider.fromRow(Map<String, dynamic> f) => RenglonDeRider(
+        envioId: Fila.texto(f, 'envio_id'),
+        codigo: Fila.texto(f, 'codigo'),
+        entregado: Fila.fecha(f, 'entregado'),
+        comercio: Fila.texto(f, 'comercio'),
+        destino: Fila.texto(f, 'destino'),
+        ganancia: Fila.entero(f, 'ganancia'),
+        efectivo: Fila.entero(f, 'efectivo'),
+      );
+}
+
 /// A qué corresponde un cargo de un rider.
 enum ConceptoCargoRider {
   abandono('abandono', 'Se bajó del envío'),
@@ -293,6 +328,26 @@ class LiquidacionesRepository {
           return (r as List).map((f) => PendienteRider.fromRow(Map<String, dynamic>.from(f as Map))).toList();
         },
       );
+
+  /// Los envíos que entran en la liquidación de un rider, uno por uno.
+  ///
+  /// Sale de la base con el mismo filtro que el resumen: si el detalle se
+  /// armara por otro lado, un día dirían cosas distintas.
+  Future<List<RenglonDeRider>> detalleDeRider(
+    String repartidorId,
+    DateTime desde,
+    DateTime hasta,
+  ) =>
+      intentar(() async {
+        final r = await _db.rpc('detalle_de_liquidar_rider', params: {
+          'p_rider': repartidorId,
+          'p_desde': _dia(desde),
+          'p_hasta': _dia(hasta),
+        });
+        return (r as List)
+            .map((f) => RenglonDeRider.fromRow(Map<String, dynamic>.from(f as Map)))
+            .toList();
+      });
 
   /// Cargos de un rider: lo que se le descuenta de lo que cobra.
   Stream<List<CargoRider>> watchCargosRider(String repartidorId) => enVivo(
