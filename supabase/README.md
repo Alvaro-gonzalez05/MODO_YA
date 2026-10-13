@@ -68,6 +68,7 @@ van en una migración nueva.
 | `0057_preinscripciones_de_la_landing.sql` | la landing guarda quién quiere sumar su local o ser rider |
 | `0058_solo_tarjeta.sql` | en la app solo se paga con tarjeta: fuera efectivo y transferencia |
 | `0059_un_solo_evento_pagado.sql` | **arreglo**: la auditoría del pedido mostraba "pagado" dos veces |
+| `0060_reembolso_del_pedido_rechazado.sql` | el local rechaza un pedido cobrado: se devuelve todo y se le cobra la penalidad |
 
 ## Decisiones de diseño
 
@@ -252,6 +253,33 @@ cosas que se descubrieron probando y conviene saber antes de perder una tarde:
 Por eso `customerDe()` nunca frena el cobro: si no se puede crear el customer,
 se cobra igual y la tarjeta no queda guardada. Quedarse sin la comodidad de la
 próxima vez es molesto; no poder pagar es perder la venta.
+
+## Si el local rechaza un pedido cobrado
+
+Antes quedaba ahí: el pedido pasaba a `rechazado`, la pantalla le prometía al
+cliente "te devolvemos el dinero" y no había función ni pantalla para hacerlo,
+ni siquiera para anotar que se devolvió por afuera. Con pagos simulados no se
+notaba; cobrando de verdad es plata del cliente retenida sin circuito.
+
+- **Al cliente se le devuelve el 100%**, productos y envío. El que falló fue el
+  local; el cliente no hizo nada mal y el envío ni siquiera se hizo.
+- **Al local se le cobra una penalidad**: un porcentaje de lo que hubiera
+  cobrado por ese pedido (`tarifarios.penalidad_rechazo_pct`, 50% por defecto),
+  sobre los productos y no sobre el envío. Entra en `cargos_comercio` con el
+  `pedido_id`, así que aparece sola en su liquidación y en la que mira la
+  administración — y tres semanas después se puede explicar de dónde salió.
+
+El reembolso contra Mercado Pago **no lo hace la base**: hace falta el access
+token, que vive solo en las Edge Functions. `rechazar_pedido` lo deja marcado
+como pendiente y lo ejecuta el cron **`reembolsar-pedidos`** (cada minuto, llama
+a `reembolsar`), con `POST /v1/orders/{id}/refund` sin cuerpo, que es la
+devolución total. Si falla —sin red, Mercado Pago caído— la fila queda pendiente
+y se reintenta sola; colgado del rechazo, un fallo dejaría al cliente sin su
+plata y sin que nadie se entere. Después de un día deja de reintentarse y lo
+mira una persona: puede que haya que resolverlo por afuera.
+
+Un pedido que **nunca llegó a cobrarse** no deja nada pendiente ni genera
+penalidad. `tests/reembolsos.sql` cubre las dos cosas.
 
 ## Liquidaciones
 

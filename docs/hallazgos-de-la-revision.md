@@ -33,7 +33,7 @@ transferir.
 **Arreglado (0058):** transferencia y efectivo salieron de la pantalla del
 cliente y de `crear_pedido`. En la app solo se paga con tarjeta.
 
-### 2. Se le promete al cliente un reembolso que ningún flujo puede hacer
+### 2. Se le promete al cliente un reembolso que ningún flujo puede hacer — ARREGLADO
 
 `pedido_seguimiento_page.dart:89`, `:90` y `:258` dicen "Te devolvemos el
 dinero". El valor `'reembolsado'` del enum `estado_pago` no se escribe en ningún
@@ -45,7 +45,11 @@ la pasarela "que todavía no está definida", pero la pasarela ya está (0032-00
 que le devuelven la plata y no hay pantalla ni función para devolverla, ni
 siquiera para registrar que se devolvió por afuera.
 
-### 3. Un pedido con tarjeta abandonado no se puede volver a pagar
+**Arreglado (0060):** al rechazar un pedido cobrado se le devuelve el 100% al
+cliente (cron `reembolsar-pedidos` + Edge Function `reembolsar`) y se le cobra
+la penalidad al local, que aparece en la liquidación.
+
+### 3. Un pedido con tarjeta abandonado no se puede volver a pagar — ARREGLADO
 
 La ruta `/cliente/pagar/:id` tiene **un solo enlace en toda la app**:
 `carrito_page.dart:58`, justo después de crear el pedido. Desde "Mis pedidos" se
@@ -57,6 +61,9 @@ funciona si el cliente no se va de esa pantalla.
 **Reproducir:** elegir "Tarjeta" → cerrar la app en la pantalla de pago → volver
 a "Mis pedidos" → el pedido queda "Esperando pago" sin forma de pagarlo. A la
 media hora lo cierra `cerrar_pagos_vencidos()`.
+
+**Arreglado:** el seguimiento del pedido muestra "Pagar $X" cuando quedó
+esperando el pago, y el texto dejó de decirle que esperara.
 
 ### 4. Guardar tarifas resetea en silencio el precio de MODO YA Plus — ARREGLADO
 

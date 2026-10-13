@@ -76,7 +76,7 @@ class _Contenido extends ConsumerWidget {
     final destino = pedido.entrega;
 
     final (titulo, bajada) = switch (e) {
-      EstadoPedido.pendientePago => ('Recibimos tu pedido', 'Estamos confirmando el pago. Te avisamos enseguida.'),
+      EstadoPedido.pendientePago => ('Falta pagarlo', 'Terminá el pago y el local lo empieza a preparar.'),
       EstadoPedido.pagado => ('Enviado al local', 'Esperando que ${pedido.comercioNombre} lo acepte.'),
       EstadoPedido.aceptado => ('Pedido aceptado', '${pedido.comercioNombre} ya lo tiene.'),
       EstadoPedido.enPreparacion => ('En preparación', 'Lo están preparando.'),
@@ -247,6 +247,19 @@ class _Contenido extends ConsumerWidget {
             ),
           ),
         ),
+
+        // Sin esto, un pedido que quedó esperando el pago no se puede pagar: el
+        // único enlace a la pantalla de pago estaba en el carrito, justo
+        // después de crearlo. El que se iba de ahí lo perdía, y a la media hora
+        // lo cerraba `cerrar_pagos_vencidos()`.
+        if (e == EstadoPedido.pendientePago) ...[
+          const SizedBox(height: MySpacing.lg),
+          MyBoton(
+            label: 'Pagar ${Formato.pesos(pedido.total)}',
+            icon: Symbols.credit_card,
+            onPressed: () => context.go('/cliente/pagar/${pedido.id}'),
+          ),
+        ],
 
         if (e == EstadoPedido.pendientePago || e == EstadoPedido.pagado) ...[
           const SizedBox(height: MySpacing.lg),
