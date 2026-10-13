@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import 'ubicacion.dart';
 
 /// Servicio en curso (B4 a B7): ir al local, retirar, llevar y confirmar con
 /// el codigo que dicta el cliente.
@@ -85,6 +88,9 @@ class _Contenido extends ConsumerWidget {
     final vaAlLocal = envio.estado.index < EstadoEnvio.retirado.index;
     final o = envio.origen;
     final d = envio.destino;
+    final otros = (ref.watch(enviosEnCursoProvider).value ?? const <Envio>[])
+        .where((e) => e.id != envio.id)
+        .toList();
 
     return Column(
       children: [
@@ -128,23 +134,32 @@ class _Contenido extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: MySpacing.md),
-              if (o.tieneCoordenadas && d.tieneCoordenadas) ...[
-                MyMapaVista(
-                  alto: 220,
-                  interactivo: true,
-                  marcadores: [
-                    MyMarcador(punto: LatLng(o.lat!, o.lng!), icono: Symbols.storefront, etiqueta: vaAlLocal ? 'Ir acá' : null),
-                    MyMarcador(
-                      punto: LatLng(d.lat!, d.lng!),
-                      icono: Symbols.home,
-                      color: MyColors.dock,
-                      etiqueta: vaAlLocal ? null : 'Ir acá',
-                    ),
-                  ],
+              // Lleva dos pedidos del mismo local (0056): que no se olvide del otro.
+              for (final otro in otros) ...[
+                const SizedBox(height: MySpacing.sm),
+                MyCard(
+                  onTap: () => context.pushReplacement('/servicio/${otro.id}'),
+                  color: MyColors.primaryFixed,
+                  child: Row(
+                    children: [
+                      Icon(Symbols.package_2, color: MyColors.onPrimaryFixed, fill: 1),
+                      const SizedBox(width: MySpacing.sm),
+                      Expanded(
+                        child: Text(
+                          otro.estado.index < EstadoEnvio.retirado.index && vaAlLocal
+                              ? 'También retirás ${otro.codigo} en este local (para ${otro.destino.calle}).'
+                              : 'También llevás ${otro.codigo} a ${otro.destino.calle}.',
+                          style: MyType.labelLg.copyWith(color: MyColors.onPrimaryFixed),
+                        ),
+                      ),
+                      Icon(Symbols.chevron_right, color: MyColors.onPrimaryFixed),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: MySpacing.md),
               ],
+              const SizedBox(height: MySpacing.md),
+              _MapaDelServicio(envio: envio, vaAlRetiro: vaAlLocal),
+              const SizedBox(height: MySpacing.md),
               MyRouteTimeline(
                 background: MyColors.surfaceContainerLowest,
                 stops: [
@@ -259,6 +274,67 @@ class _Contenido extends ConsumerWidget {
                         },
                       ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Mapa del servicio en curso: dónde está el rider, dónde retira y dónde
+/// entrega, con el destino del momento marcado, y el botón para abrir la ruta
+/// en Google Maps.
+class _MapaDelServicio extends ConsumerWidget {
+  const _MapaDelServicio({required this.envio, required this.vaAlRetiro});
+
+  final Envio envio;
+  final bool vaAlRetiro;
+
+  /// Abre la ruta hasta [destino]. Sin coordenadas, busca la dirección.
+  Future<void> _comoLlegar(BuildContext context, Direccion destino) async {
+    final adonde = destino.tieneCoordenadas ? '${destino.lat},${destino.lng}' : '${destino.calle}, Malargüe, Mendoza';
+    final url = Uri.https('www.google.com', '/maps/dir/', {'api': '1', 'destination': adonde, 'travelmode': 'driving'});
+    final ok = await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) mostrarError(context, 'No pudimos abrir el mapa.');
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final o = envio.origen;
+    final d = envio.destino;
+    final yo = ref.watch(ubicacionRiderProvider);
+    final destino = vaAlRetiro ? o : d;
+
+    final marcadores = [
+      if (yo is LecturaOk)
+        MyMarcador(punto: LatLng(yo.lat, yo.lng), icono: Symbols.two_wheeler, color: MyColors.onSurface, etiqueta: 'Vos'),
+      if (o.tieneCoordenadas)
+        MyMarcador(
+          punto: LatLng(o.lat!, o.lng!),
+          icono: envio.esMandado ? Symbols.pin_drop : Symbols.storefront,
+          etiqueta: vaAlRetiro ? 'Retirá acá' : 'Retiro',
+        ),
+      if (d.tieneCoordenadas)
+        MyMarcador(
+          punto: LatLng(d.lat!, d.lng!),
+          icono: Symbols.home,
+          color: MyColors.dock,
+          etiqueta: vaAlRetiro ? 'Entrega' : 'Entregá acá',
+        ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (o.tieneCoordenadas || d.tieneCoordenadas) ...[
+          MyMapaVista(alto: 260, interactivo: true, marcadores: marcadores),
+          const SizedBox(height: MySpacing.sm),
+        ],
+        OutlinedButton.icon(
+          onPressed: () => _comoLlegar(context, destino),
+          icon: const Icon(Symbols.directions, size: 22),
+          label: Text(vaAlRetiro
+              ? 'Cómo llegar a ${envio.esMandado ? 'retirar' : envio.comercioNombre}'
+              : 'Cómo llegar a la entrega'),
         ),
       ],
     );

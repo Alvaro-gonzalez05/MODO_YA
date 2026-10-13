@@ -182,7 +182,8 @@ class _MyMapaVistaState extends State<MyMapaVista> {
       opciones = MapOptions(
         initialCameraFit: CameraFit.coordinates(
           coordinates: puntos,
-          padding: const EdgeInsets.all(48),
+          // Arriba mas margen: la etiqueta va encima del pin y se cortaba.
+          padding: const EdgeInsets.fromLTRB(48, 84, 48, 32),
           maxZoom: 17,
         ),
         interactionOptions: gestos,
