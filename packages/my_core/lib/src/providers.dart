@@ -205,10 +205,11 @@ final enviosDelRepartidorProvider = StreamProvider<List<Envio>>((ref) {
   return ref.watch(enviosRepositoryProvider).watchDelRepartidor(id);
 });
 
-/// El envio que el rider tiene en curso, si tiene.
-final envioEnCursoProvider = Provider<AsyncValue<Envio?>>((ref) {
+/// Los envios que el rider tiene en curso: uno, o dos si se sumo un segundo
+/// pedido del mismo local (0056).
+final enviosEnCursoProvider = Provider<AsyncValue<List<Envio>>>((ref) {
   return ref.watch(enviosDelRepartidorProvider).whenData(
-        (lista) => lista.where((e) => e.estado.esActivo).firstOrNull,
+        (lista) => lista.where((e) => e.estado.esActivo).toList(),
       );
 });
 

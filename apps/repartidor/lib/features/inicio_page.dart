@@ -74,7 +74,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
   @override
   Widget build(BuildContext context) {
     final rider = ref.watch(repartidorActualProvider).value;
-    final enCurso = ref.watch(envioEnCursoProvider).value;
+    final enCurso = ref.watch(enviosEnCursoProvider).value ?? const <Envio>[];
     final lectura = ref.watch(ubicacionRiderProvider);
     final conectado = rider?.conectado ?? false;
 
@@ -138,10 +138,10 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                 ),
               ],
 
-              if (enCurso != null) ...[
+              for (final e in enCurso) ...[
                 const SizedBox(height: MySpacing.md),
                 MyCard(
-                  onTap: () => context.push('/servicio/${enCurso.id}'),
+                  onTap: () => context.push('/servicio/${e.id}'),
                   color: MyColors.primaryFixed,
                   child: Row(
                     children: [
@@ -151,9 +151,11 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const MyOverline('Servicio en curso'),
-                            Text('${enCurso.codigo} - ${enCurso.nombreRetiro}', style: MyType.headlineSm),
-                            Text(enCurso.estado.label, style: MyType.bodySm),
+                            MyOverline(enCurso.length > 1
+                                ? 'Servicio en curso · ${enCurso.indexOf(e) + 1} de ${enCurso.length}'
+                                : 'Servicio en curso'),
+                            Text('${e.codigo} - ${e.nombreRetiro}', style: MyType.headlineSm),
+                            Text('${e.estado.label} · a ${e.destino.calle}', style: MyType.bodySm),
                           ],
                         ),
                       ),
@@ -173,7 +175,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
               ]),
 
               const SizedBox(height: MySpacing.lg),
-              if (conectado && enCurso == null)
+              if (conectado && enCurso.isEmpty)
                 MyCard(
                   child: Column(
                     children: [

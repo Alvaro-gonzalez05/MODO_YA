@@ -64,6 +64,7 @@ van en una migración nueva.
 | `0053_push_al_celular.sql` | tokens de celular y el cron que empuja lo que quedó sin mandar |
 | `0054_recordatorio_viejo_no_sale_tarde.sql` | **arreglo**: un recordatorio salteado del carrito abandonado ya no sale después, fuera de orden |
 | `0055_solicitud_de_rider_del_local.sql` | el local pide el alta de un rider nuevo con su documentación |
+| `0056_doble_pedido_del_mismo_local.sql` | un rider lleva dos pedidos del mismo local en el mismo viaje |
 
 ## Decisiones de diseño
 
@@ -374,6 +375,27 @@ aprobada y vincula el rider al local en el mismo paso; si algo de eso falla, se
 borra el usuario recién creado. **No aprobar** (`admin_rechazar_solicitud_rider`)
 exige un motivo, que es lo que ve el local.
 
+## Doble pedido del mismo local
+
+Si un local tiene un pedido listo y ya hay un rider yendo a buscarle otro (o
+esperando en la puerta), el pedido nuevo **se le ofrece primero a él** y se lo
+lleva en el mismo viaje (0056). Va antes que el rider propio y no pasa por el
+filtro de radio: ya está yendo para ahí.
+
+Se suma solo si el envío que tiene en curso es **de ese mismo local**, es
+**uno solo** y está todavía en `asignado` o `en_local`: si ya lo retiró, ya se
+fue. Los mandados no se suman, porque no tienen local. Con dos envíos encima no
+recibe un tercero (`responder_oferta` lo vuelve a controlar, por si aceptara
+dos ofertas a la vez).
+
+Cada envío sigue siendo independiente: su código de entrega, sus estados y su
+ganancia. Lo único que cambió es `ocupado`, que pasa a ser "tiene algún envío
+activo" (`recalcular_ocupado`): entregar o cancelar el primero no lo libera si
+le queda el segundo.
+
+En la app del rider la oferta dice **OTRO PEDIDO** y de qué envío en curso es
+compañero, el inicio lista los dos y cada servicio avisa del otro.
+
 ## Promociones del local
 
 El local baja el precio de **todo su menú**, de **las secciones que elija** o de
@@ -596,6 +618,11 @@ aceptar → retirar → entregar. Verifica que el precio lo ponga el servidor, q
 el motor elija al cadete más cercano *dentro del radio* (hay un segundo cadete a
 9 km que debe quedar afuera), que una transición inválida rebote y que un código
 de entrega equivocado no cierre el envío.
+
+**`tests/doble_pedido.sql`** — el segundo pedido del local va al rider que ya
+va para ahí aunque haya otro libre más cerca, no pasa de dos, no se suman
+pedidos de otro local ni después de retirar el primero, y entregar uno no lo
+libera si le queda el otro.
 
 **`tests/campanias.sql`** — campañas del local, envío gratis con Plus,
 publicidad cobrada una vez por día y lo que termina en la liquidación.

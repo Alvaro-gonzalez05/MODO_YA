@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
@@ -13,7 +14,7 @@ enum RespuestaOferta { acepta, rechaza, vencio }
 ///
 /// Sin datos del cliente: todavia no acepto (la vista de la base tampoco los
 /// trae).
-class OfertaSheet extends StatefulWidget {
+class OfertaSheet extends ConsumerStatefulWidget {
   const OfertaSheet({super.key, required this.oferta});
 
   final OfertaServicio oferta;
@@ -32,10 +33,10 @@ class OfertaSheet extends StatefulWidget {
   }
 
   @override
-  State<OfertaSheet> createState() => _OfertaSheetState();
+  ConsumerState<OfertaSheet> createState() => _OfertaSheetState();
 }
 
-class _OfertaSheetState extends State<OfertaSheet> {
+class _OfertaSheetState extends ConsumerState<OfertaSheet> {
   late Timer _timer;
   late Duration _restante = widget.oferta.restante;
   late final int _totalMs = (widget.oferta.expiraEn.difference(widget.oferta.envio.creadoEn)).inMilliseconds.clamp(1, 600000);
@@ -47,8 +48,18 @@ class _OfertaSheetState extends State<OfertaSheet> {
       if (!mounted) return;
       final r = widget.oferta.restante;
       setState(() => _restante = r);
-      if (r == Duration.zero) Navigator.of(context).pop(RespuestaOferta.vencio);
+      if (r == Duration.zero) _cerrar(RespuestaOferta.vencio);
     });
+  }
+
+  /// Cierra la hoja una sola vez. El reloj se frena antes: si siguiera
+  /// andando mientras la hoja se va, al llegar a cero volveria a cerrar y se
+  /// llevaria puestas las pantallas de abajo (la app quedaba en negro si el
+  /// rider aceptaba en los ultimos segundos).
+  void _cerrar(RespuestaOferta respuesta) {
+    if (!_timer.isActive) return;
+    _timer.cancel();
+    if (ModalRoute.of(context)?.isCurrent ?? false) Navigator.of(context).pop(respuesta);
   }
 
   @override
@@ -62,6 +73,14 @@ class _OfertaSheetState extends State<OfertaSheet> {
     final o = widget.oferta;
     final envio = o.envio;
     final progreso = (_restante.inMilliseconds / _totalMs).clamp(0.0, 1.0);
+    // Si ya va para ese mismo local (0056), la oferta lo dice: es un pedido que
+    // se suma al viaje, no un viaje nuevo. En vivo: al abrir la app la oferta
+    // puede llegar antes que la lista de envios en curso.
+    final sumaA = envio.esMandado
+        ? null
+        : (ref.watch(enviosEnCursoProvider).value ?? const <Envio>[])
+            .where((e) => !e.esMandado && e.comercioId == envio.comercioId)
+            .firstOrNull;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -72,7 +91,8 @@ class _OfertaSheetState extends State<OfertaSheet> {
           children: [
             Row(
               children: [
-                const MyBadge('NUEVO SERVICIO', tone: MyBadgeTone.ember, icon: Symbols.notifications_active),
+                MyBadge(sumaA != null ? 'OTRO PEDIDO' : 'NUEVO SERVICIO',
+                    tone: MyBadgeTone.ember, icon: Symbols.notifications_active),
                 const Spacer(),
                 Text(envio.codigo, style: MyType.labelLg),
               ],
@@ -116,6 +136,29 @@ class _OfertaSheetState extends State<OfertaSheet> {
                 icon: envio.cobroMetodo == MetodoPago.tarjeta ? Symbols.credit_card : Symbols.payments,
               ),
             ],
+            // Ya va para ese local: este se retira en el mismo viaje.
+            if (sumaA case final s?) ...[
+              const SizedBox(height: MySpacing.md),
+              Container(
+                padding: const EdgeInsets.all(MySpacing.sm),
+                decoration: BoxDecoration(
+                  color: MyColors.primaryFixed,
+                  borderRadius: BorderRadius.circular(MyRadius.lg),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Symbols.package_2, color: MyColors.onPrimaryFixed, fill: 1),
+                    const SizedBox(width: MySpacing.sm),
+                    Expanded(
+                      child: Text(
+                        'Es de ${envio.comercioNombre}, igual que tu ${s.codigo}: lo retirás en el mismo viaje.',
+                        style: MyType.labelLg.copyWith(color: MyColors.onPrimaryFixed),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: MySpacing.lg),
             MyStatRow(tiles: [
               MyStatTile(icon: Symbols.near_me, value: Formato.km(o.distanciaAlRetiroKm), label: envio.esMandado ? 'Hasta el retiro' : 'Hasta el local'),
@@ -127,8 +170,17 @@ class _OfertaSheetState extends State<OfertaSheet> {
               MyMapaVista(
                 alto: 150,
                 marcadores: [
-                  MyMarcador(punto: LatLng(envio.origen.lat!, envio.origen.lng!), icono: Symbols.storefront),
-                  MyMarcador(punto: LatLng(envio.destino.lat!, envio.destino.lng!), icono: Symbols.home, color: MyColors.dock),
+                  MyMarcador(
+                    punto: LatLng(envio.origen.lat!, envio.origen.lng!),
+                    icono: envio.esMandado ? Symbols.pin_drop : Symbols.storefront,
+                    etiqueta: 'Retiro',
+                  ),
+                  MyMarcador(
+                    punto: LatLng(envio.destino.lat!, envio.destino.lng!),
+                    icono: Symbols.home,
+                    color: MyColors.dock,
+                    etiqueta: 'Entrega',
+                  ),
                 ],
               ),
               const SizedBox(height: MySpacing.md),
@@ -159,7 +211,7 @@ class _OfertaSheetState extends State<OfertaSheet> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(RespuestaOferta.rechaza),
+                    onPressed: () => _cerrar(RespuestaOferta.rechaza),
                     child: const Text('Rechazar'),
                   ),
                 ),
@@ -167,7 +219,7 @@ class _OfertaSheetState extends State<OfertaSheet> {
                 Expanded(
                   flex: 2,
                   child: FilledButton.icon(
-                    onPressed: () => Navigator.of(context).pop(RespuestaOferta.acepta),
+                    onPressed: () => _cerrar(RespuestaOferta.acepta),
                     icon: const Icon(Symbols.bolt, size: 22, fill: 1),
                     label: const Text('Aceptar'),
                   ),
