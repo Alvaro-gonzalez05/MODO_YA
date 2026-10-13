@@ -260,6 +260,17 @@ final cargosDeComercioProvider = StreamProvider.family<List<CargoComercio>, Stri
   (ref, id) => ref.watch(liquidacionesRepositoryProvider).watchCargos(id),
 );
 
+/// Cargos de un rider, para la administración y para el propio rider.
+final cargosDeRiderProvider = StreamProvider.family<List<CargoRider>, String>(
+  (ref, id) => ref.watch(liquidacionesRepositoryProvider).watchCargosRider(id),
+);
+
+/// Los riders que se bajaron de un envío, para que la administración decida.
+final abandonosProvider = StreamProvider.family<List<AbandonoDeEnvio>, String?>(
+  (ref, repartidorId) =>
+      ref.watch(liquidacionesRepositoryProvider).watchAbandonos(repartidorId: repartidorId),
+);
+
 /// Campañas del local de la sesión (publicidad y MODO YA Plus).
 final campaniasDelComercioProvider = StreamProvider<List<Campania>>((ref) {
   final id = ref.watch(sesionProvider).comercioId;

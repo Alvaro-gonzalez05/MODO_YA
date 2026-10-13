@@ -43,6 +43,7 @@ class PendienteRider {
     required this.envios,
     required this.ganancias,
     required this.efectivo,
+    required this.cargos,
     required this.total,
   });
 
@@ -53,6 +54,8 @@ class PendienteRider {
   final int efectivo;
 
   /// Positivo: MODO YA le paga. Negativo: el rider tiene que rendir plata.
+  /// Lo que se le descuenta además del efectivo: bajadas, faltantes, ajustes.
+  final int cargos;
   final int total;
 
   factory PendienteRider.fromRow(Map<String, dynamic> f) => PendienteRider(
@@ -61,7 +64,107 @@ class PendienteRider {
         envios: Fila.entero(f, 'envios'),
         ganancias: Fila.entero(f, 'ganancias'),
         efectivo: Fila.entero(f, 'efectivo'),
+        cargos: Fila.entero(f, 'cargos'),
         total: Fila.entero(f, 'total'),
+      );
+}
+
+/// A qué corresponde un cargo de un rider.
+enum ConceptoCargoRider {
+  abandono('abandono', 'Se bajó del envío'),
+  faltante('faltante', 'Faltante'),
+  ajuste('ajuste', 'Ajuste');
+
+  const ConceptoCargoRider(this.wire, this.rotulo);
+
+  final String wire;
+  final String rotulo;
+
+  static ConceptoCargoRider fromWire(String? v) =>
+      ConceptoCargoRider.values.firstWhere((e) => e.wire == v, orElse: () => ConceptoCargoRider.ajuste);
+}
+
+/// Lo que se le descuenta a un rider de lo que cobra. Lo carga la
+/// administración: el sistema registra la bajada, pero no decide si se cobra.
+class CargoRider {
+  const CargoRider({
+    required this.id,
+    required this.repartidorId,
+    required this.concepto,
+    required this.detalle,
+    required this.monto,
+    required this.fecha,
+    this.envioId,
+    this.liquidado = false,
+  });
+
+  final String id;
+  final String repartidorId;
+  final ConceptoCargoRider concepto;
+  final String detalle;
+
+  /// Positivo: se le descuenta. Negativo: se le devuelve.
+  final int monto;
+  final DateTime fecha;
+  final String? envioId;
+
+  /// Ya entró en una liquidación: no se puede borrar.
+  final bool liquidado;
+
+  factory CargoRider.fromRow(Map<String, dynamic> f) => CargoRider(
+        id: Fila.texto(f, 'id'),
+        repartidorId: Fila.texto(f, 'repartidor_id'),
+        concepto: ConceptoCargoRider.fromWire(f['concepto'] as String?),
+        detalle: Fila.texto(f, 'detalle'),
+        monto: Fila.entero(f, 'monto'),
+        fecha: Fila.fecha(f, 'fecha'),
+        envioId: Fila.textoOpcional(f, 'envio_id'),
+        liquidado: f['liquidacion_id'] != null,
+      );
+}
+
+/// Un rider que se bajó de un envío que ya había aceptado.
+class AbandonoDeEnvio {
+  const AbandonoDeEnvio({
+    required this.id,
+    required this.envioId,
+    required this.repartidorId,
+    required this.rider,
+    required this.cuando,
+    required this.yaCobrado,
+    this.motivo,
+    this.envioCodigo,
+    this.comercioNombre,
+    this.estadoAlBajarse,
+  });
+
+  final String id;
+  final String envioId;
+  final String repartidorId;
+  final String rider;
+  final DateTime cuando;
+
+  /// Ya se le cargó algo por ese envío: no hay nada que decidir.
+  final bool yaCobrado;
+  final String? motivo;
+  final String? envioCodigo;
+  final String? comercioNombre;
+
+  /// En qué estado estaba al bajarse: no es lo mismo plantar al local que
+  /// bajarse apenas aceptó.
+  final String? estadoAlBajarse;
+
+  factory AbandonoDeEnvio.fromRow(Map<String, dynamic> f) => AbandonoDeEnvio(
+        id: Fila.texto(f, 'id'),
+        envioId: Fila.texto(f, 'envio_id'),
+        repartidorId: Fila.texto(f, 'repartidor_id'),
+        rider: Fila.textoOpcional(f, 'rider') ?? 'Rider',
+        cuando: Fila.fecha(f, 'creado_en'),
+        yaCobrado: Fila.booleano(f, 'ya_cobrado'),
+        motivo: Fila.textoOpcional(f, 'motivo'),
+        envioCodigo: Fila.textoOpcional(f, 'envio_codigo'),
+        comercioNombre: Fila.textoOpcional(f, 'comercio_nombre'),
+        estadoAlBajarse: Fila.textoOpcional(f, 'estado_al_bajarse'),
       );
 }
 
@@ -181,7 +284,7 @@ class LiquidacionesRepository {
 
   Stream<List<PendienteRider>> watchPendientesRiders(DateTime desde, DateTime hasta) => enVivo(
         canal: 'liq-riders-${_dia(desde)}-${_dia(hasta)}',
-        tablas: const ['envios', 'liquidaciones'],
+        tablas: const ['envios', 'liquidaciones', 'cargos_repartidor'],
         leer: () async {
           final r = await _db.rpc('pendiente_de_liquidar_riders', params: {
             'p_desde': _dia(desde),
@@ -190,6 +293,52 @@ class LiquidacionesRepository {
           return (r as List).map((f) => PendienteRider.fromRow(Map<String, dynamic>.from(f as Map))).toList();
         },
       );
+
+  /// Cargos de un rider: lo que se le descuenta de lo que cobra.
+  Stream<List<CargoRider>> watchCargosRider(String repartidorId) => enVivo(
+        canal: 'cargos-rider-$repartidorId',
+        tablas: const ['cargos_repartidor'],
+        leer: () async => (await _db
+                .from('cargos_repartidor')
+                .select()
+                .eq('repartidor_id', repartidorId)
+                .order('fecha', ascending: false))
+            .map(CargoRider.fromRow)
+            .toList(),
+      );
+
+  /// Los riders que se bajaron de un envío. La administración decide si cobra.
+  Stream<List<AbandonoDeEnvio>> watchAbandonos({String? repartidorId}) => enVivo(
+        canal: 'abandonos-${repartidorId ?? "todos"}',
+        tablas: const ['abandonos_envio', 'cargos_repartidor'],
+        leer: () async {
+          var q = _db.from('v_abandonos').select();
+          if (repartidorId != null) q = q.eq('repartidor_id', repartidorId);
+          return (await q.order('creado_en', ascending: false).limit(60))
+              .map(AbandonoDeEnvio.fromRow)
+              .toList();
+        },
+      );
+
+  /// Le carga algo a un rider. Solo la administración.
+  Future<void> cargarARider({
+    required String repartidorId,
+    required ConceptoCargoRider concepto,
+    required String detalle,
+    required int monto,
+    String? envioId,
+  }) =>
+      intentar(() => _db.rpc('admin_cargar_a_rider', params: {
+            'p_rider': repartidorId,
+            'p_concepto': concepto.wire,
+            'p_detalle': detalle,
+            'p_monto': monto,
+            'p_envio': envioId,
+          }));
+
+  /// Solo mientras no esté liquidado.
+  Future<void> borrarCargoRider(String id) =>
+      intentar(() => _db.rpc('admin_borrar_cargo_rider', params: {'p_cargo': id}));
 
   /// Cargos de un local (mensualidad, publicidad, ajustes).
   Stream<List<CargoComercio>> watchCargos(String comercioId) => enVivo(

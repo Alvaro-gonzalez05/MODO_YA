@@ -70,6 +70,7 @@ van en una migración nueva.
 | `0059_un_solo_evento_pagado.sql` | **arreglo**: la auditoría del pedido mostraba "pagado" dos veces |
 | `0060_reembolso_del_pedido_rechazado.sql` | el local rechaza un pedido cobrado: se devuelve todo y se le cobra la penalidad |
 | `0061_el_rider_se_baja_sin_matar_el_pedido.sql` | el rider se baja y el envío vuelve a buscar; cancelar un pedido cobrado devuelve la plata |
+| `0062_cargos_del_rider.sql` | lo que se le descuenta a un rider, que lo carga la administración |
 
 ## Decisiones de diseño
 
@@ -576,6 +577,32 @@ la trata bien.
 `tests/notificaciones_automaticas.sql` cubre las dos, con foco en lo que no
 tiene que pasar: que avise antes de tiempo, que le escriba al que sí pagó, que
 repita por el mismo pedido o que insista con el dormido antes del período.
+
+## Cargos del rider
+
+Los locales ya tenían `cargos_comercio` —mensualidad, publicidad, la penalidad
+por rechazar—. Los riders no tenían nada: su liquidación era ganancias menos el
+efectivo sin rendir, y no había forma de cobrarles una bajada ni un faltante.
+
+**La liquidación es la única vía de cobro que funciona.** Una tarjeta guardada
+no se puede retener: el rider puede desconocer el cargo o darla de baja. Lo que
+sí se puede es descontar de lo que se le va a pagar, que es lo que hacen todas
+las plataformas.
+
+**Lo carga la administración, no el sistema.** Que un rider se baje queda
+registrado solo (`abandonos_envio`, 0061), pero cobrarlo lo decide una persona:
+no es lo mismo bajarse porque sí que porque lo chocaron, y automatizar esa
+diferencia sale caro de los dos lados. `v_abandonos` es esa bandeja: quién se
+bajó, de qué envío, en qué estado y si ya se le cobró.
+
+Un cargo puede ser **negativo**, y así se devuelve algo cobrado de más sin
+borrar el registro. El total de la liquidación **puede dar negativo**: ahí el
+rider debe, y queda asentado en vez de perderse. Un cargo ya liquidado no se
+borra: con ese número ya se le pagó.
+
+`tests/cargos_del_rider.sql` cubre que solo la administración cargue, que cada
+rider vea solo lo suyo (con `set local role`, que si no la prueba no prueba
+nada), que llegue a la liquidación y que no se cobre dos veces.
 
 ## Fotos
 

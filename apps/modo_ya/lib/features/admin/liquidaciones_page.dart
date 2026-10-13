@@ -236,7 +236,9 @@ class _Riders extends ConsumerWidget {
       titulo: 'Cerrar la liquidación de ${p.rider}',
       mensaje: p.total >= 0
           ? 'Le vas a pagar ${Formato.pesos(p.total)} por ${p.envios} envíos.'
-          : 'Cobró ${Formato.pesos(p.efectivo)} en la calle y ganó ${Formato.pesos(p.ganancias)}: tiene que rendirte ${Formato.pesos(p.total.abs())}.',
+          : 'Cobró ${Formato.pesos(p.efectivo)} en la calle y ganó ${Formato.pesos(p.ganancias)}'
+              '${p.cargos == 0 ? '' : ', con ${Formato.pesos(p.cargos)} de cargos'}'
+              ': tiene que rendirte ${Formato.pesos(p.total.abs())}.',
       aceptar: 'Cerrar',
     );
     if (!ok) return;
@@ -280,7 +282,8 @@ class _Riders extends ConsumerWidget {
                         ],
                       ),
                       Text(
-                        '${p.envios} envíos · ganó ${Formato.pesos(p.ganancias)} · cobró ${Formato.pesos(p.efectivo)}',
+                        '${p.envios} envíos · ganó ${Formato.pesos(p.ganancias)} · cobró ${Formato.pesos(p.efectivo)}'
+                        '${p.cargos == 0 ? '' : ' · cargos ${Formato.pesos(p.cargos)}'}',
                         style: MyType.bodySm.copyWith(color: MyColors.secondary),
                       ),
                       const SizedBox(height: MySpacing.sm),
@@ -302,6 +305,7 @@ class _Riders extends ConsumerWidget {
             MyColumna('Envíos'),
             MyColumna('Ganó', alDerecha: true),
             MyColumna('Cobró en efectivo', alDerecha: true),
+            MyColumna('Cargos', alDerecha: true),
             MyColumna('Saldo', alDerecha: true),
             MyColumna('', alDerecha: true),
           ],
@@ -313,6 +317,12 @@ class _Riders extends ConsumerWidget {
                   Text('${p.envios}', style: MyType.bodyMd),
                   Text(Formato.pesos(p.ganancias), style: MyType.bodyMd),
                   Text(Formato.pesos(p.efectivo), style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+                  Text(
+                    p.cargos == 0 ? '—' : Formato.pesos(p.cargos),
+                    style: MyType.bodyMd.copyWith(
+                      color: p.cargos == 0 ? MyColors.secondary : MyColors.error,
+                    ),
+                  ),
                   _Saldo(p.total),
                   MyBoton(label: 'Cerrar', icon: Symbols.done_all, onPressed: () => _cerrar(context, ref, p)),
                 ],
