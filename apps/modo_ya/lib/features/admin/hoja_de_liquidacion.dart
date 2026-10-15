@@ -5,6 +5,7 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import '../../comun/formulario_emergente.dart';
+import 'liquidacion_en_pdf.dart';
 
 /// El detalle de lo que se le va a pagar a un rider, como una hoja.
 ///
@@ -71,7 +72,34 @@ class _HojaDeRider extends ConsumerWidget {
             const Divider(height: MySpacing.xl),
 
             // ---- Los envíos ----------------------------------------------------
-            Text('Envíos entregados', style: MyType.labelLg),
+            Row(
+              children: [
+                Expanded(child: Text('Envíos entregados', style: MyType.labelLg)),
+                // Solo cuando ya cargaron los dos: un PDF a medio armar no
+                // sirve, y es peor que no poder bajarlo.
+                if (detalle.hasValue && cargos.hasValue)
+                  MyBoton(
+                    label: 'PDF',
+                    icon: Symbols.download,
+                    tipo: MyBotonTipo.texto,
+                    onPressed: () async {
+                      try {
+                        await guardarLiquidacionEnPdf(
+                          rider: p,
+                          envios: detalle.value!,
+                          cargos: cargos.value!
+                              .where((c) => !c.fecha.isBefore(desde) && !c.fecha.isAfter(hasta))
+                              .toList(),
+                          desde: desde,
+                          hasta: hasta,
+                        );
+                      } catch (e) {
+                        if (context.mounted) mostrarError(context, e);
+                      }
+                    },
+                  ),
+              ],
+            ),
             const SizedBox(height: MySpacing.xs),
             MyAsync(
               valor: detalle,
