@@ -75,29 +75,34 @@ class _HojaDeRider extends ConsumerWidget {
             Row(
               children: [
                 Expanded(child: Text('Envíos entregados', style: MyType.labelLg)),
-                // Solo cuando ya cargaron los dos: un PDF a medio armar no
-                // sirve, y es peor que no poder bajarlo.
-                if (detalle.hasValue && cargos.hasValue)
-                  MyBoton(
-                    label: 'PDF',
-                    icon: Symbols.download,
-                    tipo: MyBotonTipo.texto,
-                    onPressed: () async {
-                      try {
-                        await guardarLiquidacionEnPdf(
-                          rider: p,
-                          envios: detalle.value!,
-                          cargos: cargos.value!
-                              .where((c) => !c.fecha.isBefore(desde) && !c.fecha.isAfter(hasta))
-                              .toList(),
-                          desde: desde,
-                          hasta: hasta,
-                        );
-                      } catch (e) {
-                        if (context.mounted) mostrarError(context, e);
-                      }
-                    },
-                  ),
+                MyBoton(
+                  label: 'PDF',
+                  icon: Symbols.download,
+                  tipo: MyBotonTipo.texto,
+                  onPressed: () async {
+                    // Si todavía está cargando se avisa, en vez de bajar un
+                    // documento a medio armar.
+                    final envios = detalle.value;
+                    final lista = cargos.value;
+                    if (envios == null || lista == null) {
+                      mostrarAviso(context, 'Esperá a que termine de cargar.');
+                      return;
+                    }
+                    try {
+                      await guardarLiquidacionEnPdf(
+                        rider: p,
+                        envios: envios,
+                        cargos: lista
+                            .where((c) => !c.fecha.isBefore(desde) && !c.fecha.isAfter(hasta))
+                            .toList(),
+                        desde: desde,
+                        hasta: hasta,
+                      );
+                    } catch (e) {
+                      if (context.mounted) mostrarError(context, e);
+                    }
+                  },
+                ),
               ],
             ),
             const SizedBox(height: MySpacing.xs),

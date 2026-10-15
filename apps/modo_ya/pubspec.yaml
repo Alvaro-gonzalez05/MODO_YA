@@ -55,6 +55,9 @@ dependencies:
   # en cada plataforma.
   pdf: ^3.11.3
   printing: ^5.14.2
+  # `image` (que arrastra `pdf`) usa ZLibDecoder.decodeLazy, que recién existe
+  # en archive 4.5: sin esto el build web se cae al compilar el PNG decoder.
+  archive: ^4.5.2
 
 dev_dependencies:
   flutter_test:
