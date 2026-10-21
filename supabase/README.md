@@ -71,6 +71,7 @@ van en una migración nueva.
 | `0060_reembolso_del_pedido_rechazado.sql` | el local rechaza un pedido cobrado: se devuelve todo y se le cobra la penalidad |
 | `0061_el_rider_se_baja_sin_matar_el_pedido.sql` | el rider se baja y el envío vuelve a buscar; cancelar un pedido cobrado devuelve la plata |
 | `0062_cargos_del_rider.sql` | lo que se le descuenta a un rider, que lo carga la administración |
+| `0065_cada_uno_ve_su_liquidacion.sql` | el rider y el local leen su propia liquidación, no la de otro |
 
 ## Decisiones de diseño
 
@@ -329,6 +330,30 @@ Después hay que repartirla:
 que muestra el panel; `cerrar_liquidacion_*()` la deja registrada y marca esos
 pedidos y envíos, para que **no se paguen dos veces**. `supabase/tests/liquidaciones.sql`
 recorre el circuito entero.
+
+### Cada uno ve la suya (0065)
+
+Las funciones de liquidación arrancaban con `where public.es_admin()`: el rider
+y el local podían leer el *resultado* (el RLS de `liquidaciones`,
+`liquidaciones_comercio`, `cargos_comercio` y `cargos_repartidor` ya los
+habilitaba) pero no de qué se componía. 0065 **amplía esas mismas funciones** en
+vez de agregar unas nuevas: `es_admin()` **o** el dueño de los datos, que sale
+de `mi_repartidor_id()` / `mi_comercio_id()` (del JWT, no de un parámetro). Un
+rider pidiendo el detalle de otro recibe cero filas.
+
+Se suman `cargos_a_liquidar_rider()` / `cargos_a_liquidar_comercio()` —los
+descuentos del período con **el mismo filtro que el resumen**, así los renglones
+suman el saldo del encabezado— y `renglones_de_liquidacion_rider()` /
+`..._comercio()`, el detalle de una liquidación ya cerrada.
+
+La del local une `cargos_comercio` con `campania_gastos`: el resumen suma las
+dos (0046), así que mostrar una sola dejaba al local con un descuento sin
+explicar.
+
+`tests/mi_liquidacion.sql` prueba las dos puntas con dos riders y dos locales:
+que A no vea nada de B (detalle, resumen, cargos, la tabla por RLS y la
+liquidación cerrada) y que A sí vea todo lo suyo. Cerrar de más también es un
+bug: un rider que no ve su liquidación es el problema que esto vino a resolver.
 
 ## Campañas y MODO YA Plus
 
@@ -741,6 +766,10 @@ que un cliente no vea ni la notificación de otro ni la lista de destinatarios.
 **`tests/flujo_marketplace.sql`** — marketplace. Carrito con opciones → pago →
 aceptación → preparación → entrega. Además de los precios y la sincronía entre
 pedido y envío, comprueba las tres reglas de privacidad de arriba.
+
+**`tests/mi_liquidacion.sql`** — aislamiento de las liquidaciones (0065). Dos
+riders y dos locales con plata de verdad en el período: cruzado tiene que dar
+cero y propio tiene que dar completo. 20 comprobaciones.
 
 > **Ojo al escribir pruebas de RLS.** Estos scripts corren como `postgres`, que
 > es dueño de las tablas y **saltea RLS por completo**. Cualquier comprobación

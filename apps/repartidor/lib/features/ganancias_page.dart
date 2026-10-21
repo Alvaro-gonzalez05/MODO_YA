@@ -75,6 +75,14 @@ class _EnCurso extends ConsumerWidget {
     final periodo = (desde: desde, hasta: hasta);
     final resumen = ref.watch(miLiquidacionDeRiderProvider(periodo));
 
+    // El resumen llega en vivo y la hoja se pide una vez. Si entra un envío
+    // mientras la pantalla está abierta, el número de arriba cambiaría y el
+    // detalle de abajo no: quedarían contradiciéndose en la misma pantalla.
+    ref.listen(pendientesRidersProvider(periodo), (_, _) {
+      ref.invalidate(detalleDeRiderProvider);
+      ref.invalidate(cargosDelPeriodoRiderProvider);
+    });
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

@@ -428,7 +428,10 @@ class LiquidacionesRepository {
 
   Stream<List<PendienteComercio>> watchPendientesComercios(DateTime desde, DateTime hasta) => enVivo(
         canal: 'liq-comercios-${_dia(desde)}-${_dia(hasta)}',
-        tablas: const ['pedidos', 'cargos_comercio', 'liquidaciones_comercio'],
+        // `campania_gastos` también: la publicidad del día y los envíos
+        // regalados con Plus entran en los descuentos (0046), así que si cambian
+        // y no se vuelve a leer, el saldo que se muestra queda viejo.
+        tablas: const ['pedidos', 'cargos_comercio', 'liquidaciones_comercio', 'campania_gastos'],
         leer: () async {
           final r = await _db.rpc('pendiente_de_liquidar_comercios', params: {
             'p_desde': _dia(desde),

@@ -8,6 +8,30 @@ import 'package:my_ui/my_ui.dart';
 
 import 'widgets/envio_tile.dart';
 
+/// Lo que lleva cobrado la semana, con el acceso a la liquidación.
+///
+/// Va en el inicio porque es la pregunta que el local se hace sin entrar a
+/// buscarla, y porque antes el saldo le llegaba sin que pudiera verlo venir.
+class _KpiDeLaSemana extends ConsumerWidget {
+  const _KpiDeLaSemana();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final (desde, hasta) = RangoDePeriodo.estaSemana.periodo;
+    final r = ref.watch(miLiquidacionDeComercioProvider((desde: desde, hasta: hasta))).value;
+
+    return MyKpi(
+      rotulo: 'Vas a cobrar',
+      // Sin movimientos todavía no hay fila (ver 0065): se muestra un guion en
+      // vez de un "$0" que haría pensar que el cálculo dio cero.
+      valor: r == null ? '—' : Formato.pesos(r.total),
+      icono: Symbols.payments,
+      detalle: r == null ? 'Esta semana, sin movimientos' : 'Esta semana · tocá para ver el detalle',
+      onTap: () => context.go('/local/dinero'),
+    );
+  }
+}
+
 /// Inicio del local (A4): estado, pedidos por atender, pedir un rider y los
 /// envíos de hoy.
 class InicioComercioPage extends ConsumerWidget {
@@ -57,6 +81,7 @@ class InicioComercioPage extends ConsumerWidget {
           icono: Symbols.task_alt,
           detalle: 'Confirmados con código',
         ),
+        const _KpiDeLaSemana(),
       ],
     );
 

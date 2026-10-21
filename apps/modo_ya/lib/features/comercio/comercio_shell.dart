@@ -18,7 +18,8 @@ class ComercioShell extends ConsumerWidget {
   final bool enRaiz;
 
   static const raices = {
-    '/local', '/local/pedidos', '/local/campanias', '/local/menu', '/local/envios', '/local/cuenta',
+    '/local', '/local/pedidos', '/local/dinero', '/local/campanias', '/local/menu',
+    '/local/envios', '/local/cuenta',
   };
 
   @override
@@ -53,6 +54,10 @@ class ComercioShell extends ConsumerWidget {
       destinos: [
         const MyDestino(icon: Symbols.home, label: 'Inicio'),
         MyDestino(icon: Symbols.receipt_long, label: 'Pedidos', contador: nuevos),
+        // Tercera y no última: saber cuánto va a cobrar es lo que el local
+        // mira todas las semanas, y en el celular el dock solo muestra las
+        // primeras cuatro.
+        const MyDestino(icon: Symbols.payments, label: 'Dinero'),
         const MyDestino(icon: Symbols.campaign, label: 'Campañas'),
         const MyDestino(icon: Symbols.menu_book, label: 'Menú'),
         const MyDestino(icon: Symbols.sports_motorsports, label: 'Envíos'),

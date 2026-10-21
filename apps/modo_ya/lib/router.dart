@@ -35,6 +35,7 @@ import 'features/comercio/campanias_page.dart';
 import 'features/comercio/comercio_shell.dart';
 import 'features/comercio/crear_envio_page.dart';
 import 'features/comercio/cuenta_local_page.dart';
+import 'features/comercio/dinero_page.dart';
 import 'features/comercio/historial_page.dart';
 import 'features/comercio/horarios_page.dart';
 import 'features/comercio/inicio_page.dart';
@@ -158,6 +159,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/local/pedidos', builder: (_, _) => const PedidosLocalPage()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/local/dinero', builder: (_, _) => const DineroLocalPage()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/local/campanias', builder: (_, _) => const CampaniasPage()),
