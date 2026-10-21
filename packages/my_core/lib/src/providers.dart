@@ -6,6 +6,7 @@ import 'models/models.dart';
 import 'repositories/campanias_repository.dart';
 import 'repositories/carteles_repository.dart';
 import 'repositories/liquidaciones_repository.dart';
+import 'repositories/mp_notificaciones_repository.dart';
 import 'repositories/notificaciones_repository.dart';
 import 'repositories/pagos_repository.dart';
 import 'repositories/catalogo_repository.dart';
@@ -417,3 +418,13 @@ void refrescarResumenAdmin(WidgetRef ref) {
   ref.invalidate(pedidosPendientesDePagoProvider);
   ref.invalidate(preinscripcionesProvider);
 }
+
+// ---- El buzón de avisos de Mercado Pago -------------------------------------
+
+final mpNotificacionesRepositoryProvider = Provider((_) => const MpNotificacionesRepository());
+
+/// Los avisos que mandó Mercado Pago, tal como llegaron. Solo los ve la
+/// administración (lo decide el RLS de `mp_notificaciones`).
+final avisosMercadoPagoProvider = StreamProvider<List<AvisoMercadoPago>>(
+  (ref) => ref.watch(mpNotificacionesRepositoryProvider).watch(),
+);

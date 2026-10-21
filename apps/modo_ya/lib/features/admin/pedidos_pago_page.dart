@@ -4,6 +4,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import 'avisos_mp.dart';
+
 /// Los pedidos cuyo cobro quedó sin registrar.
 ///
 /// La pantalla es de antes de que en la app se pagara **solo con tarjeta**
@@ -25,6 +27,17 @@ class PedidosPagoPage extends ConsumerWidget {
       rotulo: 'Cobros',
       titulo: 'Cobros sin registrar',
       bajada: 'Los pedidos de antes del pago con tarjeta que quedaron sin cerrar',
+      acciones: [
+        // Lo que guarda el webhook no lo veía nadie (hallazgo 11). Se mira
+        // justo acá: cuando un cobro no cerró, lo primero es qué dijo
+        // Mercado Pago.
+        MyBoton(
+          label: 'Avisos de Mercado Pago',
+          icon: Symbols.inbox,
+          tipo: MyBotonTipo.secundario,
+          onPressed: () => mostrarAvisosDeMercadoPago(context),
+        ),
+      ],
       children: [
         MyCard(
           color: MyColors.primaryFixed,
