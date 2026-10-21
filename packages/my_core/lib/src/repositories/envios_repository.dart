@@ -191,4 +191,13 @@ class EnviosRepository {
   Future<void> cancelar(String envioId, String motivo) => intentar(
         () => _db.rpc('cancelar_envio', params: {'p_envio': envioId, 'p_motivo': motivo}),
       );
+
+  /// El rider se baja de un envio que ya habia aceptado.
+  ///
+  /// No es cancelar: el envio vuelve a la busqueda y sigue su curso (0061).
+  /// La base solo lo deja antes de retirar; con la comida encima lo resuelve
+  /// una persona.
+  Future<void> abandonar(String envioId, String motivo) => intentar(
+        () => _db.rpc('abandonar_envio', params: {'p_envio': envioId, 'p_motivo': motivo}),
+      );
 }

@@ -67,6 +67,38 @@ class _Contenido extends ConsumerWidget {
     }
   }
 
+  /// La base solo deja bajarse antes de retirar: con el pedido encima ya no es
+  /// un problema de asignación y lo resuelve una persona (0061).
+  bool get _puedeBajarse =>
+      envio.estado == EstadoEnvio.asignado || envio.estado == EstadoEnvio.enLocal;
+
+  Future<void> _bajarse(BuildContext context, WidgetRef ref) async {
+    final motivo = await pedirTexto(
+      context,
+      titulo: '¿Te bajás de este envío?',
+      // El motivo es lo único que después lee la administración para decidir
+      // si le cobra el cargo o no, así que se le avisa antes de escribirlo.
+      ayuda: 'Vuelve a la búsqueda y lo toma otro rider. Según el motivo, la '
+          'administración te puede cobrar un cargo.',
+      label: 'Por qué te bajás',
+      aceptar: 'Me bajo',
+    );
+    if (motivo == null) return;
+    try {
+      await ref.read(enviosRepositoryProvider).abandonar(envio.id, motivo);
+      if (!context.mounted) return;
+      await mostrarExito(
+        context,
+        titulo: 'Te bajaste del envío',
+        mensaje: 'Ya salió a buscar otro rider.',
+        icono: Symbols.person_off,
+      );
+      if (context.mounted) context.go('/');
+    } catch (e) {
+      if (context.mounted) mostrarError(context, e);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (envio.estado == EstadoEnvio.entregado) return _Finalizado(envio: envio);
@@ -254,25 +286,38 @@ class _Contenido extends ConsumerWidget {
           top: false,
           child: Padding(
             padding: const EdgeInsets.all(MySpacing.screenEdge),
-            child: envio.estado == EstadoEnvio.enCamino
-                ? MyBotonAccion(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (envio.estado == EstadoEnvio.enCamino)
+                  MyBotonAccion(
                     label: 'Confirmar entrega',
                     icon: Symbols.verified,
                     onPressed: () => _confirmarEntrega(context, ref),
                   )
-                : accion == null
-                    ? const SizedBox.shrink()
-                    : MyBotonAccion(
-                        label: accion.label,
-                        icon: accion.icon,
-                        onPressed: () async {
-                          try {
-                            await ref.read(enviosRepositoryProvider).avanzar(envio.id, accion.siguiente);
-                          } catch (e) {
-                            if (context.mounted) mostrarError(context, e);
-                          }
-                        },
-                      ),
+                else if (accion != null)
+                  MyBotonAccion(
+                    label: accion.label,
+                    icon: accion.icon,
+                    onPressed: () async {
+                      try {
+                        await ref.read(enviosRepositoryProvider).avanzar(envio.id, accion.siguiente);
+                      } catch (e) {
+                        if (context.mounted) mostrarError(context, e);
+                      }
+                    },
+                  ),
+                // Sin esto el envío se quedaba con el rider para siempre: la
+                // base tiene `abandonar_envio` desde 0061 y no había botón.
+                if (_puedeBajarse)
+                  TextButton.icon(
+                    onPressed: () => _bajarse(context, ref),
+                    icon: const Icon(Symbols.person_off, size: 20),
+                    label: const Text('No puedo seguir con este envío'),
+                    style: TextButton.styleFrom(foregroundColor: MyColors.error),
+                  ),
+              ],
+            ),
           ),
         ),
       ],
