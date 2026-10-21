@@ -50,3 +50,5 @@ apps/*/android/.kotlin/
 
 # Ajustes personales de Claude Code
 .claude/settings.local.json
+# Las copias del repo donde trabajan los agentes en paralelo.
+.claude/worktrees/
