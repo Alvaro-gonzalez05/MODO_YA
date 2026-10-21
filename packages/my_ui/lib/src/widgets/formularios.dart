@@ -326,12 +326,65 @@ Future<String?> pedirTexto(
   String aceptar = 'Confirmar',
   String? inicial,
   String? ayuda,
-}) async {
-  final ctrl = TextEditingController(text: inicial);
-  final r = await mostrarDialogoAnimado<String>(
+}) {
+  return mostrarDialogoAnimado<String>(
     context,
-    builder: (c) => AlertDialog(
-      title: Text(titulo),
+    builder: (_) => _DialogoTexto(
+      titulo: titulo,
+      label: label,
+      aceptar: aceptar,
+      inicial: inicial,
+      ayuda: ayuda,
+    ),
+  );
+}
+
+/// El contenido de [pedirTexto].
+///
+/// Es un widget con estado y no un `AlertDialog` armado al vuelo porque el
+/// controlador del campo tiene que vivir hasta que el dialogo termine de
+/// cerrarse: liberandolo en cuanto `showGeneralDialog` devuelve, el campo se
+/// sigue dibujando durante la animacion de salida con el controlador ya
+/// liberado y explota.
+class _DialogoTexto extends StatefulWidget {
+  const _DialogoTexto({
+    required this.titulo,
+    required this.label,
+    required this.aceptar,
+    this.inicial,
+    this.ayuda,
+  });
+
+  final String titulo;
+  final String label;
+  final String aceptar;
+  final String? inicial;
+  final String? ayuda;
+
+  @override
+  State<_DialogoTexto> createState() => _DialogoTextoState();
+}
+
+class _DialogoTextoState extends State<_DialogoTexto> {
+  late final _ctrl = TextEditingController(text: widget.inicial);
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  String get _texto => _ctrl.text.trim();
+
+  void _aceptar() {
+    if (_texto.isNotEmpty) Navigator.pop(context, _texto);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ayuda = widget.ayuda;
+    return AlertDialog(
+      title: Text(widget.titulo),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -341,35 +394,28 @@ Future<String?> pedirTexto(
             const SizedBox(height: MySpacing.sm),
           ],
           TextField(
-            controller: ctrl,
+            controller: _ctrl,
             autofocus: true,
             maxLines: 2,
-            decoration: InputDecoration(hintText: label),
+            decoration: InputDecoration(hintText: widget.label),
+            // Sin esto el boton no se enteraba de lo que se escribe: se veia
+            // habilitado con el campo vacio y al tocarlo no pasaba nada.
+            onChanged: (_) => setState(() {}),
           ),
         ],
       ),
       actions: [
         OutlinedButton(
-          onPressed: () => Navigator.pop(c),
+          onPressed: () => Navigator.pop(context),
           style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
           child: const Text('Volver'),
         ),
-        // Escucha al campo: antes el boton se veia habilitado siempre y con el
-        // campo vacio se tocaba y no pasaba nada, sin ningun mensaje.
-        ValueListenableBuilder<TextEditingValue>(
-          valueListenable: ctrl,
-          builder: (_, valor, _) {
-            final t = valor.text.trim();
-            return FilledButton(
-              onPressed: t.isEmpty ? null : () => Navigator.pop(c, t),
-              style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
-              child: Text(aceptar),
-            );
-          },
+        FilledButton(
+          onPressed: _texto.isEmpty ? null : _aceptar,
+          style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+          child: Text(widget.aceptar),
         ),
       ],
-    ),
-  );
-  ctrl.dispose();
-  return r;
+    );
+  }
 }
