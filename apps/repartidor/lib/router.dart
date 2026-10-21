@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:my_core/my_core.dart';
 
 import 'features/cargando_page.dart';
+import 'features/documentacion_page.dart';
 import 'features/ganancias_page.dart';
 import 'features/inicio_page.dart';
 import 'features/login_page.dart';
 import 'features/perfil_page.dart';
+import 'features/reclamos_page.dart';
 import 'features/repartidor_shell.dart';
 import 'features/servicio_page.dart';
 import 'features/servicios_page.dart';
@@ -49,7 +51,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [GoRoute(path: '/', builder: (_, _) => const InicioRepartidorPage())]),
           StatefulShellBranch(routes: [GoRoute(path: '/servicios', builder: (_, _) => const ServiciosPage())]),
           StatefulShellBranch(routes: [GoRoute(path: '/ganancias', builder: (_, _) => const GananciasPage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/perfil', builder: (_, _) => const PerfilPage())]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/perfil',
+              builder: (_, _) => const PerfilPage(),
+              routes: [
+                GoRoute(path: 'documentacion', builder: (_, _) => const DocumentacionPage()),
+                GoRoute(path: 'reclamos', builder: (_, _) => const ReclamosPage()),
+              ],
+            ),
+          ]),
         ],
       ),
       GoRoute(

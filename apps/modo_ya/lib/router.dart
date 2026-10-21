@@ -14,6 +14,7 @@ import 'features/admin/liquidaciones_page.dart';
 import 'features/admin/notificaciones_page.dart';
 import 'features/admin/pedidos_pago_page.dart';
 import 'features/admin/promociones_admin_page.dart';
+import 'features/admin/reclamos_page.dart';
 import 'features/admin/repartidores_page.dart';
 import 'features/admin/tarifas_page.dart';
 import 'features/auth/cuenta_no_habilitada_page.dart';
@@ -27,6 +28,7 @@ import 'features/cliente/home_page.dart';
 import 'features/cliente/local_page.dart';
 import 'features/cliente/mis_mandados_page.dart';
 import 'features/cliente/mis_pedidos_page.dart';
+import 'features/cliente/mis_reclamos_page.dart';
 import 'features/cliente/pedir_mandado_page.dart';
 import 'features/cliente/pago_page.dart';
 import 'features/cliente/plus_page.dart';
@@ -43,6 +45,7 @@ import 'features/comercio/mis_riders_page.dart';
 import 'features/comercio/pedidos_local_page.dart';
 import 'features/comercio/producto_form_page.dart';
 import 'features/comercio/promociones_page.dart';
+import 'features/comercio/reclamos_local_page.dart';
 import 'features/comercio/seguimiento_page.dart';
 
 /// Avisa a go_router cada vez que cambia la sesion, para que vuelva a decidir
@@ -139,7 +142,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/cliente/cuenta', builder: (_, _) => const CuentaClientePage()),
+            GoRoute(
+              path: '/cliente/cuenta',
+              builder: (_, _) => const CuentaClientePage(),
+              routes: [
+                GoRoute(path: 'reclamos', builder: (_, _) => const MisReclamosClientePage()),
+              ],
+            ),
           ]),
         ],
       ),
@@ -189,6 +198,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               routes: [
                 GoRoute(path: 'horarios', builder: (_, _) => const HorariosPage()),
                 GoRoute(path: 'riders', builder: (_, _) => const MisRidersPage()),
+                GoRoute(path: 'reclamos', builder: (_, _) => const ReclamosLocalPage()),
               ],
             ),
           ]),
@@ -199,7 +209,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (_, state, shell) => AdminShell(
           navigationShell: shell,
-          enRaiz: const {'/admin', '/admin/pedidos', '/admin/liquidaciones', '/admin/locales', '/admin/riders', '/admin/envios', '/admin/tarifas', '/admin/carteles', '/admin/notificaciones'}
+          enRaiz: const {'/admin', '/admin/pedidos', '/admin/liquidaciones', '/admin/locales', '/admin/riders', '/admin/envios', '/admin/tarifas', '/admin/carteles', '/admin/notificaciones', '/admin/reclamos'}
               .contains(state.uri.path),
         ),
         branches: [
@@ -240,6 +250,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/admin/notificaciones', builder: (_, _) => const AdminNotificacionesPage()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/admin/reclamos', builder: (_, _) => const AdminReclamosPage()),
           ]),
         ],
       ),

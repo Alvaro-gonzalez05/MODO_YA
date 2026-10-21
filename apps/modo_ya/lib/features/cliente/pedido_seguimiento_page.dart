@@ -7,6 +7,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import '../../comun/reclamos.dart';
 
 /// Lo que ve el cliente del envío de su pedido. Se recalcula cada vez que el
 /// pedido cambia.
@@ -259,6 +260,13 @@ class _Contenido extends ConsumerWidget {
             icon: Symbols.credit_card,
             onPressed: () => context.go('/cliente/pagar/${pedido.id}'),
           ),
+        ],
+
+        // El reclamo recién tiene sentido cuando el pedido ya pasó por el
+        // local: antes de eso lo que se quiere es cancelarlo, no reclamar.
+        if (e != EstadoPedido.pendientePago && e != EstadoPedido.carrito) ...[
+          const SizedBox(height: MySpacing.lg),
+          ReclamoDelPedido(pedido: pedido),
         ],
 
         if (e == EstadoPedido.pendientePago || e == EstadoPedido.pagado) ...[
