@@ -140,6 +140,10 @@ class EnviosRepository {
       );
 
   /// Crea el envio y arranca la busqueda de rider.
+  ///
+  /// Una sola llamada: antes eran `crear_envio` y `confirmar_envio` seguidas,
+  /// sin transaccion, y si se cortaba entre las dos el envio quedaba en
+  /// `cotizado` sin salida (0067).
   Future<String> crearYBuscar({
     required String calle,
     required double lat,
@@ -151,7 +155,7 @@ class EnviosRepository {
     String? indicaciones,
   }) =>
       intentar(() async {
-        final creado = await _db.rpc('crear_envio', params: {
+        final creado = await _db.rpc('pedir_envio', params: {
           'p_destino_calle': calle,
           'p_destino_lat': lat,
           'p_destino_lng': lng,
@@ -161,10 +165,16 @@ class EnviosRepository {
           'p_destino_referencia': referencia,
           'p_cliente_indicaciones': indicaciones,
         });
-        final id = (creado as Map)['id'] as String;
-        await _db.rpc('confirmar_envio', params: {'p_envio': id});
-        return id;
+        return Fila.texto(Map<String, dynamic>.from(creado as Map), 'id');
       });
+
+  /// Saca a buscar rider un envio que quedo en `cotizado`.
+  ///
+  /// Es la salida de los que quedaron trabados con la version vieja de la app,
+  /// antes de que el cron los venza.
+  Future<void> confirmarBusqueda(String envioId) => intentar(
+        () => _db.rpc('confirmar_envio', params: {'p_envio': envioId}),
+      );
 
   Future<void> responderOferta(String ofertaId, {required bool acepta}) => intentar(
         () => _db.rpc('responder_oferta', params: {'p_oferta': ofertaId, 'p_acepta': acepta}),
@@ -180,5 +190,14 @@ class EnviosRepository {
 
   Future<void> cancelar(String envioId, String motivo) => intentar(
         () => _db.rpc('cancelar_envio', params: {'p_envio': envioId, 'p_motivo': motivo}),
+      );
+
+  /// El rider se baja de un envio que ya habia aceptado.
+  ///
+  /// No es cancelar: el envio vuelve a la busqueda y sigue su curso (0061).
+  /// La base solo lo deja antes de retirar; con la comida encima lo resuelve
+  /// una persona.
+  Future<void> abandonar(String envioId, String motivo) => intentar(
+        () => _db.rpc('abandonar_envio', params: {'p_envio': envioId, 'p_motivo': motivo}),
       );
 }

@@ -46,10 +46,10 @@ class _Contenido extends ConsumerWidget {
   ({String label, IconData icon, EstadoEnvio siguiente})? get _accion => switch (envio.estado) {
         EstadoEnvio.asignado when envio.esMandado =>
           (label: 'Llegué al retiro', icon: Symbols.pin_drop, siguiente: EstadoEnvio.enLocal),
-        EstadoEnvio.asignado => (label: 'Llegue al local', icon: Symbols.storefront, siguiente: EstadoEnvio.enLocal),
+        EstadoEnvio.asignado => (label: 'Llegué al local', icon: Symbols.storefront, siguiente: EstadoEnvio.enLocal),
         EstadoEnvio.enLocal when envio.esMandado =>
           (label: 'Ya lo retiré', icon: Symbols.package_2, siguiente: EstadoEnvio.retirado),
-        EstadoEnvio.enLocal => (label: 'Retire el pedido', icon: Symbols.package_2, siguiente: EstadoEnvio.retirado),
+        EstadoEnvio.enLocal => (label: 'Retiré el pedido', icon: Symbols.package_2, siguiente: EstadoEnvio.retirado),
         EstadoEnvio.retirado => (label: 'Salgo para el cliente', icon: Symbols.navigation, siguiente: EstadoEnvio.enCamino),
         _ => null,
       };
@@ -62,6 +62,38 @@ class _Contenido extends ConsumerWidget {
       if (context.mounted) {
         await mostrarExito(context, titulo: '¡Entregado!', mensaje: 'Buen trabajo. Ya podés tomar el próximo.');
       }
+    } catch (e) {
+      if (context.mounted) mostrarError(context, e);
+    }
+  }
+
+  /// La base solo deja bajarse antes de retirar: con el pedido encima ya no es
+  /// un problema de asignación y lo resuelve una persona (0061).
+  bool get _puedeBajarse =>
+      envio.estado == EstadoEnvio.asignado || envio.estado == EstadoEnvio.enLocal;
+
+  Future<void> _bajarse(BuildContext context, WidgetRef ref) async {
+    final motivo = await pedirTexto(
+      context,
+      titulo: '¿Te bajás de este envío?',
+      // El motivo es lo único que después lee la administración para decidir
+      // si le cobra el cargo o no, así que se le avisa antes de escribirlo.
+      ayuda: 'Vuelve a la búsqueda y lo toma otro rider. Según el motivo, la '
+          'administración te puede cobrar un cargo.',
+      label: 'Por qué te bajás',
+      aceptar: 'Me bajo',
+    );
+    if (motivo == null) return;
+    try {
+      await ref.read(enviosRepositoryProvider).abandonar(envio.id, motivo);
+      if (!context.mounted) return;
+      await mostrarExito(
+        context,
+        titulo: 'Te bajaste del envío',
+        mensaje: 'Ya salió a buscar otro rider.',
+        icono: Symbols.person_off,
+      );
+      if (context.mounted) context.go('/');
     } catch (e) {
       if (context.mounted) mostrarError(context, e);
     }
@@ -124,7 +156,7 @@ class _Contenido extends ConsumerWidget {
                         EstadoEnvio.asignado => 'Retira el pedido en ${o.calle}.',
                         EstadoEnvio.enLocal when envio.esMandado =>
                           'Retirá: ${o.referencia ?? 'lo que te indique el cliente'}.',
-                        EstadoEnvio.enLocal => 'Avisale al local que llegaste y retira el pedido.',
+                        EstadoEnvio.enLocal => 'Avisale al local que llegaste y retirá el pedido.',
                         EstadoEnvio.retirado => 'Tenés el pedido. Salí para el domicilio.',
                         EstadoEnvio.enCamino => 'Al llegar, pedile el código de 4 números al cliente.',
                         _ => '',
@@ -254,25 +286,38 @@ class _Contenido extends ConsumerWidget {
           top: false,
           child: Padding(
             padding: const EdgeInsets.all(MySpacing.screenEdge),
-            child: envio.estado == EstadoEnvio.enCamino
-                ? MyBotonAccion(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (envio.estado == EstadoEnvio.enCamino)
+                  MyBotonAccion(
                     label: 'Confirmar entrega',
                     icon: Symbols.verified,
                     onPressed: () => _confirmarEntrega(context, ref),
                   )
-                : accion == null
-                    ? const SizedBox.shrink()
-                    : MyBotonAccion(
-                        label: accion.label,
-                        icon: accion.icon,
-                        onPressed: () async {
-                          try {
-                            await ref.read(enviosRepositoryProvider).avanzar(envio.id, accion.siguiente);
-                          } catch (e) {
-                            if (context.mounted) mostrarError(context, e);
-                          }
-                        },
-                      ),
+                else if (accion != null)
+                  MyBotonAccion(
+                    label: accion.label,
+                    icon: accion.icon,
+                    onPressed: () async {
+                      try {
+                        await ref.read(enviosRepositoryProvider).avanzar(envio.id, accion.siguiente);
+                      } catch (e) {
+                        if (context.mounted) mostrarError(context, e);
+                      }
+                    },
+                  ),
+                // Sin esto el envío se quedaba con el rider para siempre: la
+                // base tiene `abandonar_envio` desde 0061 y no había botón.
+                if (_puedeBajarse)
+                  TextButton.icon(
+                    onPressed: () => _bajarse(context, ref),
+                    icon: const Icon(Symbols.person_off, size: 20),
+                    label: const Text('No puedo seguir con este envío'),
+                    style: TextButton.styleFrom(foregroundColor: MyColors.error),
+                  ),
+              ],
+            ),
           ),
         ),
       ],
@@ -357,6 +402,12 @@ class _DialogoCodigoState extends State<_DialogoCodigo> {
     super.dispose();
   }
 
+  bool get _completo => _c.text.length == 4;
+
+  void _confirmar() {
+    if (_completo) Navigator.pop(context, _c.text);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -375,14 +426,17 @@ class _DialogoCodigoState extends State<_DialogoCodigo> {
             textAlign: TextAlign.center,
             style: MyType.displayLg.copyWith(letterSpacing: 8),
             decoration: const InputDecoration(counterText: ''),
-            onSubmitted: (v) => v.length == 4 ? Navigator.pop(context, v) : null,
+            // Sin esto el boton no se enteraba de lo que se va tecleando: se
+            // veia habilitado siempre y con menos de 4 digitos no hacia nada.
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) => _confirmar(),
           ),
         ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Volver')),
         FilledButton(
-          onPressed: () => _c.text.length == 4 ? Navigator.pop(context, _c.text) : null,
+          onPressed: _completo ? _confirmar : null,
           child: const Text('Confirmar'),
         ),
       ],
@@ -409,7 +463,7 @@ class _Finalizado extends StatelessWidget {
               Icon(Symbols.check_circle, size: 72, color: MyColors.success, fill: 1),
               const SizedBox(height: MySpacing.md),
               Text('Entregado', style: MyType.displayLg, textAlign: TextAlign.center),
-              Text('Buen trabajo. La ganancia ya quedo registrada.',
+              Text('Buen trabajo. La ganancia ya quedó registrada.',
                   style: MyType.bodyLg.copyWith(color: MyColors.secondary), textAlign: TextAlign.center),
               const SizedBox(height: MySpacing.lg),
               MyHeroCard(

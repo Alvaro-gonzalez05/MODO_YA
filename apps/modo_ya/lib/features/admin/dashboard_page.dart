@@ -14,11 +14,38 @@ class DashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final comercios = ref.watch(todosLosComerciosProvider).value ?? const <Comercio>[];
-    final riders = ref.watch(todosLosRepartidoresProvider).value ?? const <Repartidor>[];
-    final activos = ref.watch(enviosActivosProvider).value ?? const <Envio>[];
-    final porCobrar = ref.watch(pedidosPendientesDePagoProvider).value ?? const <Pedido>[];
-    final preinscriptos = (ref.watch(preinscripcionesProvider).value ?? const <Preinscripcion>[])
+    final resumen = ref.watch(resumenAdminProvider);
+
+    return MyPagina(
+      rotulo: 'Malargüe · en vivo',
+      titulo: 'Resumen',
+      bajada: 'Cómo viene la operación ahora',
+      onRefresh: () async => refrescarResumenAdmin(ref),
+      children: [
+        // Sin esto el panel mostraba ceros y "Todo en orden" cuando una
+        // consulta fallaba: la administración creía que no pasaba nada.
+        MyAsync(
+          valor: resumen,
+          onReintentar: () => refrescarResumenAdmin(ref),
+          datos: (datos) => _Resumen(datos: datos),
+        ),
+      ],
+    );
+  }
+}
+
+class _Resumen extends StatelessWidget {
+  const _Resumen({required this.datos});
+
+  final ResumenAdmin datos;
+
+  @override
+  Widget build(BuildContext context) {
+    final comercios = datos.comercios;
+    final riders = datos.riders;
+    final activos = datos.enviosActivos;
+    final porCobrar = datos.pedidosPorCobrar;
+    final preinscriptos = datos.preinscripciones
         .where((p) => p.estado == EstadoPreinscripcion.pendiente)
         .toList();
 
@@ -77,14 +104,8 @@ class DashboardPage extends ConsumerWidget {
       ridersWeb: preinscriptos.where((p) => p.tipo == TipoPreinscripcion.rider).length,
     );
 
-    return MyPagina(
-      rotulo: 'Malargüe · en vivo',
-      titulo: 'Resumen',
-      bajada: 'Cómo viene la operación ahora',
-      onRefresh: () async {
-        ref.invalidate(todosLosComerciosProvider);
-        ref.invalidate(todosLosRepartidoresProvider);
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         kpis,
         const SizedBox(height: MySpacing.lg),

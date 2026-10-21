@@ -111,7 +111,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                   color: MyColors.errorContainer,
                   shadows: const [],
                   child: Text(
-                    'Tu cuenta esta ${rider.aprobacion.label.toLowerCase()}. Hablalo con la administracion.',
+                    'Tu cuenta está ${rider.aprobacion.label.toLowerCase()}. Hablalo con la administración.',
                     style: MyType.labelLg.copyWith(color: MyColors.onErrorContainer),
                   ),
                 )
@@ -168,7 +168,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                   value: ubic.simular,
                   onChanged: (v) => setState(() => ubic.simular = v),
                   title: Text('Simular ubicación (solo desarrollo)', style: MyType.labelMd),
-                  subtitle: Text('Usa el centro de Malargüe si esta PC no tiene GPS', style: MyType.bodySm),
+                  subtitle: Text('La app usa el centro de Malargüe si esta PC no tiene GPS', style: MyType.bodySm),
                 ),
               ],
 

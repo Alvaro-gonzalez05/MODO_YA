@@ -51,6 +51,10 @@ class _Contenido extends ConsumerWidget {
           Text(envio.estado.label, style: MyType.headlineLg.copyWith(color: Colors.white)),
           Text(
             switch (envio.estado) {
+              // Un envío en `cotizado` es uno que se creó y nunca salió a
+              // buscar: antes la bajada quedaba vacía y no había nada que
+              // tocar más que cancelarlo (0067).
+              EstadoEnvio.cotizado => 'Se creó pero todavía no salió a buscar rider.',
               EstadoEnvio.buscandoRepartidor => 'Le estamos ofreciendo el envío a los riders más cercanos.',
               EstadoEnvio.asignado => '${envio.repartidorNombre} va para tu local.',
               EstadoEnvio.enLocal => 'El rider llegó. Entregale el pedido.',
@@ -154,6 +158,23 @@ class _Contenido extends ConsumerWidget {
       ),
     );
 
+    // La salida de un envío trabado en `cotizado`: el local decide si todavía
+    // quiere el viaje. Si no toca nada, a los 15 minutos lo cancela el cron
+    // (`vencer_envios_cotizados`, 0067).
+    final buscar = envio.estado == EstadoEnvio.cotizado
+        ? MyBoton(
+            label: 'Buscar rider ahora',
+            icon: Symbols.sports_motorsports,
+            onPressed: () async {
+              try {
+                await ref.read(enviosRepositoryProvider).confirmarBusqueda(envio.id);
+              } catch (e) {
+                if (context.mounted) mostrarError(context, e);
+              }
+            },
+          )
+        : null;
+
     final cancelar = !envio.estado.esFinal && envio.estado != EstadoEnvio.enCamino
         ? MyBoton(
             label: 'Cancelar envío',
@@ -178,7 +199,8 @@ class _Contenido extends ConsumerWidget {
       if (codigo != null) ...[espacio, codigo],
       espacio,
       dinero,
-      if (cancelar != null) ...[const SizedBox(height: MySpacing.lg), cancelar],
+      if (buscar != null) ...[const SizedBox(height: MySpacing.lg), buscar],
+      if (cancelar != null) ...[SizedBox(height: buscar == null ? MySpacing.lg : MySpacing.sm), cancelar],
     ];
 
     return MyPagina(

@@ -267,8 +267,14 @@ class _TarjetaPedido extends ConsumerWidget {
               Text(Formato.pesos(pedido.subtotal), style: MyType.headlineSm.copyWith(color: MyColors.tertiary)),
             ],
           ),
+          // Con Plus el cliente no paga el envío y `costoEnvio` viene en 0, asi
+          // que acá decía "$0": el envío igual vale lo que vale y lo pone el
+          // local con su campaña. Mostrarle cero era mentirle sobre su plata.
           Text(
-            'El envío (${Formato.pesos(pedido.costoEnvio)}) lo cobra MODO YA.',
+            pedido.envioLoPoneElLocal
+                ? 'El envío (${Formato.pesos(pedido.envioReal)}) lo ponés vos con tu campaña Plus: '
+                    'se te descuenta de tus ventas.'
+                : 'El envío (${Formato.pesos(pedido.envioReal)}) lo cobra MODO YA.',
             style: MyType.bodySm.copyWith(color: MyColors.secondary),
           ),
           if (pedido.metodoPago != null) ...[

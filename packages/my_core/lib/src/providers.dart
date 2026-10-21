@@ -8,6 +8,7 @@ import 'repositories/campanias_repository.dart';
 import 'repositories/carteles_repository.dart';
 import 'repositories/documentacion_repository.dart';
 import 'repositories/liquidaciones_repository.dart';
+import 'repositories/mp_notificaciones_repository.dart';
 import 'repositories/notificaciones_repository.dart';
 import 'repositories/pagos_repository.dart';
 import 'repositories/catalogo_repository.dart';
@@ -507,4 +508,71 @@ final documentosSinRevisarProvider = Provider<int>(
   (ref) => (ref.watch(documentacionProvider).value ?? const <DocumentoRider>[])
       .where((d) => d.estado == EstadoAprobacion.pendiente)
       .length,
+// ---- El resumen de la administración ----------------------------------------
+
+/// Las cinco consultas que alimentan el resumen de la administración, juntas.
+typedef ResumenAdmin = ({
+  List<Comercio> comercios,
+  List<Repartidor> riders,
+  List<Envio> enviosActivos,
+  List<Pedido> pedidosPorCobrar,
+  List<Preinscripcion> preinscripciones,
+});
+
+/// Junta las cinco consultas del panel en un solo [AsyncValue].
+///
+/// El panel las leía por separado con `.value ?? const []`, y una consulta que
+/// fallaba se veía igual que una que no tiene nada: ceros y "Todo en orden".
+/// Eso es peor que no mostrar nada, porque la administración se queda
+/// tranquila mientras no ve la mitad de la operación. Juntándolas acá el
+/// error de cualquiera de las cinco llega como error a `MyAsync`, que ya
+/// muestra el cartel con "Reintentar" en el resto de la app.
+final resumenAdminProvider = Provider<AsyncValue<ResumenAdmin>>((ref) {
+  final comercios = ref.watch(todosLosComerciosProvider);
+  final riders = ref.watch(todosLosRepartidoresProvider);
+  final envios = ref.watch(enviosActivosProvider);
+  final porCobrar = ref.watch(pedidosPendientesDePagoProvider);
+  final preinscripciones = ref.watch(preinscripcionesProvider);
+
+  final partes = <AsyncValue<Object?>>[comercios, riders, envios, porCobrar, preinscripciones];
+
+  for (final p in partes) {
+    // El error solo gana si esa consulta nunca llegó a traer nada. Si ya había
+    // datos se siguen mostrando: es la misma política de `MyAsync`, que
+    // prefiere lo de hace un segundo a parpadear en cada refresco.
+    if (p.hasError && !p.hasValue) {
+      return AsyncError(p.error!, p.stackTrace ?? StackTrace.empty);
+    }
+  }
+  for (final p in partes) {
+    if (!p.hasValue) return const AsyncLoading();
+  }
+
+  return AsyncData((
+    comercios: comercios.requireValue,
+    riders: riders.requireValue,
+    enviosActivos: envios.requireValue,
+    pedidosPorCobrar: porCobrar.requireValue,
+    preinscripciones: preinscripciones.requireValue,
+  ));
+});
+
+/// Vuelve a pedir las cinco consultas del resumen. El refresco del panel solo
+/// invalidaba dos, así que el mapa y los pedidos por cobrar no se movían.
+void refrescarResumenAdmin(WidgetRef ref) {
+  ref.invalidate(todosLosComerciosProvider);
+  ref.invalidate(todosLosRepartidoresProvider);
+  ref.invalidate(enviosActivosProvider);
+  ref.invalidate(pedidosPendientesDePagoProvider);
+  ref.invalidate(preinscripcionesProvider);
+}
+
+// ---- El buzón de avisos de Mercado Pago -------------------------------------
+
+final mpNotificacionesRepositoryProvider = Provider((_) => const MpNotificacionesRepository());
+
+/// Los avisos que mandó Mercado Pago, tal como llegaron. Solo los ve la
+/// administración (lo decide el RLS de `mp_notificaciones`).
+final avisosMercadoPagoProvider = StreamProvider<List<AvisoMercadoPago>>(
+  (ref) => ref.watch(mpNotificacionesRepositoryProvider).watch(),
 );

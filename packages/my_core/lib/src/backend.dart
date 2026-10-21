@@ -44,28 +44,28 @@ ErrorModoYa traducirError(Object e) {
       return ErrorModoYa(e.message, codigo: codigo);
     }
     if (codigo == 'PGRST301' || codigo == 'PGRST303') {
-      return ErrorModoYa('Tu sesion vencio. Volve a entrar.', codigo: codigo);
+      return ErrorModoYa('Tu sesión venció. Volvé a entrar.', codigo: codigo);
     }
     if (codigo == '23505') {
       return ErrorModoYa('Ya existe un registro con esos datos.', codigo: codigo);
     }
-    return ErrorModoYa('No pudimos completar la operacion (${e.message}).', codigo: codigo);
+    return ErrorModoYa('No pudimos completar la operación (${e.message}).', codigo: codigo);
   }
 
   if (e is AuthException) {
     final c = e.code ?? '';
     final m = e.message.toLowerCase();
     final mensaje = switch (c) {
-      'invalid_credentials' => 'Email o contrasena incorrectos.',
-      'email_not_confirmed' => 'Tenes que confirmar tu email antes de entrar.',
+      'invalid_credentials' => 'Email o contraseña incorrectos.',
+      'email_not_confirmed' => 'Tenés que confirmar tu email antes de entrar.',
       'user_already_exists' || 'email_exists' => 'Ya hay una cuenta con ese email.',
-      'weak_password' => 'La contrasena es muy debil. Usa al menos 8 caracteres.',
+      'weak_password' => 'La contraseña es muy débil. Usá al menos 8 caracteres.',
       'over_email_send_rate_limit' =>
-        'No pudimos mandar el mail de confirmacion. Probalo de nuevo mas tarde.',
-      'email_address_invalid' => 'Ese email no es valido.',
-      'signup_disabled' => 'El registro de cuentas esta deshabilitado.',
-      _ when m.contains('invalid login') => 'Email o contrasena incorrectos.',
-      _ => 'No pudimos iniciar sesion (${e.message}).',
+        'No pudimos mandar el mail de confirmación. Probalo de nuevo más tarde.',
+      'email_address_invalid' => 'Ese email no es válido.',
+      'signup_disabled' => 'El registro de cuentas está deshabilitado.',
+      _ when m.contains('invalid login') => 'Email o contraseña incorrectos.',
+      _ => 'No pudimos iniciar sesión (${e.message}).',
     };
     return ErrorModoYa(mensaje, codigo: c);
   }
@@ -76,7 +76,7 @@ ErrorModoYa traducirError(Object e) {
       final err = detalles['error'] as Map;
       return ErrorModoYa('${err['mensaje']}', codigo: '${err['codigo']}');
     }
-    return ErrorModoYa('No pudimos completar la operacion (HTTP ${e.status}).');
+    return ErrorModoYa('No pudimos completar la operación (HTTP ${e.status}).');
   }
 
   if (e is StorageException) {
@@ -86,10 +86,10 @@ ErrorModoYa traducirError(Object e) {
   // Sin dart:io, que no existe en la compilacion web: se reconoce por nombre.
   final tipo = e.runtimeType.toString();
   if (e is TimeoutException || tipo.contains('SocketException') || tipo.contains('ClientException')) {
-    return const ErrorModoYa('Sin conexion. Revisa internet y volve a intentar.');
+    return const ErrorModoYa('Sin conexión. Revisá internet y volvé a intentar.');
   }
 
-  return ErrorModoYa('Algo salio mal: $e');
+  return ErrorModoYa('Algo salió mal: $e');
 }
 
 /// Ejecuta una llamada al backend traduciendo el error.

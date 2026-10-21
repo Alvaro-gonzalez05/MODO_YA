@@ -24,7 +24,10 @@ class _HistorialPageState extends ConsumerState<HistorialPage> {
 
   bool _pasa(Envio e, _Filtro f) => switch (f) {
         _Filtro.todos => true,
-        _Filtro.enCurso => e.estado.esActivo,
+        // `cotizado` no es "activo" (no está en la calle), pero para el local
+        // es algo que tiene pendiente: si queda trabado ahí, acá es donde lo
+        // encuentra para sacarlo a buscar o cancelarlo (0067).
+        _Filtro.enCurso => e.estado.esActivo || e.estado == EstadoEnvio.cotizado,
         _Filtro.entregados => e.estado == EstadoEnvio.entregado,
         _Filtro.cancelados => e.estado == EstadoEnvio.cancelado || e.estado == EstadoEnvio.sinRepartidor,
       };

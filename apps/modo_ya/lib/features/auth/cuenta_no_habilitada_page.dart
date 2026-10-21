@@ -20,11 +20,11 @@ class CuentaNoHabilitadaPage extends ConsumerWidget {
         ? (
             Symbols.sports_motorsports,
             'Esta app es para clientes y locales',
-            'Tu cuenta es de rider. Entra con el mismo email y contraseña en la app MODO YA Rider.',
+            'Tu cuenta es de rider. Entrá con el mismo email y contraseña en la app MODO YA Rider.',
           )
         : (
             Symbols.block,
-            'Tu local no esta habilitado',
+            'Tu local no está habilitado',
             'La cuenta figura como "${s.aprobacion?.label.toLowerCase() ?? 'sin aprobar'}". '
                 'Comunicate con la administración de MODO YA para reactivarla.',
           );

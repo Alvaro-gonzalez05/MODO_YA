@@ -35,8 +35,8 @@ abstract final class MyMapa {
   static Future<LatLng?> elegirPunto(
     BuildContext context, {
     LatLng? inicial,
-    String titulo = 'Marca el punto exacto',
-    String ayuda = 'Mueve el mapa hasta que el pin quede sobre la puerta.',
+    String titulo = 'Marcá el punto exacto',
+    String ayuda = 'Mové el mapa hasta que el pin quede sobre la puerta.',
   }) =>
       Navigator.of(context, rootNavigator: true).push<LatLng>(
         MaterialPageRoute(

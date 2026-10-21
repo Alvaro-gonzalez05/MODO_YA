@@ -38,7 +38,7 @@ abstract final class Entorno {
   static void validar() {
     if (!tieneSupabase) {
       throw StateError(
-        'Falta la configuracion de Supabase. Corre la app con '
+        'Falta la configuración de Supabase. Corré la app con '
         '--dart-define-from-file=../../env/dev.json (ver env/example.json).',
       );
     }

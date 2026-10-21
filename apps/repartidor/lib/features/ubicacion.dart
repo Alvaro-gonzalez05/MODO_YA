@@ -65,7 +65,7 @@ class UbicacionRider extends Notifier<Lectura?> {
   /// para mostrar o null si se puede seguir.
   Future<String?> _pedirPermiso() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
-      return 'La ubicación del dispositivo esta apagada.';
+      return 'La ubicación del dispositivo está apagada.';
     }
     var permiso = await Geolocator.checkPermission();
     if (permiso == LocationPermission.denied) permiso = await Geolocator.requestPermission();

@@ -39,7 +39,7 @@ Future<void> main() async {
   try {
     await Backend.inicializar();
   } catch (e) {
-    runApp(MaterialApp(home: Scaffold(body: MyEmptyState(title: 'La app no esta configurada', message: '$e'))));
+    runApp(MaterialApp(home: Scaffold(body: MyEmptyState(title: 'La app no está configurada', message: '$e'))));
     return;
   }
 
