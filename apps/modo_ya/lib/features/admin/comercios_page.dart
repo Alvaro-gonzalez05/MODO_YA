@@ -255,12 +255,16 @@ class _FichaLocal extends ConsumerWidget {
 
   Future<void> _cambiar(BuildContext context, WidgetRef ref, Comercio c, EstadoAprobacion estado) async {
     String? motivo;
-    if (estado == EstadoAprobacion.suspendido) {
+    // Suspender y no aprobar son las dos decisiones que dejan a alguien afuera:
+    // las dos piden el motivo, porque después hay que poder explicarlo.
+    final dejaAfuera = estado == EstadoAprobacion.suspendido || estado == EstadoAprobacion.rechazado;
+    if (dejaAfuera) {
+      final suspende = estado == EstadoAprobacion.suspendido;
       motivo = await pedirTexto(
         context,
-        titulo: 'Suspender ${c.nombre}',
+        titulo: suspende ? 'Suspender ${c.nombre}' : 'No aprobar ${c.nombre}',
         label: 'Motivo (lo ve la administración)',
-        aceptar: 'Suspender',
+        aceptar: suspende ? 'Suspender' : 'No aprobar',
       );
       if (motivo == null) return;
     }
@@ -326,12 +330,25 @@ class _FichaLocal extends ConsumerWidget {
             tipo: MyBotonTipo.peligro,
             onPressed: () => _cambiar(context, ref, c, EstadoAprobacion.suspendido),
           )
-        else
+        else ...[
           MyBoton(
             label: c.aprobacion == EstadoAprobacion.pendiente ? 'Aprobar y habilitar' : 'Reactivar cuenta',
             icon: Symbols.verified,
             onPressed: () => _cambiar(context, ref, c, EstadoAprobacion.aprobado),
           ),
+          // Una solicitud pendiente solo se podía aprobar o dejar ahí para
+          // siempre: no había forma de decirle que no. Sin esto `rechazado` es
+          // un estado que la base contempla y la app nunca puede alcanzar.
+          if (c.aprobacion == EstadoAprobacion.pendiente) ...[
+            const SizedBox(height: MySpacing.sm),
+            MyBoton(
+              label: 'No aprobar',
+              icon: Symbols.do_not_disturb_on,
+              tipo: MyBotonTipo.peligro,
+              onPressed: () => _cambiar(context, ref, c, EstadoAprobacion.rechazado),
+            ),
+          ],
+        ],
       ],
     );
   }
