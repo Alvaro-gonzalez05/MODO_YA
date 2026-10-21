@@ -27,31 +27,15 @@ class LiquidacionesPage extends ConsumerStatefulWidget {
 
 enum _Vista { locales, riders, historial }
 
-enum _Rango { estaSemana, semanaPasada, esteMes, mesPasado }
-
 class _LiquidacionesPageState extends ConsumerState<LiquidacionesPage> {
   var _vista = _Vista.locales;
-  var _rango = _Rango.estaSemana;
-
-  (DateTime, DateTime) get _periodo {
-    final hoy = DateTime.now();
-    final lunes = DateTime(hoy.year, hoy.month, hoy.day).subtract(Duration(days: hoy.weekday - 1));
-    return switch (_rango) {
-      _Rango.estaSemana => (lunes, lunes.add(const Duration(days: 6))),
-      _Rango.semanaPasada => (lunes.subtract(const Duration(days: 7)), lunes.subtract(const Duration(days: 1))),
-      _Rango.esteMes => (DateTime(hoy.year, hoy.month), DateTime(hoy.year, hoy.month + 1, 0)),
-      _Rango.mesPasado => (DateTime(hoy.year, hoy.month - 1), DateTime(hoy.year, hoy.month, 0)),
-    };
-  }
-
-  String get _periodoTexto {
-    final (d, h) = _periodo;
-    return '${Formato.fechaCorta(d)} al ${Formato.fechaCorta(h)}';
-  }
+  // Cómo se cuentan las semanas y los meses vive en `my_core`: el rider y el
+  // local miran los mismos períodos desde sus pantallas.
+  var _rango = RangoDePeriodo.estaSemana;
 
   @override
   Widget build(BuildContext context) {
-    final (desde, hasta) = _periodo;
+    final (desde, hasta) = _rango.periodo;
     final periodo = (desde: desde, hasta: hasta);
     final locales = ref.watch(pendientesComerciosProvider(periodo));
     final riders = ref.watch(pendientesRidersProvider(periodo));
@@ -61,18 +45,13 @@ class _LiquidacionesPageState extends ConsumerState<LiquidacionesPage> {
       titulo: 'Liquidaciones',
       bajada: 'Lo que hay que pagarle a cada local y a cada rider',
       children: [
-        MyFiltros<_Rango>(
-          opciones: [
-            (_Rango.estaSemana, 'Esta semana', -1),
-            (_Rango.semanaPasada, 'Semana pasada', -1),
-            (_Rango.esteMes, 'Este mes', -1),
-            (_Rango.mesPasado, 'Mes pasado', -1),
-          ],
+        MyFiltros<RangoDePeriodo>(
+          opciones: [for (final r in RangoDePeriodo.values) (r, r.rotulo, -1)],
           seleccionado: _rango,
           onChanged: (r) => setState(() => _rango = r),
         ),
         const SizedBox(height: MySpacing.xs),
-        Text(_periodoTexto, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+        Text(_rango.texto, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
         const SizedBox(height: MySpacing.md),
         MyFiltros<_Vista>(
           opciones: [

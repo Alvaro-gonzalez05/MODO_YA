@@ -15,6 +15,45 @@ library;
 import 'formato.dart';
 import 'repositories/liquidaciones_repository.dart';
 
+/// Los períodos que se pueden mirar.
+///
+/// Una liquidación no tiene período propio hasta que se cierra: hasta entonces
+/// es "lo que hay entre dos fechas". Estas cuatro opciones son las que se usan
+/// de verdad, y viven acá para que la administración, el rider y el local
+/// cuenten las semanas igual. La semana arranca el lunes.
+enum RangoDePeriodo {
+  estaSemana('Esta semana'),
+  semanaPasada('Semana pasada'),
+  esteMes('Este mes'),
+  mesPasado('Mes pasado');
+
+  const RangoDePeriodo(this.rotulo);
+
+  final String rotulo;
+
+  (DateTime desde, DateTime hasta) get periodo {
+    final hoy = DateTime.now();
+    final lunes = DateTime(hoy.year, hoy.month, hoy.day).subtract(Duration(days: hoy.weekday - 1));
+    return switch (this) {
+      RangoDePeriodo.estaSemana => (lunes, lunes.add(const Duration(days: 6))),
+      RangoDePeriodo.semanaPasada => (
+          lunes.subtract(const Duration(days: 7)),
+          lunes.subtract(const Duration(days: 1)),
+        ),
+      // Día 0 del mes siguiente: el último del mes, sin tener que saber si
+      // tiene 28, 30 o 31.
+      RangoDePeriodo.esteMes => (DateTime(hoy.year, hoy.month), DateTime(hoy.year, hoy.month + 1, 0)),
+      RangoDePeriodo.mesPasado => (DateTime(hoy.year, hoy.month - 1), DateTime(hoy.year, hoy.month, 0)),
+    };
+  }
+
+  /// "01/10/26 al 07/10/26".
+  String get texto {
+    final (d, h) = periodo;
+    return '${Formato.fechaCorta(d)} al ${Formato.fechaCorta(h)}';
+  }
+}
+
 /// De qué lado cae un número de la hoja.
 enum TonoDeRenglon {
   /// Un importe que se lee solo, sin signo (lo que ganó, lo que vendió).

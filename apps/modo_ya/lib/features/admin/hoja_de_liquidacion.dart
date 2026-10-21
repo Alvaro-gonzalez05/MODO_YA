@@ -12,9 +12,10 @@ import '../../comun/formulario_emergente.dart';
 /// lista con el detalle sin ir y volver. Es un documento, no una pantalla —
 /// está pensado para leerlo con el rider al lado y poder discutir cada línea.
 ///
-/// El documento en sí (`MyHojaDescargable`) y su armado (`hojaDeRider`) son los
-/// mismos que usan la app del rider y la pantalla del local: acá solo se elige
-/// a quién mirar y se agregan las acciones que puede hacer la administración.
+/// La hoja en sí (`MyHojaDeRider`) y su PDF viven en `my_ui`: son los mismos
+/// que ve el rider en su app y el local en su pantalla. Acá solo se elige a
+/// quién mirar y se agrega lo único que la administración puede hacer y los
+/// demás no: cargarle algo.
 Future<void> mostrarHojaDeRider(
   BuildContext context,
   PendienteRider p,
@@ -38,21 +39,7 @@ Future<void> mostrarHojaDeComercio(
   return mostrarHojaLateral(
     context,
     titulo: 'Liquidación',
-    builder: (_) => _HojaDeComercio(pendiente: p, desde: desde, hasta: hasta),
-  );
-}
-
-/// El detalle de una liquidación ya cerrada, para cualquiera de los dos.
-Future<void> mostrarHojaCerrada(
-  BuildContext context,
-  Liquidacion l, {
-  String? titular,
-  bool paraElMismo = false,
-}) {
-  return mostrarHojaLateral(
-    context,
-    titulo: 'Liquidación cerrada',
-    builder: (_) => HojaCerrada(liquidacion: l, titular: titular, paraElMismo: paraElMismo),
+    builder: (_) => MyHojaDeComercio(resumen: p, desde: desde, hasta: hasta),
   );
 }
 
@@ -66,109 +53,18 @@ class _HojaDeRider extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = pendiente;
-    final rango = (repartidorId: p.repartidorId, desde: desde, hasta: hasta);
-    final envios = ref.watch(detalleDeRiderProvider(rango));
-    final cargos = ref.watch(cargosDelPeriodoRiderProvider(rango));
-
-    // Se espera a que estén los dos: una hoja a medio armar invita a bajar un
-    // PDF al que le falta la mitad de los renglones.
-    return MyAsync(
-      valor: envios,
-      onReintentar: () => ref.invalidate(detalleDeRiderProvider(rango)),
-      datos: (lista) => MyAsync(
-        valor: cargos,
-        onReintentar: () => ref.invalidate(cargosDelPeriodoRiderProvider(rango)),
-        datos: (losCargos) => MyHojaDescargable(
-          hoja: hojaDeRider(
-            resumen: p,
-            envios: lista,
-            cargos: losCargos,
-            desde: desde,
-            hasta: hasta,
-          ),
-          acciones: [
-            MyBoton(
-              label: 'Cargarle algo',
-              icon: Symbols.add,
-              tipo: MyBotonTipo.texto,
-              onPressed: () => cargarARider(context, ref, p.repartidorId, p.rider),
-            ),
-          ],
+    return MyHojaDeRider(
+      resumen: p,
+      desde: desde,
+      hasta: hasta,
+      acciones: [
+        MyBoton(
+          label: 'Cargarle algo',
+          icon: Symbols.add,
+          tipo: MyBotonTipo.texto,
+          onPressed: () => cargarARider(context, ref, p.repartidorId, p.rider),
         ),
-      ),
-    );
-  }
-}
-
-class _HojaDeComercio extends ConsumerWidget {
-  const _HojaDeComercio({required this.pendiente, required this.desde, required this.hasta});
-
-  final PendienteComercio pendiente;
-  final DateTime desde;
-  final DateTime hasta;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final p = pendiente;
-    final rango = (comercioId: p.comercioId, desde: desde, hasta: hasta);
-    final pedidos = ref.watch(detalleDeComercioProvider(rango));
-    final cargos = ref.watch(cargosDelPeriodoComercioProvider(rango));
-
-    return MyAsync(
-      valor: pedidos,
-      onReintentar: () => ref.invalidate(detalleDeComercioProvider(rango)),
-      datos: (lista) => MyAsync(
-        valor: cargos,
-        onReintentar: () => ref.invalidate(cargosDelPeriodoComercioProvider(rango)),
-        datos: (losCargos) => MyHojaDescargable(
-          hoja: hojaDeComercio(
-            resumen: p,
-            pedidos: lista,
-            cargos: losCargos,
-            desde: desde,
-            hasta: hasta,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// El renglón por renglón de una liquidación ya cerrada.
-///
-/// Es pública porque la usan las tres pantallas de historial (administración,
-/// rider y local) con la misma hoja y el mismo PDF.
-class HojaCerrada extends ConsumerWidget {
-  const HojaCerrada({
-    super.key,
-    required this.liquidacion,
-    this.titular,
-    this.paraElMismo = false,
-  });
-
-  final Liquidacion liquidacion;
-
-  /// El nombre que va en el encabezado. El historial propio no trae el nombre
-  /// en la consulta (sería siempre el mismo), así que lo pone la pantalla.
-  final String? titular;
-  final bool paraElMismo;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final clave = (liquidacionId: liquidacion.id, esComercio: liquidacion.esComercio);
-    final renglones = ref.watch(renglonesCerradosProvider(clave));
-
-    return MyAsync(
-      valor: renglones,
-      onReintentar: () => ref.invalidate(renglonesCerradosProvider(clave)),
-      datos: (lista) => MyHojaDescargable(
-        hoja: hojaCerrada(
-          liquidacion: liquidacion,
-          renglones: lista,
-          titular: titular,
-          paraElMismo: paraElMismo,
-        ),
-      ),
+      ],
     );
   }
 }
@@ -245,8 +141,8 @@ Future<void> cargarARider(
                         monto: int.parse(monto.text.replaceAll(' ', '')),
                         envioId: envioId,
                       );
-                  // Sin período a mano: se invalida toda la familia, que son
-                  // dos o tres consultas y se rearman solas.
+                  // Sin el período a mano se invalida toda la familia: son dos
+                  // o tres consultas y se rearman solas.
                   ref.invalidate(cargosDelPeriodoRiderProvider);
                   ref.invalidate(cargosDeRiderProvider(repartidorId));
                   if (h.mounted) Navigator.pop(h);
