@@ -70,6 +70,12 @@ abstract final class MyMapa {
         for (final c in coordenadas) LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()),
       ];
       if (puntos.length < 2) return recta;
+      // El routing devuelve el camino pegado al eje de la calle. Si la casa
+      // esta en mitad de cuadra, el trazo arranca o termina a unos metros del
+      // pin y queda un hueco feo. Se cosen las dos puntas con los puntos de
+      // verdad.
+      if (metrosEntre(puntos.first, desde) > 5) puntos.insert(0, desde);
+      if (metrosEntre(puntos.last, hasta) > 5) puntos.add(hasta);
       final segundos = (tramo['duration'] as num?)?.round();
       return MyRuta(
         puntos: puntos,
@@ -285,6 +291,10 @@ class _MyMapaVistaState extends State<MyMapaVista> with SingleTickerProviderStat
 
     final nuevos = [for (final m in widget.marcadores) m.punto];
     final movio = !_mismosPuntos(nuevos, _hasta);
+    // Aparecio o desaparecio algo (el rider, el camino): el encuadre de antes
+    // ya no sirve ni aunque lo que habia siga a la vista, hay que rehacerlo.
+    final cambioQueHay = nuevos.length != _hasta.length ||
+        (widget.ruta?.isNotEmpty ?? false) != (anterior.ruta?.isNotEmpty ?? false);
     if (movio) {
       // Sin la misma cantidad de marcadores no hay con quien emparejar al
       // viejo: aparecio o desaparecio alguien y el pin se pone donde va.
@@ -297,7 +307,8 @@ class _MyMapaVistaState extends State<MyMapaVista> with SingleTickerProviderStat
         _desliz.value = 1;
       }
     }
-    if (movio || !_mismosPuntos(widget.ruta ?? const [], anterior.ruta ?? const [])) _reencuadrar();
+    final cambioElCamino = !_mismosPuntos(widget.ruta ?? const [], anterior.ruta ?? const []);
+    if (movio || cambioElCamino) _reencuadrar(forzar: cambioQueHay);
   }
 
   static bool _mismosPuntos(List<LatLng> a, List<LatLng> b) {
@@ -332,22 +343,37 @@ class _MyMapaVistaState extends State<MyMapaVista> with SingleTickerProviderStat
   // Arriba mas margen: la etiqueta va encima del pin y se cortaba.
   static const _margenEncuadre = EdgeInsets.fromLTRB(48, 84, 48, 32);
 
+  var _encuadrePendiente = false;
+  var _forzarEncuadre = false;
+
   /// Se pide para despues del frame: mover la camara hace `setState` por
   /// dentro del mapa, y desde `didUpdateWidget` estariamos en medio del build.
-  void _reencuadrar() {
-    if (!_listo || _usuarioMovio) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _usuarioMovio) return;
-      final puntos = _aEncuadrar;
-      if (puntos.isEmpty || _todoALaVista(puntos)) return;
-      if (puntos.length == 1) {
-        _control.move(puntos.first, _control.camera.zoom);
-        return;
-      }
-      _control.fitCamera(
-        CameraFit.coordinates(coordinates: puntos, padding: _margenEncuadre, maxZoom: 17),
-      );
-    });
+  ///
+  /// El pedido queda anotado en [_encuadrePendiente] hasta que se cumple. Si
+  /// se descartara cuando el mapa todavia no esta medido, el encuadre se
+  /// perderia para siempre: no hay nadie mas que lo vuelva a pedir.
+  void _reencuadrar({bool forzar = false}) {
+    if (_usuarioMovio) return;
+    _encuadrePendiente = true;
+    _forzarEncuadre = _forzarEncuadre || forzar;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _encuadrarAhora());
+  }
+
+  void _encuadrarAhora() {
+    if (!mounted || !_listo || _usuarioMovio || !_encuadrePendiente) return;
+    final puntos = _aEncuadrar;
+    if (puntos.isEmpty) return;
+    final forzar = _forzarEncuadre;
+    _encuadrePendiente = false;
+    _forzarEncuadre = false;
+    if (!forzar && _todoALaVista(puntos)) return;
+    if (puntos.length == 1) {
+      _control.move(puntos.first, _control.camera.zoom);
+      return;
+    }
+    _control.fitCamera(
+      CameraFit.coordinates(coordinates: puntos, padding: _margenEncuadre, maxZoom: 17),
+    );
   }
 
   /// Re-encuadrar en cada lectura hace saltar la camara cada pocos segundos
@@ -373,10 +399,14 @@ class _MyMapaVistaState extends State<MyMapaVista> with SingleTickerProviderStat
 
   void _volverAEncuadrar() {
     setState(() => _usuarioMovio = false);
-    _reencuadrar();
+    // Lo pidio el usuario con el dedo: se encuadra aunque todo este a la vista.
+    _reencuadrar(forzar: true);
   }
 
-  void _alEstarListo() => _listo = true;
+  void _alEstarListo() {
+    _listo = true;
+    if (_encuadrePendiente) _encuadrarAhora();
+  }
 
   void _alMoverse(MapCamera camara, bool huboGesto) {
     if (!huboGesto || _usuarioMovio) return;

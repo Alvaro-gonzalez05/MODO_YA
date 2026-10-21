@@ -123,8 +123,14 @@ class _ContenidoState extends ConsumerState<_Contenido> {
     // El GPS tiembla aunque la moto esté parada: por menos de media cuadra no
     // vale la pena otra consulta (y el servidor de rutas es público y gratis,
     // conviene no castigarlo).
+    //
+    // La comparación es contra el punto del que ya se pidió, esté la respuesta
+    // o no. Si acá se mirara `_ruta`, cada reconstrucción de la pantalla
+    // mientras la primera consulta está en el aire largaría otra y anularía la
+    // anterior con `_vuelta`: si la consulta tarda más que el refresco, nunca
+    // llega ninguna y no se dibuja ningún camino.
     final desde = _rutaDesde;
-    if (_ruta != null && desde != null && MyMapa.metrosEntre(desde, rider) < 40) return;
+    if (desde != null && MyMapa.metrosEntre(desde, rider) < 40) return;
 
     _rutaDesde = rider;
     final vuelta = ++_vuelta;
