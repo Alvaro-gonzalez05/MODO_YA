@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'backend.dart';
+import 'models/estados.dart';
 import 'models/marketplace.dart';
 import 'models/models.dart';
 import 'repositories/campanias_repository.dart';
 import 'repositories/carteles_repository.dart';
+import 'repositories/documentacion_repository.dart';
 import 'repositories/liquidaciones_repository.dart';
 import 'repositories/notificaciones_repository.dart';
 import 'repositories/pagos_repository.dart';
@@ -15,6 +17,7 @@ import 'repositories/envios_repository.dart';
 import 'repositories/pedidos_repository.dart';
 import 'repositories/preinscripciones_repository.dart';
 import 'repositories/promociones_repository.dart';
+import 'repositories/reclamos_repository.dart';
 import 'repositories/repartidores_repository.dart';
 import 'repositories/solicitudes_rider_repository.dart';
 import 'repositories/tarifas_repository.dart';
@@ -431,3 +434,77 @@ final renglonesCerradosProvider =
     FutureProvider.family<List<RenglonCerrado>, Cerrada>((ref, c) => ref
         .watch(liquidacionesRepositoryProvider)
         .renglonesCerrados(c.liquidacionId, esComercio: c.esComercio));
+// ---- Reclamos y documentación del rider -------------------------------------
+//
+// Las dos cosas tenían la base entera y ninguna pantalla (hallazgos 6 y 7).
+
+final reclamosRepositoryProvider = Provider((_) => const ReclamosRepository());
+
+/// Los reclamos que puede ver el que está usando la app: los que abrió él, o
+/// todos si es la administración. Una sola consulta para los dos casos porque
+/// lo decide el RLS (`reclamos_leer`), no la app.
+final reclamosProvider = StreamProvider<List<Reclamo>>(
+  (ref) => ref.watch(reclamosRepositoryProvider).watch(),
+);
+
+/// Los reclamos de un pedido, para mostrarlos en su seguimiento.
+final reclamosDelPedidoProvider = Provider.family<List<Reclamo>, String>(
+  (ref, pedidoId) => (ref.watch(reclamosProvider).value ?? const <Reclamo>[])
+      .where((r) => r.pedidoId == pedidoId)
+      .toList(),
+);
+
+/// Cuántos reclamos esperan una decisión de la administración, para el globito
+/// del panel.
+final reclamosSinResolverProvider = Provider<int>(
+  (ref) => (ref.watch(reclamosProvider).value ?? const <Reclamo>[])
+      .where((r) => !r.estado.esCerrado)
+      .length,
+);
+
+final documentacionRepositoryProvider = Provider((_) => const DocumentacionRepository());
+
+/// Qué documentos se le exigen a cada vehículo. Cambia muy de vez en cuando
+/// (es un insert en `documentos_exigidos`), así que se lee una vez por sesión.
+final documentosExigidosProvider = FutureProvider<List<DocumentoExigido>>(
+  (ref) => ref.watch(documentacionRepositoryProvider).exigidos(),
+);
+
+/// Toda la documentación que el RLS deja ver: la de todos si es la
+/// administración, la propia si es un rider.
+final documentacionProvider = StreamProvider<List<DocumentoRider>>(
+  (ref) => ref.watch(documentacionRepositoryProvider).watch(),
+);
+
+/// La carpeta de un rider, cruzando lo que se le exige por su vehículo con lo
+/// que subió. La usan la pantalla del rider y la ficha de la administración.
+typedef RiderYVehiculo = ({String repartidorId, Vehiculo vehiculo});
+
+final carpetaDeRiderProvider = Provider.family<AsyncValue<CarpetaRider>, RiderYVehiculo>((ref, r) {
+  final exigidos = ref.watch(documentosExigidosProvider);
+  final subidos = ref.watch(documentacionProvider);
+  if (exigidos.hasError) return AsyncValue<CarpetaRider>.error(exigidos.error!, exigidos.stackTrace!);
+  if (subidos.hasError) return AsyncValue<CarpetaRider>.error(subidos.error!, subidos.stackTrace!);
+  if (!exigidos.hasValue || !subidos.hasValue) return const AsyncValue<CarpetaRider>.loading();
+  return AsyncValue.data(CarpetaRider.armar(
+    vehiculo: r.vehiculo,
+    exigidos: exigidos.value!,
+    subidos: subidos.value!.where((d) => d.repartidorId == r.repartidorId).toList(),
+  ));
+});
+
+/// La carpeta del rider que está usando la app del rider.
+final miCarpetaProvider = Provider<AsyncValue<CarpetaRider>>((ref) {
+  final rider = ref.watch(repartidorActualProvider);
+  if (rider.hasError) return AsyncValue<CarpetaRider>.error(rider.error!, rider.stackTrace!);
+  final r = rider.value;
+  if (r == null) return const AsyncValue<CarpetaRider>.loading();
+  return ref.watch(carpetaDeRiderProvider((repartidorId: r.id, vehiculo: r.vehiculo)));
+});
+
+/// Cuántos documentos esperan que la administración los mire, para el globito.
+final documentosSinRevisarProvider = Provider<int>(
+  (ref) => (ref.watch(documentacionProvider).value ?? const <DocumentoRider>[])
+      .where((d) => d.estado == EstadoAprobacion.pendiente)
+      .length,
+);

@@ -77,6 +77,7 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
     final enCurso = ref.watch(enviosEnCursoProvider).value ?? const <Envio>[];
     final lectura = ref.watch(ubicacionRiderProvider);
     final conectado = rider?.conectado ?? false;
+    final carpeta = ref.watch(miCarpetaProvider).value;
 
     // Si la base dice que esta conectado (por ejemplo, reabrio la app), se
     // retoma el envio periodico de la ubicacion.
@@ -120,6 +121,39 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                   nombre: rider?.nombre ?? '',
                   onCambiar: _cambiarConexion,
                 ),
+
+              // Antes la documentacion no tenia pantalla: el rider no sabia que
+              // se le pedia ni que le faltaba, y la administracion lo aprobaba
+              // a ciegas. El aviso va en el inicio porque el perfil casi nadie
+              // lo abre.
+              if (carpeta != null && !carpeta.completa) ...[
+                const SizedBox(height: MySpacing.sm),
+                MyCard(
+                  color: MyColors.primaryFixed,
+                  shadows: const [],
+                  onTap: () => context.go('/perfil/documentacion'),
+                  child: Row(
+                    children: [
+                      Icon(Symbols.badge, color: MyColors.onPrimaryFixed, fill: 1),
+                      const SizedBox(width: MySpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(carpeta.titular,
+                                style: MyType.labelLg.copyWith(color: MyColors.onPrimaryFixed)),
+                            Text(
+                              'Tocá para subirla. Sin la documentación al día no podés trabajar.',
+                              style: MyType.bodySm.copyWith(color: MyColors.onPrimaryFixedVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Symbols.chevron_right, color: MyColors.onPrimaryFixed),
+                    ],
+                  ),
+                ),
+              ],
 
               if (conectado && lectura != null) ...[
                 const SizedBox(height: MySpacing.sm),

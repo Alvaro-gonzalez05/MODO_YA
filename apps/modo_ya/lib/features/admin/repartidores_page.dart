@@ -7,10 +7,11 @@ import 'package:my_ui/my_ui.dart';
 
 import '../../comun/credenciales.dart';
 import 'admin_shell.dart';
+import 'documentacion_rider.dart';
 import 'preinscripciones.dart';
 import 'solicitudes_rider.dart';
 
-enum _Filtro { todos, conectados, enServicio, suspendidos }
+enum _Filtro { todos, conectados, enServicio, documentacion, suspendidos }
 
 /// Riders: quién está conectado, ficha con su última ubicación, alta,
 /// suspensión y contraseña nueva.
@@ -30,8 +31,16 @@ class _AdminRepartidoresPageState extends ConsumerState<AdminRepartidoresPage> {
         _Filtro.todos => true,
         _Filtro.conectados => r.conectado,
         _Filtro.enServicio => r.ocupado,
+        _Filtro.documentacion => _tieneDocsSinRevisar(r),
         _Filtro.suspendidos => !r.aprobacion.puedeOperar,
       };
+
+  /// Si tiene algo subido esperando que la administración lo mire. No usa la
+  /// carpeta completa a propósito: para filtrar una lista larga alcanza con
+  /// mirar lo subido, sin cruzarlo con lo exigido de cada vehículo.
+  bool _tieneDocsSinRevisar(Repartidor r) =>
+      (ref.watch(documentacionProvider).value ?? const <DocumentoRider>[])
+          .any((d) => d.repartidorId == r.id && d.estado == EstadoAprobacion.pendiente);
 
   void _abrir(Repartidor r) {
     if (context.esEscritorio) {
@@ -167,6 +176,7 @@ class _AdminRepartidoresPageState extends ConsumerState<AdminRepartidoresPage> {
                     (_Filtro.todos, 'Todos', todos.length),
                     (_Filtro.conectados, 'Conectados', todos.where((r) => r.conectado).length),
                     (_Filtro.enServicio, 'En servicio', todos.where((r) => r.ocupado).length),
+                    (_Filtro.documentacion, 'Documentación por revisar', todos.where(_tieneDocsSinRevisar).length),
                     (_Filtro.suspendidos, 'Suspendidos', todos.where((r) => !r.aprobacion.puedeOperar).length),
                   ],
                 ),
@@ -232,9 +242,18 @@ class _FichaRider extends ConsumerWidget {
   final VoidCallback? onCerrar;
 
   Future<void> _cambiar(BuildContext context, WidgetRef ref, Repartidor r, EstadoAprobacion estado) async {
+    // Suspender y no aprobar son las dos decisiones que el rider tiene que
+    // poder entender: sin motivo no se mandan. Un solo `pedirTexto` para las
+    // dos, que si no el segundo usaría el context después de un await.
     String? motivo;
-    if (estado == EstadoAprobacion.suspendido) {
-      motivo = await pedirTexto(context, titulo: 'Suspender a ${r.nombre}', label: 'Motivo', aceptar: 'Suspender');
+    final suspende = estado == EstadoAprobacion.suspendido;
+    if (suspende || estado == EstadoAprobacion.rechazado) {
+      motivo = await pedirTexto(
+        context,
+        titulo: suspende ? 'Suspender a ${r.nombre}' : 'No aprobar a ${r.nombre}',
+        label: suspende ? 'Motivo' : 'Por qué no se aprueba',
+        aceptar: suspende ? 'Suspender' : 'No aprobar',
+      );
       if (motivo == null) return;
     }
     try {
@@ -317,6 +336,10 @@ class _FichaRider extends ConsumerWidget {
             ],
           ),
         ],
+        const SizedBox(height: MySpacing.md),
+        // Acá se decide si el rider puede trabajar, así que la documentación
+        // tiene que estar a la vista: antes se aprobaba a ciegas.
+        DocumentacionDelRider(rider: r),
         const SizedBox(height: MySpacing.lg),
         if (r.aprobacion.puedeOperar)
           MyBoton(
@@ -326,10 +349,28 @@ class _FichaRider extends ConsumerWidget {
             onPressed: () => _cambiar(context, ref, r, EstadoAprobacion.suspendido),
           )
         else
-          MyBoton(
-            label: r.aprobacion == EstadoAprobacion.pendiente ? 'Aprobar y habilitar' : 'Reactivar cuenta',
-            icon: Symbols.verified,
-            onPressed: () => _cambiar(context, ref, r, EstadoAprobacion.aprobado),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              MyBoton(
+                label: r.aprobacion == EstadoAprobacion.pendiente ? 'Aprobar y habilitar' : 'Reactivar cuenta',
+                icon: Symbols.verified,
+                onPressed: () => _cambiar(context, ref, r, EstadoAprobacion.aprobado),
+              ),
+              // `EstadoAprobacion.rechazado` existía en el enum y en
+              // `admin_aprobacion_repartidor` desde el principio, pero ninguna
+              // pantalla lo podía fijar (hallazgo 15): un rider que no da el
+              // perfil quedaba "En revisión" para siempre.
+              if (r.aprobacion == EstadoAprobacion.pendiente) ...[
+                const SizedBox(height: MySpacing.xs),
+                MyBoton(
+                  label: 'No aprobar',
+                  icon: Symbols.person_off,
+                  tipo: MyBotonTipo.texto,
+                  onPressed: () => _cambiar(context, ref, r, EstadoAprobacion.rechazado),
+                ),
+              ],
+            ],
           ),
       ],
     );

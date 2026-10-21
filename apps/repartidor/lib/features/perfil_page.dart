@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
@@ -14,6 +15,9 @@ class PerfilPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final rider = ref.watch(repartidorActualProvider).value;
     final s = ref.watch(sesionProvider);
+    final carpeta = ref.watch(miCarpetaProvider).value;
+    final reclamosAbiertos =
+        (ref.watch(reclamosProvider).value ?? const <Reclamo>[]).where((r) => !r.estado.esCerrado).length;
 
     return Column(
       children: [
@@ -60,6 +64,29 @@ class PerfilPage extends ConsumerWidget {
                       leading: Icon(Symbols.two_wheeler, color: MyColors.onSurface),
                       title: Text('Vehículo', style: MyType.labelLg),
                       subtitle: Text(rider?.vehiculo.label ?? '-', style: MyType.bodySm),
+                    ),
+                    ListTile(
+                      leading: Icon(Symbols.badge, color: MyColors.onSurface),
+                      title: Text('Mi documentación', style: MyType.labelLg),
+                      subtitle: Text(carpeta?.titular ?? 'DNI, licencia, seguro', style: MyType.bodySm),
+                      trailing: carpeta != null && !carpeta.completa
+                          ? const MyBadge('Falta', tone: MyBadgeTone.danger)
+                          : const Icon(Symbols.chevron_right),
+                      onTap: () => context.go('/perfil/documentacion'),
+                    ),
+                    ListTile(
+                      leading: Icon(Symbols.support_agent, color: MyColors.onSurface),
+                      title: Text('Mis reclamos', style: MyType.labelLg),
+                      subtitle: Text(
+                        reclamosAbiertos == 0
+                            ? 'Contanos si algo salió mal'
+                            : reclamosAbiertos == 1
+                                ? 'Tenés 1 esperando respuesta'
+                                : 'Tenés $reclamosAbiertos esperando respuesta',
+                        style: MyType.bodySm,
+                      ),
+                      trailing: const Icon(Symbols.chevron_right),
+                      onTap: () => context.go('/perfil/reclamos'),
                     ),
                     ListTile(
                       leading: Icon(Symbols.lock, color: MyColors.onSurface),

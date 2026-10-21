@@ -59,6 +59,41 @@ class CuentaLocalPage extends ConsumerWidget {
                 ],
               ),
             );
+            final sinResolver = ref.watch(reclamosSinResolverProvider);
+            final reclamos = MyCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: Text('Reclamos', style: MyType.headlineSm)),
+                      if (sinResolver > 0)
+                        MyBadge(
+                          sinResolver == 1 ? '1 sin resolver' : '$sinResolver sin resolver',
+                          tone: MyBadgeTone.ember,
+                          dot: true,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: MySpacing.xxs),
+                  Text(
+                    'Si un rider no vino a buscar un pedido, un cliente rechazó una entrega '
+                    'o algo de la liquidación no cierra, contanos.',
+                    style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                  ),
+                  const SizedBox(height: MySpacing.md),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: MyBoton(
+                      label: 'Ver mis reclamos',
+                      icon: Symbols.support_agent,
+                      tipo: MyBotonTipo.secundario,
+                      onPressed: () => context.go('/local/cuenta/reclamos'),
+                    ),
+                  ),
+                ],
+              ),
+            );
             final seguridad = MyCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -96,7 +131,10 @@ class CuentaLocalPage extends ConsumerWidget {
             if (context.esMovil) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [perfil, espacio, datos, espacio, ubicacion, espacio, horarios, espacio, riders, espacio, seguridad],
+                children: [
+                  perfil, espacio, datos, espacio, ubicacion, espacio, horarios,
+                  espacio, riders, espacio, reclamos, espacio, seguridad,
+                ],
               );
             }
             return Row(
@@ -105,7 +143,7 @@ class CuentaLocalPage extends ConsumerWidget {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [perfil, espacio, datos, espacio, seguridad],
+                    children: [perfil, espacio, datos, espacio, reclamos, espacio, seguridad],
                   ),
                 ),
                 const SizedBox(width: MySpacing.lg),

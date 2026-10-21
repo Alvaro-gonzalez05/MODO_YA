@@ -30,6 +30,12 @@ Future<void> mostrarCuentaCliente(BuildContext context, WidgetRef ref) {
       MySeccionHoja(icon: Symbols.person, label: 'Mis datos', onTap: () => editarMisDatos(context, ref, s)),
       MySeccionHoja(icon: Symbols.home_pin, label: 'Direcciones', contador: 0, onTap: () => context.go('/cliente/direcciones')),
       MySeccionHoja(icon: Symbols.receipt_long, label: 'Mis pedidos', onTap: () => context.go('/cliente/pedidos')),
+      MySeccionHoja(
+        icon: Symbols.support_agent,
+        label: 'Mis reclamos',
+        contador: ref.read(reclamosSinResolverProvider),
+        onTap: () => context.go('/cliente/cuenta/reclamos'),
+      ),
       MySeccionHoja(icon: Symbols.key, label: 'Contraseña', onTap: () => mostrarCambiarPassword(context, ref)),
     ],
     onSalir: () => cerrarSesion(context, ref),
@@ -214,6 +220,42 @@ class CuentaClientePage extends ConsumerWidget {
       ),
     );
 
+    final sinResolver = ref.watch(reclamosSinResolverProvider);
+    final reclamos = MyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text('Reclamos', style: MyType.headlineSm)),
+              if (sinResolver > 0)
+                MyBadge(
+                  sinResolver == 1 ? '1 sin resolver' : '$sinResolver sin resolver',
+                  tone: MyBadgeTone.ember,
+                  dot: true,
+                ),
+            ],
+          ),
+          const SizedBox(height: MySpacing.xxs),
+          Text(
+            'Si un pedido no llegó, llegó mal o te cobraron algo que no corresponde, '
+            'contanos y te contestamos.',
+            style: MyType.bodySm.copyWith(color: MyColors.secondary),
+          ),
+          const SizedBox(height: MySpacing.md),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: MyBoton(
+              label: 'Ver mis reclamos',
+              icon: Symbols.support_agent,
+              tipo: MyBotonTipo.secundario,
+              onPressed: () => context.go('/cliente/cuenta/reclamos'),
+            ),
+          ),
+        ],
+      ),
+    );
+
     final seguridad = MyCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -248,7 +290,7 @@ class CuentaClientePage extends ConsumerWidget {
       titulo: 'Mi cuenta',
       anchoMaximo: 1080,
       children: context.esMovil
-          ? [perfilConAccion, espacio, tarjetaPlus, espacio, misDirecciones, espacio, seguridad]
+          ? [perfilConAccion, espacio, tarjetaPlus, espacio, misDirecciones, espacio, reclamos, espacio, seguridad]
           : [
               perfil,
               espacio,
@@ -259,7 +301,12 @@ class CuentaClientePage extends ConsumerWidget {
                 children: [
                   Expanded(child: misDirecciones),
                   const SizedBox(width: MySpacing.md),
-                  Expanded(child: seguridad),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [reclamos, espacio, seguridad],
+                    ),
+                  ),
                 ],
               ),
             ],

@@ -29,6 +29,10 @@ class AdminShell extends ConsumerWidget {
     final porCobrar = ref.watch(pedidosPendientesDePagoProvider).value?.length ?? 0;
     final riders = ref.watch(todosLosRepartidoresProvider).value ?? const <Repartidor>[];
     final conectados = riders.where((r) => r.conectado).length;
+    // Un reclamo sin resolver o un documento sin revisar es gente esperando una
+    // respuesta: van con contador para que no queden olvidados.
+    final reclamos = ref.watch(reclamosSinResolverProvider);
+    final documentos = ref.watch(documentosSinRevisarProvider);
 
     return MyAppShell(
       seccion: 'Admin',
@@ -37,11 +41,12 @@ class AdminShell extends ConsumerWidget {
         MyDestino(icon: Symbols.receipt_long, label: 'Cobros', contador: porCobrar),
         const MyDestino(icon: Symbols.account_balance_wallet, label: 'Liquidaciones'),
         const MyDestino(icon: Symbols.storefront, label: 'Locales'),
-        const MyDestino(icon: Symbols.sports_motorsports, label: 'Riders'),
+        MyDestino(icon: Symbols.sports_motorsports, label: 'Riders', contador: documentos),
         const MyDestino(icon: Symbols.route, label: 'Envíos'),
         const MyDestino(icon: Symbols.tune, label: 'Tarifas y reglas'),
         const MyDestino(icon: Symbols.campaign, label: 'Carteles'),
         const MyDestino(icon: Symbols.notifications, label: 'Notificaciones'),
+        MyDestino(icon: Symbols.support_agent, label: 'Reclamos', contador: reclamos),
       ],
       indice: navigationShell.currentIndex,
       onSelect: (i) => navigationShell.goBranch(i, initialLocation: i == navigationShell.currentIndex),

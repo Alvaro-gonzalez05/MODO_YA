@@ -104,19 +104,40 @@ de 0003, la mensualidad del local) y tampoco la lee nadie.
 
 ## Media
 
-### 6. Reclamos: backend completo, cero pantallas
+### 6. Reclamos: backend completo, cero pantallas — ARREGLADO
 
 Existe la tabla `reclamos`, el `grant insert` para que un usuario abra uno, el
 trigger `completar_reclamo` y la RPC `admin_resolver_reclamo`. La palabra
 "reclamo" **no aparece en ningún archivo `.dart`** de las tres apps. Nadie puede
 abrir un reclamo ni resolverlo.
 
-### 7. Documentación del rider: permisos y semilla, ninguna pantalla
+**Arreglado:** el cliente abre un reclamo desde el seguimiento del pedido o
+desde "Mi cuenta → Mis reclamos"; el local desde "Mi local → Reclamos" y el
+rider desde "Perfil → Mis reclamos". La administración los ve, los toma, los
+responde y los cierra en `/admin/reclamos`, con contador en la barra lateral.
+
+Dos cosas que faltaban en la base y se agregaron en `0066`: `reclamos` solo
+podía apuntar a un `envio_id`, y el envío del pedido recién existe cuando el
+local lo acepta, así que un reclamo de un pedido rechazado no se podía atar a
+nada (ahora hay `pedido_id`); y nada controlaba que el pedido o el envío fueran
+del que reclama (ahora sí, con el trigger `reclamos_de_lo_mio`).
+
+### 7. Documentación del rider: permisos y semilla, ninguna pantalla — ARREGLADO
 
 `documentos_exigidos` se siembra por vehículo (`0007_semilla.sql:42`),
 `documentos_repartidor` tiene grants para que el rider suba sus archivos
 (`0016:43-48`) y existe `admin_validar_documento`. No hay una sola referencia en
 Dart: el rider nunca sube nada y la administración lo aprueba a ciegas.
+
+**Arreglado:** el rider ve en "Perfil → Mi documentación" qué se le pide según
+su vehículo, saca la foto y la sube al bucket privado `documentos`; el inicio le
+avisa mientras le falte algo. La administración la revisa en la ficha del rider,
+donde aprueba o rechaza cada documento con un motivo que el rider lee en su app.
+
+Faltaba un paso en la base, agregado en `0066`: el rider puede escribir
+`archivo_url` pero no `estado`, así que un documento rechazado seguía rechazado
+aunque volviera a subir la foto buena. Ahora cambiar el archivo lo devuelve a
+'pendiente' (trigger `documentos_repartidor_a_revision`).
 
 ### 8. Las liquidaciones son invisibles para quien las cobra — ARREGLADO
 
@@ -206,12 +227,22 @@ nunca es `null`, así que el botón siempre se ve activo, y no hay `onChanged` q
 lo reevalúe. Con 1 a 3 dígitos el rider toca "Confirmar" y no pasa nada, sin
 ningún mensaje.
 
-### 15. `EstadoAprobacion.rechazado` es inalcanzable desde la app
+### 15. `EstadoAprobacion.rechazado` es inalcanzable desde la app — ARREGLADO A MEDIAS
 
 `admin/comercios_page.dart:319-331` y `admin/repartidores_page.dart:315-327`
 solo ofrecen `aprobado` y `suspendido`, y el alta crea aprobado. El estado
 existe en el enum, tiene label "Rechazado" y lo soporta
 `admin_aprobacion_comercio`, pero ninguna pantalla lo puede fijar.
+
+**Arreglado del lado del rider**, que es donde el rechazo tiene sentido natural:
+la revisión de la documentación rechaza cada documento con una observación que
+el rider lee (`admin_validar_documento` con `'rechazado'`), y la ficha de un
+rider en revisión ofrece "No aprobar" pidiendo el motivo
+(`admin_aprobacion_repartidor` con `'rechazado'`).
+
+**Falta el local:** `admin/comercios_page.dart` sigue ofreciendo solo aprobar y
+suspender. Es el mismo arreglo de tres líneas, pero se dejó afuera para no
+pisar un archivo de otra tanda de trabajo.
 
 ---
 
