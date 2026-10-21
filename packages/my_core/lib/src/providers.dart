@@ -508,6 +508,8 @@ final documentosSinRevisarProvider = Provider<int>(
   (ref) => (ref.watch(documentacionProvider).value ?? const <DocumentoRider>[])
       .where((d) => d.estado == EstadoAprobacion.pendiente)
       .length,
+);
+
 // ---- El resumen de la administración ----------------------------------------
 
 /// Las cinco consultas que alimentan el resumen de la administración, juntas.
