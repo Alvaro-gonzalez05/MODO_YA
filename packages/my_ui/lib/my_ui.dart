@@ -5,6 +5,7 @@
 library;
 
 export 'src/actualizaciones/aviso_actualizacion.dart';
+export 'src/hoja_en_pdf.dart';
 export 'src/sonidos.dart';
 export 'src/theme.dart';
 export 'src/widgets/animaciones.dart';
@@ -14,6 +15,7 @@ export 'src/widgets/app_shell.dart';
 export 'src/widgets/controls.dart';
 export 'src/widgets/escritorio.dart';
 export 'src/widgets/formularios.dart';
+export 'src/widgets/hoja_de_liquidacion.dart';
 export 'src/widgets/hoja_secciones.dart';
 export 'src/widgets/hoja_lateral.dart';
 export 'src/widgets/mapa.dart';

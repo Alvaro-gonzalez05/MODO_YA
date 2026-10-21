@@ -5,13 +5,16 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import '../../comun/formulario_emergente.dart';
-import 'liquidacion_en_pdf.dart';
 
-/// El detalle de lo que se le va a pagar a un rider, como una hoja.
+/// El detalle de lo que se le va a pagar a un rider o a un local, como una hoja.
 ///
 /// Entra desde la derecha y tapa la mitad: así se compara el renglón de la
 /// lista con el detalle sin ir y volver. Es un documento, no una pantalla —
 /// está pensado para leerlo con el rider al lado y poder discutir cada línea.
+///
+/// El documento en sí (`MyHojaDescargable`) y su armado (`hojaDeRider`) son los
+/// mismos que usan la app del rider y la pantalla del local: acá solo se elige
+/// a quién mirar y se agregan las acciones que puede hacer la administración.
 Future<void> mostrarHojaDeRider(
   BuildContext context,
   PendienteRider p,
@@ -25,6 +28,34 @@ Future<void> mostrarHojaDeRider(
   );
 }
 
+/// Lo mismo para un local: qué pedidos entraron y qué se le descuenta.
+Future<void> mostrarHojaDeComercio(
+  BuildContext context,
+  PendienteComercio p,
+  DateTime desde,
+  DateTime hasta,
+) {
+  return mostrarHojaLateral(
+    context,
+    titulo: 'Liquidación',
+    builder: (_) => _HojaDeComercio(pendiente: p, desde: desde, hasta: hasta),
+  );
+}
+
+/// El detalle de una liquidación ya cerrada, para cualquiera de los dos.
+Future<void> mostrarHojaCerrada(
+  BuildContext context,
+  Liquidacion l, {
+  String? titular,
+  bool paraElMismo = false,
+}) {
+  return mostrarHojaLateral(
+    context,
+    titulo: 'Liquidación cerrada',
+    builder: (_) => HojaCerrada(liquidacion: l, titular: titular, paraElMismo: paraElMismo),
+  );
+}
+
 class _HojaDeRider extends ConsumerWidget {
   const _HojaDeRider({required this.pendiente, required this.desde, required this.hasta});
 
@@ -35,168 +66,109 @@ class _HojaDeRider extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = pendiente;
-    final detalle = ref.watch(detalleDeRiderProvider(
-      (repartidorId: p.repartidorId, desde: desde, hasta: hasta),
-    ));
-    final cargos = ref.watch(cargosDeRiderProvider(p.repartidorId));
+    final rango = (repartidorId: p.repartidorId, desde: desde, hasta: hasta);
+    final envios = ref.watch(detalleDeRiderProvider(rango));
+    final cargos = ref.watch(cargosDelPeriodoRiderProvider(rango));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        MyHojaImpresa(
-          children: [
-            // ---- Encabezado del documento ------------------------------------
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('MODO YA', style: MyType.labelLg.copyWith(color: MyColors.secondary)),
-                      const SizedBox(height: 2),
-                      Text(p.rider, style: MyType.headlineMd),
-                      Text(
-                        'Del ${Formato.fechaCorta(desde)} al ${Formato.fechaCorta(hasta)}',
-                        style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                      ),
-                    ],
-                  ),
-                ),
-                MyBadge(
-                  p.total >= 0 ? 'A pagarle' : 'Tiene que rendir',
-                  tone: p.total >= 0 ? MyBadgeTone.success : MyBadgeTone.danger,
-                ),
-              ],
-            ),
-            const Divider(height: MySpacing.xl),
-
-            // ---- Los envíos ----------------------------------------------------
-            Row(
-              children: [
-                Expanded(child: Text('Envíos entregados', style: MyType.labelLg)),
-                MyBoton(
-                  label: 'PDF',
-                  icon: Symbols.download,
-                  tipo: MyBotonTipo.texto,
-                  onPressed: () async {
-                    // Si todavía está cargando se avisa, en vez de bajar un
-                    // documento a medio armar.
-                    final envios = detalle.value;
-                    final lista = cargos.value;
-                    if (envios == null || lista == null) {
-                      mostrarAviso(context, 'Esperá a que termine de cargar.');
-                      return;
-                    }
-                    try {
-                      await guardarLiquidacionEnPdf(
-                        rider: p,
-                        envios: envios,
-                        cargos: lista
-                            .where((c) => !c.fecha.isBefore(desde) && !c.fecha.isAfter(hasta))
-                            .toList(),
-                        desde: desde,
-                        hasta: hasta,
-                      );
-                    } catch (e) {
-                      if (context.mounted) mostrarError(context, e);
-                    }
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: MySpacing.xs),
-            MyAsync(
-              valor: detalle,
-              onReintentar: () => ref.invalidate(detalleDeRiderProvider(
-                (repartidorId: p.repartidorId, desde: desde, hasta: hasta),
-              )),
-              datos: (lista) {
-                if (lista.isEmpty) {
-                  return Text(
-                    'No entregó nada en este período.',
-                    style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final e in lista)
-                      MyRenglon(
-                        '${e.codigo} · ${e.comercio}',
-                        Formato.pesos(e.ganancia),
-                        detalle: '${Formato.fechaHora(e.entregado)} · ${e.destino}'
-                            '${e.efectivo == 0 ? '' : ' · cobró ${Formato.pesos(e.efectivo)}'}',
-                      ),
-                  ],
-                );
-              },
-            ),
-
-            const Divider(height: MySpacing.xl),
-
-            // ---- Los cargos ----------------------------------------------------
-            Row(
-              children: [
-                Expanded(child: Text('Cargos', style: MyType.labelLg)),
-                MyBoton(
-                  label: 'Agregar',
-                  icon: Symbols.add,
-                  tipo: MyBotonTipo.texto,
-                  onPressed: () => cargarARider(context, ref, p.repartidorId, p.rider),
-                ),
-              ],
-            ),
-            const SizedBox(height: MySpacing.xs),
-            MyAsync(
-              valor: cargos,
-              onReintentar: () => ref.invalidate(cargosDeRiderProvider(p.repartidorId)),
-              datos: (lista) {
-                final delPeriodo = lista
-                    .where((c) => !c.fecha.isBefore(desde) && !c.fecha.isAfter(hasta))
-                    .toList();
-                if (delPeriodo.isEmpty) {
-                  return Text(
-                    'Sin cargos en este período.',
-                    style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final c in delPeriodo)
-                      MyRenglon(
-                        c.concepto.rotulo,
-                        Formato.pesos(c.monto),
-                        detalle: '${Formato.fechaCorta(c.fecha)} · ${c.detalle}',
-                        color: c.monto > 0 ? MyColors.error : MyColors.success,
-                      ),
-                  ],
-                );
-              },
-            ),
-
-            const Divider(height: MySpacing.xl),
-
-            // ---- El cierre ------------------------------------------------------
-            MyRenglon('Ganó por ${p.envios} ${p.envios == 1 ? "envío" : "envíos"}',
-                Formato.pesos(p.ganancias)),
-            if (p.efectivo != 0)
-              MyRenglon('Cobró en efectivo', '− ${Formato.pesos(p.efectivo)}',
-                  detalle: 'Lo juntó en la puerta y lo tiene que rendir',
-                  color: MyColors.secondary),
-            if (p.cargos != 0)
-              MyRenglon('Cargos', '− ${Formato.pesos(p.cargos)}', color: MyColors.error),
-            const Divider(height: MySpacing.lg),
-            MyRenglon(
-              p.total >= 0 ? 'A pagarle' : 'Tiene que rendir',
-              Formato.pesos(p.total.abs()),
-              fuerte: true,
-              color: p.total >= 0 ? MyColors.tertiary : MyColors.error,
+    // Se espera a que estén los dos: una hoja a medio armar invita a bajar un
+    // PDF al que le falta la mitad de los renglones.
+    return MyAsync(
+      valor: envios,
+      onReintentar: () => ref.invalidate(detalleDeRiderProvider(rango)),
+      datos: (lista) => MyAsync(
+        valor: cargos,
+        onReintentar: () => ref.invalidate(cargosDelPeriodoRiderProvider(rango)),
+        datos: (losCargos) => MyHojaDescargable(
+          hoja: hojaDeRider(
+            resumen: p,
+            envios: lista,
+            cargos: losCargos,
+            desde: desde,
+            hasta: hasta,
+          ),
+          acciones: [
+            MyBoton(
+              label: 'Cargarle algo',
+              icon: Symbols.add,
+              tipo: MyBotonTipo.texto,
+              onPressed: () => cargarARider(context, ref, p.repartidorId, p.rider),
             ),
           ],
         ),
-      ],
+      ),
+    );
+  }
+}
+
+class _HojaDeComercio extends ConsumerWidget {
+  const _HojaDeComercio({required this.pendiente, required this.desde, required this.hasta});
+
+  final PendienteComercio pendiente;
+  final DateTime desde;
+  final DateTime hasta;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = pendiente;
+    final rango = (comercioId: p.comercioId, desde: desde, hasta: hasta);
+    final pedidos = ref.watch(detalleDeComercioProvider(rango));
+    final cargos = ref.watch(cargosDelPeriodoComercioProvider(rango));
+
+    return MyAsync(
+      valor: pedidos,
+      onReintentar: () => ref.invalidate(detalleDeComercioProvider(rango)),
+      datos: (lista) => MyAsync(
+        valor: cargos,
+        onReintentar: () => ref.invalidate(cargosDelPeriodoComercioProvider(rango)),
+        datos: (losCargos) => MyHojaDescargable(
+          hoja: hojaDeComercio(
+            resumen: p,
+            pedidos: lista,
+            cargos: losCargos,
+            desde: desde,
+            hasta: hasta,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// El renglón por renglón de una liquidación ya cerrada.
+///
+/// Es pública porque la usan las tres pantallas de historial (administración,
+/// rider y local) con la misma hoja y el mismo PDF.
+class HojaCerrada extends ConsumerWidget {
+  const HojaCerrada({
+    super.key,
+    required this.liquidacion,
+    this.titular,
+    this.paraElMismo = false,
+  });
+
+  final Liquidacion liquidacion;
+
+  /// El nombre que va en el encabezado. El historial propio no trae el nombre
+  /// en la consulta (sería siempre el mismo), así que lo pone la pantalla.
+  final String? titular;
+  final bool paraElMismo;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final clave = (liquidacionId: liquidacion.id, esComercio: liquidacion.esComercio);
+    final renglones = ref.watch(renglonesCerradosProvider(clave));
+
+    return MyAsync(
+      valor: renglones,
+      onReintentar: () => ref.invalidate(renglonesCerradosProvider(clave)),
+      datos: (lista) => MyHojaDescargable(
+        hoja: hojaCerrada(
+          liquidacion: liquidacion,
+          renglones: lista,
+          titular: titular,
+          paraElMismo: paraElMismo,
+        ),
+      ),
     );
   }
 }
@@ -273,6 +245,9 @@ Future<void> cargarARider(
                         monto: int.parse(monto.text.replaceAll(' ', '')),
                         envioId: envioId,
                       );
+                  // Sin período a mano: se invalida toda la familia, que son
+                  // dos o tres consultas y se rearman solas.
+                  ref.invalidate(cargosDelPeriodoRiderProvider);
                   ref.invalidate(cargosDeRiderProvider(repartidorId));
                   if (h.mounted) Navigator.pop(h);
                 } catch (e) {

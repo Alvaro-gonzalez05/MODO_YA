@@ -18,6 +18,21 @@ dependencies:
   latlong2: ^0.10.1
   material_symbols_icons: ^4.2960.0
   shared_preferences: ^2.5.5
+  # La hoja de liquidación la dibuja `my_ui` pero la **arma** `my_core`
+  # (`hojaDeRider`, `hojaDeComercio`, `hojaCerrada`): los números y su formato
+  # son dominio, no diseño, y así los tres roles leen el mismo documento sin
+  # que nadie los vuelva a calcular. `my_core` no depende de `my_ui`, así que
+  # no hay ciclo.
+  my_core:
+    path: ../my_core
+  # La hoja de liquidación se baja como PDF, y la bajan los tres roles: la
+  # administración desde la app de gestión y el rider desde la suya. Por eso el
+  # renderizador vive acá y no en `apps/modo_ya`.
+  pdf: ^3.11.3
+  printing: ^5.14.2
+  # `image` (que arrastra `pdf`) usa ZLibDecoder.decodeLazy, que recién existe
+  # en archive 4.5: sin esto el build web se cae al compilar el PNG decoder.
+  archive: ^4.5.2
 
 dev_dependencies:
   flutter_lints: ^6.0.0
