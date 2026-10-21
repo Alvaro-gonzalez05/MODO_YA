@@ -48,6 +48,9 @@ dependencies:
   material_symbols_icons: ^4.2960.0
   geolocator: ^14.0.3
   url_launcher: ^6.3.2
+  # El rider saca la foto de su DNI, su licencia y su seguro desde la app: sin
+  # esto la documentacion la tenia que mandar por WhatsApp.
+  image_picker: ^1.2.3
 
 dev_dependencies:
   flutter_test:
