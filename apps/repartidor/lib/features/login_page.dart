@@ -76,8 +76,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           Text('Esta app es solo para riders', style: MyType.headlineSm),
                           const SizedBox(height: MySpacing.xxs),
                           Text(
-                            'Entraste con una cuenta de ${sesion.rol == RolUsuario.comercio ? 'local' : sesion.rol == RolUsuario.admin ? 'administracion' : 'cliente'}. '
-                            'Usa la app MODO YA.',
+                            'Entraste con una cuenta de ${sesion.rol == RolUsuario.comercio ? 'local' : sesion.rol == RolUsuario.admin ? 'administración' : 'cliente'}. '
+                            'Usá la app MODO YA.',
                             style: MyType.bodySm,
                           ),
                           const SizedBox(height: MySpacing.sm),

@@ -81,7 +81,7 @@ class MyCampo extends StatelessWidget {
             ),
             validator: (v) {
               final t = (v ?? '').trim();
-              if (obligatorio && t.isEmpty) return 'Completa este dato';
+              if (obligatorio && t.isEmpty) return 'Completá este dato';
               return validar?.call(t);
             },
           ),

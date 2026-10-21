@@ -47,7 +47,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
       await showDialog<void>(
         context: context,
         builder: (c) => AlertDialog(
-          title: const Text('Revisa tu email'),
+          title: const Text('Revisá tu email'),
           content: Text(
             'Te mandamos un mail a ${_email.text.trim()} para confirmar la cuenta. '
             'Después de confirmarla vas a poder entrar.',

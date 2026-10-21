@@ -140,7 +140,7 @@ class _ErrorDeArranque extends StatelessWidget {
       theme: MyTheme.actual,
       home: Scaffold(
         body: MyEmptyState(
-          title: 'La app no esta configurada',
+          title: 'La app no está configurada',
           message: '$error',
         ),
       ),

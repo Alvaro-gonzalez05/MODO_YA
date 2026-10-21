@@ -46,10 +46,10 @@ class _Contenido extends ConsumerWidget {
   ({String label, IconData icon, EstadoEnvio siguiente})? get _accion => switch (envio.estado) {
         EstadoEnvio.asignado when envio.esMandado =>
           (label: 'Llegué al retiro', icon: Symbols.pin_drop, siguiente: EstadoEnvio.enLocal),
-        EstadoEnvio.asignado => (label: 'Llegue al local', icon: Symbols.storefront, siguiente: EstadoEnvio.enLocal),
+        EstadoEnvio.asignado => (label: 'Llegué al local', icon: Symbols.storefront, siguiente: EstadoEnvio.enLocal),
         EstadoEnvio.enLocal when envio.esMandado =>
           (label: 'Ya lo retiré', icon: Symbols.package_2, siguiente: EstadoEnvio.retirado),
-        EstadoEnvio.enLocal => (label: 'Retire el pedido', icon: Symbols.package_2, siguiente: EstadoEnvio.retirado),
+        EstadoEnvio.enLocal => (label: 'Retiré el pedido', icon: Symbols.package_2, siguiente: EstadoEnvio.retirado),
         EstadoEnvio.retirado => (label: 'Salgo para el cliente', icon: Symbols.navigation, siguiente: EstadoEnvio.enCamino),
         _ => null,
       };
@@ -124,7 +124,7 @@ class _Contenido extends ConsumerWidget {
                         EstadoEnvio.asignado => 'Retira el pedido en ${o.calle}.',
                         EstadoEnvio.enLocal when envio.esMandado =>
                           'Retirá: ${o.referencia ?? 'lo que te indique el cliente'}.',
-                        EstadoEnvio.enLocal => 'Avisale al local que llegaste y retira el pedido.',
+                        EstadoEnvio.enLocal => 'Avisale al local que llegaste y retirá el pedido.',
                         EstadoEnvio.retirado => 'Tenés el pedido. Salí para el domicilio.',
                         EstadoEnvio.enCamino => 'Al llegar, pedile el código de 4 números al cliente.',
                         _ => '',
@@ -418,7 +418,7 @@ class _Finalizado extends StatelessWidget {
               Icon(Symbols.check_circle, size: 72, color: MyColors.success, fill: 1),
               const SizedBox(height: MySpacing.md),
               Text('Entregado', style: MyType.displayLg, textAlign: TextAlign.center),
-              Text('Buen trabajo. La ganancia ya quedo registrada.',
+              Text('Buen trabajo. La ganancia ya quedó registrada.',
                   style: MyType.bodyLg.copyWith(color: MyColors.secondary), textAlign: TextAlign.center),
               const SizedBox(height: MySpacing.lg),
               MyHeroCard(

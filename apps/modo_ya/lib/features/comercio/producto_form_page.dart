@@ -368,7 +368,7 @@ class _EditorGrupo extends StatelessWidget {
             children: [
               for (final t in TipoOpcion.values)
                 MyChip(
-                  t == TipoOpcion.unica ? 'Elige una' : 'Elige varias',
+                  t == TipoOpcion.unica ? 'Elegí una' : 'Elegí varias',
                   selected: grupo.tipo == t,
                   onTap: () {
                     grupo.tipo = t;
