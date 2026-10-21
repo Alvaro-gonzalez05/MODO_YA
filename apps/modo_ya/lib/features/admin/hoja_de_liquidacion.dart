@@ -5,13 +5,17 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import '../../comun/formulario_emergente.dart';
-import 'liquidacion_en_pdf.dart';
 
-/// El detalle de lo que se le va a pagar a un rider, como una hoja.
+/// El detalle de lo que se le va a pagar a un rider o a un local, como una hoja.
 ///
 /// Entra desde la derecha y tapa la mitad: así se compara el renglón de la
 /// lista con el detalle sin ir y volver. Es un documento, no una pantalla —
 /// está pensado para leerlo con el rider al lado y poder discutir cada línea.
+///
+/// La hoja en sí (`MyHojaDeRider`) y su PDF viven en `my_ui`: son los mismos
+/// que ve el rider en su app y el local en su pantalla. Acá solo se elige a
+/// quién mirar y se agrega lo único que la administración puede hacer y los
+/// demás no: cargarle algo.
 Future<void> mostrarHojaDeRider(
   BuildContext context,
   PendienteRider p,
@@ -25,6 +29,20 @@ Future<void> mostrarHojaDeRider(
   );
 }
 
+/// Lo mismo para un local: qué pedidos entraron y qué se le descuenta.
+Future<void> mostrarHojaDeComercio(
+  BuildContext context,
+  PendienteComercio p,
+  DateTime desde,
+  DateTime hasta,
+) {
+  return mostrarHojaLateral(
+    context,
+    titulo: 'Liquidación',
+    builder: (_) => MyHojaDeComercio(resumen: p, desde: desde, hasta: hasta),
+  );
+}
+
 class _HojaDeRider extends ConsumerWidget {
   const _HojaDeRider({required this.pendiente, required this.desde, required this.hasta});
 
@@ -35,166 +53,16 @@ class _HojaDeRider extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = pendiente;
-    final detalle = ref.watch(detalleDeRiderProvider(
-      (repartidorId: p.repartidorId, desde: desde, hasta: hasta),
-    ));
-    final cargos = ref.watch(cargosDeRiderProvider(p.repartidorId));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        MyHojaImpresa(
-          children: [
-            // ---- Encabezado del documento ------------------------------------
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('MODO YA', style: MyType.labelLg.copyWith(color: MyColors.secondary)),
-                      const SizedBox(height: 2),
-                      Text(p.rider, style: MyType.headlineMd),
-                      Text(
-                        'Del ${Formato.fechaCorta(desde)} al ${Formato.fechaCorta(hasta)}',
-                        style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                      ),
-                    ],
-                  ),
-                ),
-                MyBadge(
-                  p.total >= 0 ? 'A pagarle' : 'Tiene que rendir',
-                  tone: p.total >= 0 ? MyBadgeTone.success : MyBadgeTone.danger,
-                ),
-              ],
-            ),
-            const Divider(height: MySpacing.xl),
-
-            // ---- Los envíos ----------------------------------------------------
-            Row(
-              children: [
-                Expanded(child: Text('Envíos entregados', style: MyType.labelLg)),
-                MyBoton(
-                  label: 'PDF',
-                  icon: Symbols.download,
-                  tipo: MyBotonTipo.texto,
-                  onPressed: () async {
-                    // Si todavía está cargando se avisa, en vez de bajar un
-                    // documento a medio armar.
-                    final envios = detalle.value;
-                    final lista = cargos.value;
-                    if (envios == null || lista == null) {
-                      mostrarAviso(context, 'Esperá a que termine de cargar.');
-                      return;
-                    }
-                    try {
-                      await guardarLiquidacionEnPdf(
-                        rider: p,
-                        envios: envios,
-                        cargos: lista
-                            .where((c) => !c.fecha.isBefore(desde) && !c.fecha.isAfter(hasta))
-                            .toList(),
-                        desde: desde,
-                        hasta: hasta,
-                      );
-                    } catch (e) {
-                      if (context.mounted) mostrarError(context, e);
-                    }
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: MySpacing.xs),
-            MyAsync(
-              valor: detalle,
-              onReintentar: () => ref.invalidate(detalleDeRiderProvider(
-                (repartidorId: p.repartidorId, desde: desde, hasta: hasta),
-              )),
-              datos: (lista) {
-                if (lista.isEmpty) {
-                  return Text(
-                    'No entregó nada en este período.',
-                    style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final e in lista)
-                      MyRenglon(
-                        '${e.codigo} · ${e.comercio}',
-                        Formato.pesos(e.ganancia),
-                        detalle: '${Formato.fechaHora(e.entregado)} · ${e.destino}'
-                            '${e.efectivo == 0 ? '' : ' · cobró ${Formato.pesos(e.efectivo)}'}',
-                      ),
-                  ],
-                );
-              },
-            ),
-
-            const Divider(height: MySpacing.xl),
-
-            // ---- Los cargos ----------------------------------------------------
-            Row(
-              children: [
-                Expanded(child: Text('Cargos', style: MyType.labelLg)),
-                MyBoton(
-                  label: 'Agregar',
-                  icon: Symbols.add,
-                  tipo: MyBotonTipo.texto,
-                  onPressed: () => cargarARider(context, ref, p.repartidorId, p.rider),
-                ),
-              ],
-            ),
-            const SizedBox(height: MySpacing.xs),
-            MyAsync(
-              valor: cargos,
-              onReintentar: () => ref.invalidate(cargosDeRiderProvider(p.repartidorId)),
-              datos: (lista) {
-                final delPeriodo = lista
-                    .where((c) => !c.fecha.isBefore(desde) && !c.fecha.isAfter(hasta))
-                    .toList();
-                if (delPeriodo.isEmpty) {
-                  return Text(
-                    'Sin cargos en este período.',
-                    style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final c in delPeriodo)
-                      MyRenglon(
-                        c.concepto.rotulo,
-                        Formato.pesos(c.monto),
-                        detalle: '${Formato.fechaCorta(c.fecha)} · ${c.detalle}',
-                        color: c.monto > 0 ? MyColors.error : MyColors.success,
-                      ),
-                  ],
-                );
-              },
-            ),
-
-            const Divider(height: MySpacing.xl),
-
-            // ---- El cierre ------------------------------------------------------
-            MyRenglon('Ganó por ${p.envios} ${p.envios == 1 ? "envío" : "envíos"}',
-                Formato.pesos(p.ganancias)),
-            if (p.efectivo != 0)
-              MyRenglon('Cobró en efectivo', '− ${Formato.pesos(p.efectivo)}',
-                  detalle: 'Lo juntó en la puerta y lo tiene que rendir',
-                  color: MyColors.secondary),
-            if (p.cargos != 0)
-              MyRenglon('Cargos', '− ${Formato.pesos(p.cargos)}', color: MyColors.error),
-            const Divider(height: MySpacing.lg),
-            MyRenglon(
-              p.total >= 0 ? 'A pagarle' : 'Tiene que rendir',
-              Formato.pesos(p.total.abs()),
-              fuerte: true,
-              color: p.total >= 0 ? MyColors.tertiary : MyColors.error,
-            ),
-          ],
+    return MyHojaDeRider(
+      resumen: p,
+      desde: desde,
+      hasta: hasta,
+      acciones: [
+        MyBoton(
+          label: 'Cargarle algo',
+          icon: Symbols.add,
+          tipo: MyBotonTipo.texto,
+          onPressed: () => cargarARider(context, ref, p.repartidorId, p.rider),
         ),
       ],
     );
@@ -273,6 +141,9 @@ Future<void> cargarARider(
                         monto: int.parse(monto.text.replaceAll(' ', '')),
                         envioId: envioId,
                       );
+                  // Sin el período a mano se invalida toda la familia: son dos
+                  // o tres consultas y se rearman solas.
+                  ref.invalidate(cargosDelPeriodoRiderProvider);
                   ref.invalidate(cargosDeRiderProvider(repartidorId));
                   if (h.mounted) Navigator.pop(h);
                 } catch (e) {

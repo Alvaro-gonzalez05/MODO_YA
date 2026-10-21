@@ -9,6 +9,7 @@ export 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 export 'src/backend.dart';
 export 'src/config/entorno.dart';
 export 'src/formato.dart';
+export 'src/hoja_de_liquidacion.dart';
 export 'src/models/estados.dart';
 export 'src/models/marketplace.dart';
 export 'src/models/models.dart';

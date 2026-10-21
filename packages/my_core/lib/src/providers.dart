@@ -358,3 +358,76 @@ final preinscripcionesRepositoryProvider = Provider((_) => const Preinscripcione
 final preinscripcionesProvider = StreamProvider<List<Preinscripcion>>(
   (ref) => ref.watch(preinscripcionesRepositoryProvider).watch(),
 );
+
+// ---- Mi liquidación: lo que el rider y el local están por cobrar ------------
+//
+// Todo esto sale de las mismas funciones que usa la administración (0065 las
+// abrió al dueño de los datos). No hay una consulta paralela "para el rider" a
+// propósito: dos consultas distintas son dos números que un día no van a
+// coincidir, y el que cobra menos de lo que esperaba no vuelve a confiar en la
+// pantalla.
+
+/// El resumen del período del rider de la sesión.
+///
+/// Es `null` cuando no hizo nada en el período: la función devuelve una fila por
+/// rider con movimiento, no una fila en cero (ver el comentario de 0065). La
+/// pantalla distingue "todavía no hiciste nada" de "cargando".
+final miLiquidacionDeRiderProvider =
+    Provider.family<AsyncValue<PendienteRider?>, Periodo>((ref, p) {
+  final id = ref.watch(sesionProvider).repartidorId;
+  if (id == null) return const AsyncValue.data(null);
+  return ref.watch(pendientesRidersProvider(p)).whenData(
+        (lista) => lista.where((x) => x.repartidorId == id).firstOrNull,
+      );
+});
+
+/// El resumen del período del local de la sesión.
+final miLiquidacionDeComercioProvider =
+    Provider.family<AsyncValue<PendienteComercio?>, Periodo>((ref, p) {
+  final id = ref.watch(sesionProvider).comercioId;
+  if (id == null) return const AsyncValue.data(null);
+  return ref.watch(pendientesComerciosProvider(p)).whenData(
+        (lista) => lista.where((x) => x.comercioId == id).firstOrNull,
+      );
+});
+
+/// Los pedidos que entran en la liquidación de un local, uno por uno.
+typedef RangoDeComercio = ({String comercioId, DateTime desde, DateTime hasta});
+
+final detalleDeComercioProvider =
+    FutureProvider.family<List<RenglonDeComercio>, RangoDeComercio>((ref, r) =>
+        ref.watch(liquidacionesRepositoryProvider).detalleDeComercio(r.comercioId, r.desde, r.hasta));
+
+/// Los descuentos del período, con el mismo filtro que el resumen.
+final cargosDelPeriodoRiderProvider =
+    FutureProvider.family<List<RenglonDeCargo>, RangoDeRider>((ref, r) =>
+        ref.watch(liquidacionesRepositoryProvider).cargosDelRider(r.repartidorId, r.desde, r.hasta));
+
+final cargosDelPeriodoComercioProvider =
+    FutureProvider.family<List<RenglonDeCargo>, RangoDeComercio>((ref, r) =>
+        ref.watch(liquidacionesRepositoryProvider).cargosDelComercio(r.comercioId, r.desde, r.hasta));
+
+/// El historial de liquidaciones cerradas de quien está usando la app.
+final misLiquidacionesDeRiderProvider = StreamProvider<List<Liquidacion>>((ref) {
+  final id = ref.watch(sesionProvider).repartidorId;
+  if (id == null) return Stream.value(const []);
+  return ref.watch(liquidacionesRepositoryProvider).watchMisLiquidacionesRider(id);
+});
+
+final misLiquidacionesDeComercioProvider = StreamProvider<List<Liquidacion>>((ref) {
+  final id = ref.watch(sesionProvider).comercioId;
+  if (id == null) return Stream.value(const []);
+  return ref.watch(liquidacionesRepositoryProvider).watchMisLiquidacionesComercio(id);
+});
+
+/// El renglón por renglón de una liquidación ya cerrada.
+///
+/// La clave es un record y no la `Liquidacion`: un record compara por valor, y
+/// una familia de Riverpod que recibe un objeto nuevo en cada `build` vuelve a
+/// consultar para siempre.
+typedef Cerrada = ({String liquidacionId, bool esComercio});
+
+final renglonesCerradosProvider =
+    FutureProvider.family<List<RenglonCerrado>, Cerrada>((ref, c) => ref
+        .watch(liquidacionesRepositoryProvider)
+        .renglonesCerrados(c.liquidacionId, esComercio: c.esComercio));

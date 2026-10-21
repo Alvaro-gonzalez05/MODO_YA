@@ -104,6 +104,110 @@ class RenglonDeRider {
       );
 }
 
+/// Un pedido que entra en la liquidación de un local.
+class RenglonDeComercio {
+  const RenglonDeComercio({
+    required this.pedidoId,
+    required this.codigo,
+    required this.entregado,
+    required this.cliente,
+    required this.productos,
+  });
+
+  final String pedidoId;
+  final String codigo;
+  final DateTime entregado;
+  final String cliente;
+
+  /// Lo que vendió de su menú. El envío no entra: esa plata es de MODO YA.
+  final int productos;
+
+  factory RenglonDeComercio.fromRow(Map<String, dynamic> f) => RenglonDeComercio(
+        pedidoId: Fila.texto(f, 'pedido_id'),
+        codigo: Fila.texto(f, 'codigo'),
+        entregado: Fila.fecha(f, 'entregado'),
+        cliente: Fila.texto(f, 'cliente'),
+        productos: Fila.entero(f, 'productos'),
+      );
+}
+
+/// Un descuento del período, sea de un rider o de un local.
+///
+/// Sale de la base con el mismo filtro que el resumen (0065): si la pantalla
+/// filtrara por su cuenta, el total de los renglones no iba a dar el saldo que
+/// muestra el encabezado, y ese es justo el número que se discute.
+class RenglonDeCargo {
+  const RenglonDeCargo({
+    required this.fecha,
+    required this.concepto,
+    required this.detalle,
+    required this.monto,
+  });
+
+  final DateTime fecha;
+
+  /// `mensualidad`, `publicidad`, `campania`, `ajuste`, `abandono`, `faltante`.
+  final String concepto;
+  final String detalle;
+
+  /// Positivo: se le descuenta. Negativo: se le devuelve.
+  final int monto;
+
+  /// Cómo se lee el concepto en la hoja.
+  String get rotulo => switch (concepto) {
+        'mensualidad' => 'Mensualidad del plan',
+        'publicidad' => 'Publicidad',
+        'campania' => 'Campaña',
+        'abandono' => 'Se bajó del envío',
+        'faltante' => 'Faltante',
+        _ => 'Ajuste',
+      };
+
+  factory RenglonDeCargo.fromRow(Map<String, dynamic> f) => RenglonDeCargo(
+        fecha: Fila.fecha(f, 'fecha'),
+        concepto: Fila.texto(f, 'concepto'),
+        detalle: Fila.texto(f, 'detalle'),
+        monto: Fila.entero(f, 'monto'),
+      );
+}
+
+/// Un renglón de una liquidación **ya cerrada**.
+///
+/// Las dos secciones vienen juntas (`seccion` las separa) porque es el
+/// comprobante de algo que ya se pagó: se lee entero o no se lee.
+class RenglonCerrado {
+  const RenglonCerrado({
+    required this.seccion,
+    required this.titulo,
+    required this.cuando,
+    required this.monto,
+    this.detalle,
+  });
+
+  /// `envios` o `pedidos` (lo que generó la plata) y `cargos` (lo que se
+  /// descontó).
+  final String seccion;
+  final String titulo;
+  final DateTime cuando;
+  final String? detalle;
+  final int monto;
+
+  bool get esCargo => seccion == 'cargos';
+
+  /// En los cargos el título es el concepto crudo de la base.
+  String get rotulo => esCargo
+      ? RenglonDeCargo(fecha: cuando, concepto: titulo, detalle: '', monto: monto).rotulo
+      : titulo;
+
+  factory RenglonCerrado.fromRow(Map<String, dynamic> f) => RenglonCerrado(
+        seccion: Fila.texto(f, 'seccion'),
+        titulo: Fila.texto(f, 'titulo'),
+        cuando: Fila.fecha(f, 'cuando'),
+        detalle: Fila.textoOpcional(f, 'detalle'),
+        monto: Fila.entero(f, 'monto'),
+      );
+}
+
 /// A qué corresponde un cargo de un rider.
 enum ConceptoCargoRider {
   abandono('abandono', 'Se bajó del envío'),
@@ -246,6 +350,7 @@ class Liquidacion {
     required this.hasta,
     required this.aFavor,
     required this.enContra,
+    required this.ajustes,
     required this.total,
     required this.pagada,
     required this.esComercio,
@@ -262,6 +367,14 @@ class Liquidacion {
 
   /// Cargos (local) o efectivo cobrado (rider).
   final int enContra;
+
+  /// Los cargos del rider (bajadas, faltantes, ajustes), que desde 0062 también
+  /// se le restan: `total = ganancias − efectivo_cobrado − ajustes`. En un local
+  /// es 0, porque sus cargos ya están en [enContra].
+  ///
+  /// Sin esto la pantalla mostraba "ganó $10.000 · efectivo $2.000" al lado de
+  /// un saldo de $4.000 y faltaban $4.000 sin explicar.
+  final int ajustes;
   final int total;
   final bool pagada;
   final bool esComercio;
@@ -274,6 +387,7 @@ class Liquidacion {
         hasta: Fila.fecha(f, 'periodo_hasta'),
         aFavor: Fila.entero(f, 'ventas'),
         enContra: Fila.entero(f, 'cargos'),
+        ajustes: 0,
         total: Fila.entero(f, 'total'),
         pagada: Fila.texto(f, 'estado') == 'acreditado',
         observacion: Fila.textoOpcional(f, 'observacion'),
@@ -287,6 +401,7 @@ class Liquidacion {
         hasta: Fila.fecha(f, 'periodo_hasta'),
         aFavor: Fila.entero(f, 'ganancias'),
         enContra: Fila.entero(f, 'efectivo_cobrado'),
+        ajustes: Fila.entero(f, 'ajustes'),
         total: Fila.entero(f, 'total'),
         pagada: Fila.texto(f, 'estado') == 'acreditado',
         observacion: Fila.textoOpcional(f, 'observacion'),
@@ -297,7 +412,13 @@ class Liquidacion {
 /// Liquidaciones: lo que MODO YA le debe a cada local y a cada rider.
 ///
 /// La plata la cobra MODO YA (tarjeta) o la junta el rider (efectivo); acá se
-/// arma el reparto. Todo esto lo usa solo la administración.
+/// arma el reparto.
+///
+/// Lo usan los tres roles. La administración ve a todos; el rider y el local
+/// ven lo suyo con las **mismas** funciones, porque desde 0065 aceptan al dueño
+/// de los datos además del admin. No hay una consulta "para el rider": si la
+/// hubiera, su número y el de la administración podrían no coincidir, que es lo
+/// peor que puede pasar en una liquidación.
 class LiquidacionesRepository {
   const LiquidacionesRepository();
 
@@ -307,7 +428,10 @@ class LiquidacionesRepository {
 
   Stream<List<PendienteComercio>> watchPendientesComercios(DateTime desde, DateTime hasta) => enVivo(
         canal: 'liq-comercios-${_dia(desde)}-${_dia(hasta)}',
-        tablas: const ['pedidos', 'cargos_comercio', 'liquidaciones_comercio'],
+        // `campania_gastos` también: la publicidad del día y los envíos
+        // regalados con Plus entran en los descuentos (0046), así que si cambian
+        // y no se vuelve a leer, el saldo que se muestra queda viejo.
+        tablas: const ['pedidos', 'cargos_comercio', 'liquidaciones_comercio', 'campania_gastos'],
         leer: () async {
           final r = await _db.rpc('pendiente_de_liquidar_comercios', params: {
             'p_desde': _dia(desde),
@@ -348,6 +472,105 @@ class LiquidacionesRepository {
             .map((f) => RenglonDeRider.fromRow(Map<String, dynamic>.from(f as Map)))
             .toList();
       });
+
+  /// Los pedidos que entran en la liquidación de un local, uno por uno.
+  Future<List<RenglonDeComercio>> detalleDeComercio(
+    String comercioId,
+    DateTime desde,
+    DateTime hasta,
+  ) =>
+      intentar(() async {
+        final r = await _db.rpc('detalle_de_liquidar_comercio', params: {
+          'p_comercio': comercioId,
+          'p_desde': _dia(desde),
+          'p_hasta': _dia(hasta),
+        });
+        return (r as List)
+            .map((f) => RenglonDeComercio.fromRow(Map<String, dynamic>.from(f as Map)))
+            .toList();
+      });
+
+  /// Lo que se le descuenta a un rider en el período.
+  Future<List<RenglonDeCargo>> cargosDelRider(
+    String repartidorId,
+    DateTime desde,
+    DateTime hasta,
+  ) =>
+      intentar(() async {
+        final r = await _db.rpc('cargos_a_liquidar_rider', params: {
+          'p_rider': repartidorId,
+          'p_desde': _dia(desde),
+          'p_hasta': _dia(hasta),
+        });
+        return (r as List)
+            .map((f) => RenglonDeCargo.fromRow(Map<String, dynamic>.from(f as Map)))
+            .toList();
+      });
+
+  /// Lo que se le descuenta a un local en el período: los cargos que le carga
+  /// la administración (mensualidad, publicidad, penalidad por rechazar un
+  /// pedido cobrado) y lo que gastaron sus campañas (publicidad diaria y
+  /// envíos regalados con Plus). Van juntos porque el resumen los suma juntos.
+  Future<List<RenglonDeCargo>> cargosDelComercio(
+    String comercioId,
+    DateTime desde,
+    DateTime hasta,
+  ) =>
+      intentar(() async {
+        final r = await _db.rpc('cargos_a_liquidar_comercio', params: {
+          'p_comercio': comercioId,
+          'p_desde': _dia(desde),
+          'p_hasta': _dia(hasta),
+        });
+        return (r as List)
+            .map((f) => RenglonDeCargo.fromRow(Map<String, dynamic>.from(f as Map)))
+            .toList();
+      });
+
+  /// El detalle de una liquidación ya cerrada (envíos o pedidos, y cargos).
+  Future<List<RenglonCerrado>> renglonesCerrados(
+    String liquidacionId, {
+    required bool esComercio,
+  }) =>
+      intentar(() async {
+        final r = await _db.rpc(
+          esComercio ? 'renglones_de_liquidacion_comercio' : 'renglones_de_liquidacion_rider',
+          params: {'p_liquidacion': liquidacionId},
+        );
+        return (r as List)
+            .map((f) => RenglonCerrado.fromRow(Map<String, dynamic>.from(f as Map)))
+            .toList();
+      });
+
+  /// El historial del rider de la sesión. Lee solo `liquidaciones`: el RLS ya
+  /// deja afuera las de los demás, y pedir también las de los locales traería
+  /// siempre una lista vacía.
+  Stream<List<Liquidacion>> watchMisLiquidacionesRider(String repartidorId) => enVivo(
+        canal: 'mis-liquidaciones-rider-$repartidorId',
+        tablas: const ['liquidaciones'],
+        leer: () async => (await _db
+                .from('liquidaciones')
+                .select()
+                .eq('repartidor_id', repartidorId)
+                .order('periodo_hasta', ascending: false)
+                .limit(50))
+            .map(Liquidacion.deRider)
+            .toList(),
+      );
+
+  /// El historial del local de la sesión.
+  Stream<List<Liquidacion>> watchMisLiquidacionesComercio(String comercioId) => enVivo(
+        canal: 'mis-liquidaciones-local-$comercioId',
+        tablas: const ['liquidaciones_comercio'],
+        leer: () async => (await _db
+                .from('liquidaciones_comercio')
+                .select()
+                .eq('comercio_id', comercioId)
+                .order('periodo_hasta', ascending: false)
+                .limit(50))
+            .map(Liquidacion.deComercio)
+            .toList(),
+      );
 
   /// Cargos de un rider: lo que se le descuenta de lo que cobra.
   Stream<List<CargoRider>> watchCargosRider(String repartidorId) => enVivo(

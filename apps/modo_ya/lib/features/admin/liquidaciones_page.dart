@@ -27,31 +27,15 @@ class LiquidacionesPage extends ConsumerStatefulWidget {
 
 enum _Vista { locales, riders, historial }
 
-enum _Rango { estaSemana, semanaPasada, esteMes, mesPasado }
-
 class _LiquidacionesPageState extends ConsumerState<LiquidacionesPage> {
   var _vista = _Vista.locales;
-  var _rango = _Rango.estaSemana;
-
-  (DateTime, DateTime) get _periodo {
-    final hoy = DateTime.now();
-    final lunes = DateTime(hoy.year, hoy.month, hoy.day).subtract(Duration(days: hoy.weekday - 1));
-    return switch (_rango) {
-      _Rango.estaSemana => (lunes, lunes.add(const Duration(days: 6))),
-      _Rango.semanaPasada => (lunes.subtract(const Duration(days: 7)), lunes.subtract(const Duration(days: 1))),
-      _Rango.esteMes => (DateTime(hoy.year, hoy.month), DateTime(hoy.year, hoy.month + 1, 0)),
-      _Rango.mesPasado => (DateTime(hoy.year, hoy.month - 1), DateTime(hoy.year, hoy.month, 0)),
-    };
-  }
-
-  String get _periodoTexto {
-    final (d, h) = _periodo;
-    return '${Formato.fechaCorta(d)} al ${Formato.fechaCorta(h)}';
-  }
+  // Cómo se cuentan las semanas y los meses vive en `my_core`: el rider y el
+  // local miran los mismos períodos desde sus pantallas.
+  var _rango = RangoDePeriodo.estaSemana;
 
   @override
   Widget build(BuildContext context) {
-    final (desde, hasta) = _periodo;
+    final (desde, hasta) = _rango.periodo;
     final periodo = (desde: desde, hasta: hasta);
     final locales = ref.watch(pendientesComerciosProvider(periodo));
     final riders = ref.watch(pendientesRidersProvider(periodo));
@@ -61,18 +45,13 @@ class _LiquidacionesPageState extends ConsumerState<LiquidacionesPage> {
       titulo: 'Liquidaciones',
       bajada: 'Lo que hay que pagarle a cada local y a cada rider',
       children: [
-        MyFiltros<_Rango>(
-          opciones: [
-            (_Rango.estaSemana, 'Esta semana', -1),
-            (_Rango.semanaPasada, 'Semana pasada', -1),
-            (_Rango.esteMes, 'Este mes', -1),
-            (_Rango.mesPasado, 'Mes pasado', -1),
-          ],
+        MyFiltros<RangoDePeriodo>(
+          opciones: [for (final r in RangoDePeriodo.values) (r, r.rotulo, -1)],
           seleccionado: _rango,
           onChanged: (r) => setState(() => _rango = r),
         ),
         const SizedBox(height: MySpacing.xs),
-        Text(_periodoTexto, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+        Text(_rango.texto, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
         const SizedBox(height: MySpacing.md),
         MyFiltros<_Vista>(
           opciones: [
@@ -152,6 +131,9 @@ class _Locales extends ConsumerWidget {
             children: [
               for (final p in lista) ...[
                 MyCard(
+                  // En el celular la hoja entra desde abajo, pero es el mismo
+                  // detalle: tocar la tarjeta lo abre.
+                  onTap: () => mostrarHojaDeComercio(context, p, periodo.desde, periodo.hasta),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -200,7 +182,21 @@ class _Locales extends ConsumerWidget {
             for (final p in lista)
               MyFila(
                 celdas: [
-                  Text(p.comercio, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  // El nombre abre la hoja con el renglón por renglón: el
+                  // resumen no alcanza para explicarle un descuento.
+                  MyPressable(
+                    onTap: () => mostrarHojaDeComercio(context, p, periodo.desde, periodo.hasta),
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(p.comercio, style: MyType.labelLg,
+                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
+                        const SizedBox(width: MySpacing.xxs),
+                        Icon(Symbols.chevron_right, size: 18, color: MyColors.secondary),
+                      ],
+                    ),
+                  ),
                   Text('${p.pedidos}', style: MyType.bodyMd),
                   Text(Formato.pesos(p.ventas), style: MyType.bodyMd),
                   Text(Formato.pesos(p.cargos), style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
@@ -377,6 +373,9 @@ class _Historial extends ConsumerWidget {
           children: [
             for (final l in lista) ...[
               MyCard(
+                // Tres semanas después "$84.500 del 1 al 7" no se puede
+                // explicar: la hoja trae lo que entró en ese cierre.
+                onTap: () => mostrarHojaCerrada(context, l),
                 child: Row(
                   children: [
                     MyIconoCaja(l.esComercio ? Symbols.storefront : Symbols.sports_motorsports),
@@ -389,7 +388,10 @@ class _Historial extends ConsumerWidget {
                           Text(
                             '${Formato.fechaCorta(l.desde)} al ${Formato.fechaCorta(l.hasta)} · '
                             '${l.esComercio ? "vendió" : "ganó"} ${Formato.pesos(l.aFavor)} · '
-                            '${l.esComercio ? "descuentos" : "efectivo"} ${Formato.pesos(l.enContra)}',
+                            '${l.esComercio ? "descuentos" : "efectivo"} ${Formato.pesos(l.enContra)}'
+                            // Los cargos del rider salen de su propia columna:
+                            // sin nombrarlos, la resta no da el saldo de al lado.
+                            '${l.ajustes == 0 ? "" : " · cargos ${Formato.pesos(l.ajustes)}"}',
                             style: MyType.bodySm.copyWith(color: MyColors.secondary),
                           ),
                         ],

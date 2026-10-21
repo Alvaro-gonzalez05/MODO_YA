@@ -118,7 +118,22 @@ abrir un reclamo ni resolverlo.
 (`0016:43-48`) y existe `admin_validar_documento`. No hay una sola referencia en
 Dart: el rider nunca sube nada y la administración lo aprueba a ciegas.
 
-### 8. Las liquidaciones son invisibles para quien las cobra
+### 8. Las liquidaciones son invisibles para quien las cobra — ARREGLADO
+
+> **Arreglado (0065).** Las funciones de liquidación aceptan ahora al dueño de
+> los datos además del admin, así que el rider y el local leen **el mismo
+> documento** que mira la administración: el resumen del período, el renglón
+> por renglón, los descuentos y el neto, más el historial de lo ya cerrado y el
+> PDF. La hoja y su PDF se movieron a `my_ui` / `my_core` para que no haya un
+> segundo renderizador ni un segundo cálculo. `tests/mi_liquidacion.sql` prueba
+> que nadie vea la liquidación de otro.
+>
+> Al local le aparecen todos sus descuentos juntos —mensualidad, publicidad,
+> penalidad por rechazar un pedido cobrado y los envíos que regaló con Plus—,
+> que es lo que hace que el número le cierre. El texto falso de
+> `ganancias_page.dart` salió; lo que no se promete es **cada cuánto** se paga,
+> porque eso lo decide una persona al cerrar el período y no hay nada en el
+> código que lo fije.
 
 El RLS ya habilita al rider a leer sus `liquidaciones` y al local sus
 `liquidaciones_comercio` y `cargos_comercio`, pero no hay pantalla en
