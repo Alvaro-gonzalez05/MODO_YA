@@ -71,6 +71,7 @@ van en una migración nueva.
 | `0060_reembolso_del_pedido_rechazado.sql` | el local rechaza un pedido cobrado: se devuelve todo y se le cobra la penalidad |
 | `0061_el_rider_se_baja_sin_matar_el_pedido.sql` | el rider se baja y el envío vuelve a buscar; cancelar un pedido cobrado devuelve la plata |
 | `0062_cargos_del_rider.sql` | lo que se le descuenta a un rider, que lo carga la administración |
+| `0066_reclamos_y_documentacion_con_pantalla.sql` | el reclamo se ata al pedido y solo al propio; el documento resubido vuelve a revisión |
 
 ## Decisiones de diseño
 
