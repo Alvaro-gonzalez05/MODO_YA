@@ -316,23 +316,37 @@ Future<bool> confirmar(
 }
 
 /// Pide un texto (por ejemplo, el motivo de un rechazo).
+///
+/// [ayuda] va arriba del campo: sirve para avisar qué consecuencia tiene lo
+/// que se está por confirmar.
 Future<String?> pedirTexto(
   BuildContext context, {
   required String titulo,
   required String label,
   String aceptar = 'Confirmar',
   String? inicial,
+  String? ayuda,
 }) async {
   final ctrl = TextEditingController(text: inicial);
   final r = await mostrarDialogoAnimado<String>(
     context,
     builder: (c) => AlertDialog(
       title: Text(titulo),
-      content: TextField(
-        controller: ctrl,
-        autofocus: true,
-        maxLines: 2,
-        decoration: InputDecoration(hintText: label),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (ayuda != null) ...[
+            Text(ayuda, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+            const SizedBox(height: MySpacing.sm),
+          ],
+          TextField(
+            controller: ctrl,
+            autofocus: true,
+            maxLines: 2,
+            decoration: InputDecoration(hintText: label),
+          ),
+        ],
       ),
       actions: [
         OutlinedButton(
@@ -340,13 +354,18 @@ Future<String?> pedirTexto(
           style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
           child: const Text('Volver'),
         ),
-        FilledButton(
-          onPressed: () {
-            final t = ctrl.text.trim();
-            if (t.isNotEmpty) Navigator.pop(c, t);
+        // Escucha al campo: antes el boton se veia habilitado siempre y con el
+        // campo vacio se tocaba y no pasaba nada, sin ningun mensaje.
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: ctrl,
+          builder: (_, valor, _) {
+            final t = valor.text.trim();
+            return FilledButton(
+              onPressed: t.isEmpty ? null : () => Navigator.pop(c, t),
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+              child: Text(aceptar),
+            );
           },
-          style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
-          child: Text(aceptar),
         ),
       ],
     ),
