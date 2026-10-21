@@ -4,12 +4,16 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-/// Cobros pendientes de los pedidos.
+/// Los pedidos cuyo cobro quedó sin registrar.
 ///
-/// El pedido le llega al local apenas el cliente lo confirma (0027): esta
-/// pantalla no frena nada. Sirve para llevar la cuenta de lo que falta cobrar
-/// (el efectivo que trae el rider, el posnet, las transferencias) y marcarlo
-/// cuando entra la plata.
+/// La pantalla es de antes de que en la app se pagara **solo con tarjeta**
+/// (0058). Hoy el cobro entra solo, así que acá no cae ningún pedido nuevo:
+/// quedan los de antes que nunca se registraron, y cualquiera cuyo pago quedó
+/// colgado con el pedido ya en la cocina. Lo normal es que esté vacía.
+///
+/// Sigue existiendo porque `marcar_pedido_pagado` es la única forma de cerrar
+/// esos cobros sin entrar a la base a mano, y porque es el único lugar del
+/// panel desde donde la administración puede cancelar un pedido.
 class PedidosPagoPage extends ConsumerWidget {
   const PedidosPagoPage({super.key});
 
@@ -19,8 +23,8 @@ class PedidosPagoPage extends ConsumerWidget {
 
     return MyPagina(
       rotulo: 'Cobros',
-      titulo: 'Pedidos por cobrar',
-      bajada: 'Los pedidos ya le llegaron al local: acá registrás lo que se cobró',
+      titulo: 'Cobros sin registrar',
+      bajada: 'Los pedidos de antes del pago con tarjeta que quedaron sin cerrar',
       children: [
         MyCard(
           color: MyColors.primaryFixed,
@@ -32,8 +36,8 @@ class PedidosPagoPage extends ConsumerWidget {
               const SizedBox(width: MySpacing.sm),
               Expanded(
                 child: Text(
-                  'El cliente elige con qué paga y el local recibe el pedido en el momento. '
-                  'Cuando entra la plata (efectivo, posnet o transferencia), marcalo como cobrado.',
+                  'En la app se paga solo con tarjeta y el cobro se acredita solo: un pedido '
+                  'nuevo no pasa por acá. Lo que aparece es un cobro viejo que quedó abierto.',
                   style: MyType.bodySm.copyWith(color: MyColors.onPrimaryFixedVariant),
                 ),
               ),
@@ -49,8 +53,9 @@ class PedidosPagoPage extends ConsumerWidget {
               return const MyCard(
                 child: MyEmptyState(
                   icon: Symbols.task_alt,
-                  title: 'Nada por cobrar',
-                  message: 'Cada pedido nuevo aparece acá hasta que registres el cobro.',
+                  title: 'Nada sin registrar',
+                  message: 'Los pedidos con tarjeta se acreditan solos. Si acá aparece alguno, '
+                      'es uno viejo o uno al que le falló el cobro.',
                 ),
               );
             }
@@ -147,23 +152,36 @@ class _Acciones extends ConsumerWidget {
 
   final Pedido pedido;
 
+  /// Con qué se puede registrar el cobro de este pedido.
+  ///
+  /// Antes se ofrecía `MetodoPago.values` entero, con efectivo y transferencia
+  /// adentro — los dos que 0058 sacó. Elegir efectivo acá no es un dato
+  /// administrativo: el trigger `copiar_cobro_del_pedido` le pone al envío
+  /// `cobrar_al_entregar = total` y el rider sale a cobrar en la puerta. Así
+  /// que solo se ofrece lo que el cliente había elegido (estos pedidos son de
+  /// antes y lo tienen cargado) y "Otro" para lo que entró por fuera.
+  List<MetodoPago> get _metodos => [
+        if (pedido.metodoPago != null && pedido.metodoPago != MetodoPago.otro) pedido.metodoPago!,
+        MetodoPago.otro,
+      ];
+
   Future<void> _confirmar(BuildContext context, WidgetRef ref) async {
     final metodo = await showDialog<MetodoPago>(
       context: context,
       builder: (c) => SimpleDialog(
         title: Text('¿Cómo cobraste ${pedido.codigo}?'),
         children: [
-          // Primero lo que eligió el cliente: es lo más probable.
-          for (final m in [
-            if (pedido.metodoPago != null) pedido.metodoPago!,
-            ...MetodoPago.values.where((m) => m != pedido.metodoPago),
-          ])
+          for (final m in _metodos)
             SimpleDialogOption(
               onPressed: () => Navigator.pop(c, m),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: MySpacing.xs),
                 child: Text(
-                  m == pedido.metodoPago ? '${m.label} (lo que eligió el cliente)' : m.label,
+                  switch (m) {
+                    MetodoPago.otro => 'Otro (entró por fuera de la app)',
+                    _ when m == pedido.metodoPago => '${m.label} (lo que eligió el cliente)',
+                    _ => m.label,
+                  },
                   style: MyType.labelLg,
                 ),
               ),
