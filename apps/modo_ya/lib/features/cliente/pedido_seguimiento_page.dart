@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,49 +8,58 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 
-/// Lo que ve el cliente del envío de su pedido. Se recalcula cada vez que el
-/// pedido cambia.
-final _seguimientoProvider = FutureProvider.family<SeguimientoPedido?, String>((ref, id) async {
-  final pedido = await ref.watch(pedidoProvider(id).future);
-  if (pedido?.envioId == null) return null;
-  return ref.read(pedidosRepositoryProvider).seguimiento(id);
+/// Lo que ve el cliente del envío de su pedido, en vivo.
+///
+/// `envios` y `repartidores` son invisibles para el cliente (RLS, a propósito:
+/// ahí están los datos del rider y de la operación), así que Realtime no le
+/// manda ni los pasos del envío ni la posición de la motito: eso hay que ir a
+/// buscarlo. Lo que sí le llega en vivo es su fila de `pedidos`, y con eso el
+/// seguimiento se relee en el mismo instante en que el pedido cambia de
+/// estado, sin esperar ningún reloj.
+///
+/// Entre estado y estado lo único que se mueve es el rider, y eso marca el
+/// ritmo del refresco. La app del rider manda su posición como mucho cada 10 s
+/// (ver `apps/repartidor/lib/features/ubicacion.dart`), así que releer cada 5 s
+/// mientras viene alcanza para no perderse ninguna lectura y no tiene sentido
+/// ir más rápido. Antes de que salga del local se relee cada 20 s (no hay nada
+/// que mirar) y cuando el pedido termina no se relee más.
+final _seguimientoProvider = StreamProvider.family<SeguimientoPedido?, String>((ref, id) {
+  final estado = ref.watch(pedidoProvider(id).select((p) => p.value?.estado));
+  if (estado == null || estado == EstadoPedido.carrito) return Stream.value(null);
+
+  final pedidos = ref.read(pedidosRepositoryProvider);
+  SeguimientoPedido? ultimo;
+
+  return enVivo(
+    canal: 'seguimiento-$id',
+    tablas: const ['pedidos'],
+    // Si se corta la red se devuelve la última lectura: un error de un segundo
+    // no tiene por qué borrarle la motito del mapa.
+    leer: () async {
+      try {
+        return ultimo = await pedidos.seguimiento(id);
+      } catch (_) {
+        return ultimo;
+      }
+    },
+    refrescarCada: estado.esFinal
+        ? null
+        : estado == EstadoPedido.enCamino
+            ? const Duration(seconds: 5)
+            : const Duration(seconds: 20),
+  );
 });
 
 /// Seguimiento en vivo del pedido (D4).
-class PedidoSeguimientoPage extends ConsumerStatefulWidget {
+class PedidoSeguimientoPage extends ConsumerWidget {
   const PedidoSeguimientoPage({super.key, required this.pedidoId});
 
   final String pedidoId;
 
   @override
-  ConsumerState<PedidoSeguimientoPage> createState() => _PedidoSeguimientoPageState();
-}
-
-class _PedidoSeguimientoPageState extends ConsumerState<PedidoSeguimientoPage> {
-  Timer? _refresco;
-
-  @override
-  void initState() {
-    super.initState();
-    // El cliente no puede leer la tabla de envios (RLS), asi que no le llegan
-    // por Realtime los pasos intermedios del rider (asignado, en el local) ni
-    // su posicion. Mientras el pedido esta en curso se relee cada 15 s.
-    _refresco = Timer.periodic(const Duration(seconds: 15), (_) {
-      final p = ref.read(pedidoProvider(widget.pedidoId)).value;
-      if (p != null && !p.estado.esFinal) ref.invalidate(_seguimientoProvider(widget.pedidoId));
-    });
-  }
-
-  @override
-  void dispose() {
-    _refresco?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final pedido = ref.watch(pedidoProvider(widget.pedidoId));
-    final seg = ref.watch(_seguimientoProvider(widget.pedidoId)).value;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pedido = ref.watch(pedidoProvider(pedidoId));
+    final seg = ref.watch(_seguimientoProvider(pedidoId)).value;
 
     return MyPantallaClara(
       child: MyAsync(
@@ -63,17 +72,84 @@ class _PedidoSeguimientoPageState extends ConsumerState<PedidoSeguimientoPage> {
   }
 }
 
-class _Contenido extends ConsumerWidget {
+class _Contenido extends ConsumerStatefulWidget {
   const _Contenido({required this.pedido, required this.seguimiento});
 
   final Pedido pedido;
   final SeguimientoPedido? seguimiento;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final s = seguimiento;
+  ConsumerState<_Contenido> createState() => _ContenidoState();
+}
+
+class _ContenidoState extends ConsumerState<_Contenido> {
+  /// El camino del rider hasta la casa. Se queda con el último calculado
+  /// mientras llega el siguiente, así la línea no desaparece en cada lectura.
+  MyRuta? _ruta;
+
+  /// Posición del rider con la que se pidió [_ruta].
+  LatLng? _rutaDesde;
+
+  /// Para descartar una respuesta vieja que llega tarde y pisaría a la nueva.
+  var _vuelta = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pedirRuta();
+  }
+
+  @override
+  void didUpdateWidget(_Contenido anterior) {
+    super.didUpdateWidget(anterior);
+    _pedirRuta();
+  }
+
+  LatLng? get _rider {
+    final s = widget.seguimiento;
+    if (s?.riderLat == null || s?.riderLng == null) return null;
+    return LatLng(s!.riderLat!, s.riderLng!);
+  }
+
+  LatLng? get _destino {
+    final d = widget.pedido.entrega;
+    return d.tieneCoordenadas ? LatLng(d.lat!, d.lng!) : null;
+  }
+
+  void _pedirRuta() {
+    final rider = _rider;
+    final destino = _destino;
+    if (rider == null || destino == null || widget.pedido.estado.esFinal) return;
+    // El GPS tiembla aunque la moto esté parada: por menos de media cuadra no
+    // vale la pena otra consulta (y el servidor de rutas es público y gratis,
+    // conviene no castigarlo).
+    final desde = _rutaDesde;
+    if (_ruta != null && desde != null && MyMapa.metrosEntre(desde, rider) < 40) return;
+
+    _rutaDesde = rider;
+    final vuelta = ++_vuelta;
+    // MyMapa.ruta nunca falla: si el servicio no contesta vuelve la recta.
+    MyMapa.ruta(desde: rider, hasta: destino).then((r) {
+      if (mounted && vuelta == _vuelta) setState(() => _ruta = r);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pedido = widget.pedido;
+    final s = widget.seguimiento;
     final e = pedido.estado;
     final destino = pedido.entrega;
+    final rider = _rider;
+
+    // Mientras viene, los minutos que salen del camino real valen mucho más
+    // que el estimado fijo que calculó el servidor cuando se creó el envío.
+    final duracion = _ruta?.duracion;
+    final minutos = (e == EstadoPedido.enCamino && duracion != null
+            ? math.max(1, (duracion.inSeconds / 60).round())
+            : null) ??
+        s?.minutosEstimados ??
+        pedido.minutosEstimados;
 
     final (titulo, bajada) = switch (e) {
       EstadoPedido.pendientePago => ('Falta pagarlo', 'Terminá el pago y el local lo empieza a preparar.'),
@@ -103,13 +179,19 @@ class _Contenido extends ConsumerWidget {
           MyMapaVista(
             alto: context.esMovil ? 220 : 320,
             radio: MyRadius.card,
+            // Se puede mover y hacer zoom: el que quiere ver por qué calle
+            // viene no tiene que conformarse con el encuadre automático.
+            interactivo: true,
+            // El camino solo tiene sentido si hay un rider de dónde salir.
+            ruta: rider == null ? null : _ruta?.puntos,
             marcadores: [
               MyMarcador(punto: LatLng(destino.lat!, destino.lng!), icono: Symbols.home, color: MyColors.dock),
-              if (s?.riderLat != null && s?.riderLng != null)
+              if (rider != null)
                 MyMarcador(
-                  punto: LatLng(s!.riderLat!, s.riderLng!),
+                  punto: rider,
                   icono: Symbols.sports_motorsports,
-                  etiqueta: s.repartidorNombre?.split(' ').first,
+                  etiqueta: s?.repartidorNombre?.split(' ').first,
+                  animado: true,
                 ),
             ],
           ),
@@ -124,12 +206,12 @@ class _Contenido extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: MySpacing.sm),
-        if (!e.esFinal && pedido.minutosEstimados != null)
+        if (!e.esFinal && minutos != null)
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text('~${s?.minutosEstimados ?? pedido.minutosEstimados}', style: MyType.displayLg),
+              Text('~$minutos', style: MyType.displayLg),
               const SizedBox(width: MySpacing.xxs),
               Text('min', style: MyType.headlineSm.copyWith(color: MyColors.claroAcento)),
             ],
