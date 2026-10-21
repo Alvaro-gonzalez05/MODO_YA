@@ -357,6 +357,12 @@ class _DialogoCodigoState extends State<_DialogoCodigo> {
     super.dispose();
   }
 
+  bool get _completo => _c.text.length == 4;
+
+  void _confirmar() {
+    if (_completo) Navigator.pop(context, _c.text);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -375,14 +381,17 @@ class _DialogoCodigoState extends State<_DialogoCodigo> {
             textAlign: TextAlign.center,
             style: MyType.displayLg.copyWith(letterSpacing: 8),
             decoration: const InputDecoration(counterText: ''),
-            onSubmitted: (v) => v.length == 4 ? Navigator.pop(context, v) : null,
+            // Sin esto el boton no se enteraba de lo que se va tecleando: se
+            // veia habilitado siempre y con menos de 4 digitos no hacia nada.
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) => _confirmar(),
           ),
         ],
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Volver')),
         FilledButton(
-          onPressed: () => _c.text.length == 4 ? Navigator.pop(context, _c.text) : null,
+          onPressed: _completo ? _confirmar : null,
           child: const Text('Confirmar'),
         ),
       ],
