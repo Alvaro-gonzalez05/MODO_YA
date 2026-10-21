@@ -394,6 +394,17 @@ class Pedido {
 
   int get cantidadProductos => items.fold(0, (s, i) => s + i.cantidad);
 
+  /// Lo que vale el envío, lo pague quien lo pague.
+  ///
+  /// Con MODO YA Plus el cliente no lo paga y `costoEnvio` queda en 0, pero el
+  /// envío no vale cero: el importe está en [envioCubierto] y lo pone el local
+  /// con su campaña. La cobertura es todo o nada (0037), así que la suma nunca
+  /// cuenta dos veces lo mismo.
+  int get envioReal => costoEnvio + envioCubierto;
+
+  /// El envío de este pedido lo puso el local con su campaña Plus.
+  bool get envioLoPoneElLocal => envioCubierto > 0;
+
   factory Pedido.fromRow(Map<String, dynamic> f, {List<PedidoItem> items = const []}) => Pedido(
         id: Fila.texto(f, 'id'),
         codigo: Fila.texto(f, 'codigo'),

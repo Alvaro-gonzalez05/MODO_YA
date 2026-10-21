@@ -239,7 +239,13 @@ class _Contenido extends ConsumerWidget {
                   ),
                 const Divider(),
                 _Linea('Productos', Formato.pesos(pedido.subtotal)),
-                _Linea('Envío', Formato.pesos(pedido.costoEnvio)),
+                // "$0" es cierto pero no se entiende: la pantalla de pago ya
+                // le dice por qué no paga el envío, y acá también tiene que
+                // decirlo.
+                _Linea(
+                  'Envío',
+                  pedido.envioLoPoneElLocal ? 'Gratis con Plus' : Formato.pesos(pedido.costoEnvio),
+                ),
                 _Linea('Total', Formato.pesos(pedido.total), destacado: true),
                 const SizedBox(height: MySpacing.xs),
                 _Linea('Entrega', destino.calle),
