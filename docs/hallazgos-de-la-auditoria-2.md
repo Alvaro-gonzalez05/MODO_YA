@@ -10,6 +10,11 @@ lo instalado simula el pago. Nada de lo que está acá le hizo daño a nadie
 todavía — pero varios son exactamente el tipo de error que no se nota hasta que
 hay plata real de por medio.
 
+**Estado al 22/10/2026:** 4 de 13 arreglados (B3, C1, C2, C3). Los 9 que quedan
+abiertos no se tocaron por decisión del proyecto: los tres de pagos (A1, A2, A3)
+porque Mercado Pago está en pausa, y el resto porque nadie los tomó todavía.
+**Los tres de pagos bloquean encender el cobro real.**
+
 Cada hallazgo dice si está **verificado** (lo comprobé contra el código o la
 base) o **sin verificar** (viene del informe de la auditoría y es creíble, pero
 no lo chequeé renglón por renglón).
@@ -78,7 +83,7 @@ Con $500 de fondo y un envío de $2.500, el cliente ve "Gratis con Plus",
 confirma, y en la pantalla siguiente el total subió $2.500 sin explicación.
 No es una carrera: pasa siempre.
 
-### B3. "Pedidos por cobrar" de la administración puede hacer que se cobre dos veces — *verificado*
+### B3. "Pedidos por cobrar" de la administración puede hacer que se cobre dos veces — *verificado* — **ARREGLADO**
 
 La pantalla quedó como antes de la migración `0058` (solo tarjeta). Su filtro es
 `pago_estado = 'pendiente'`, que ahora significa **todo pedido nuevo mientras el
@@ -92,9 +97,23 @@ el cliente quizá ya pagó.
 
 ---
 
+**Arreglado.** El filtro excluye ahora `pendiente_pago`, así que un pedido nuevo
+no aparece mientras el cliente carga la tarjeta. El diálogo ofrece solo el medio
+que el cliente eligió más "Otro (entró por fuera de la app)", de modo que ya no
+se puede marcar en efectivo un pedido pagado con tarjeta — que era lo que
+disparaba `copiar_cobro_del_pedido` y mandaba al rider a cobrar en la puerta.
+Los tres textos se reescribieron: dejaron de nombrar efectivo, posnet y
+transferencia, y el vacío dejó de invitar al error. Probado en
+`tests/cobros_sin_registrar.sql` y `apps/modo_ya/test/cobros_sin_registrar_test.dart`.
+
+Los pedidos viejos colgados (P-1022 y P-1065) siguen listados a propósito: es
+justamente para lo que sirve la pantalla. Se cierran a mano con "Cobrado" o
+"Cancelar", y como su pago está en `pendiente` y no en `acreditado`, cancelarlos
+no dispara ningún reembolso.
+
 ## El rider
 
-### C1. El rider no tiene forma de bajarse de un envío — *verificado*
+### C1. El rider no tiene forma de bajarse de un envío — *verificado* — **ARREGLADO**
 
 En `0061` se construyó `abandonar_envio()` y en la misma migración se le sacó al
 rider el permiso de `cancelar_envio`. Pero `abandonar_envio` **no se llama desde
@@ -105,7 +124,15 @@ arrastre: `abandonos_envio` nunca tiene filas, la vista `v_abandonos` y
 `watchAbandonos` devuelven siempre vacío, y el concepto `'abandono'` de
 `cargos_repartidor` no tiene de dónde salir.
 
-### C2. La liquidación cerrada del rider no muestra los ajustes — *verificado*
+**Arreglado.** El rider tiene "No puedo seguir con este envío" en `asignado` y
+`en_local` (desde `retirado` la base lo rebota, así que no se le ofrece un botón
+que va a fallar). Pide el motivo, sin el cual no se puede confirmar, porque es
+lo único que después lee la administración para decidir si corresponde un cargo.
+El aviso dice que "te **puede** cobrar un cargo", a propósito: 0062 establece que
+lo decide una persona. No se tocó nada de 0061. Probado en
+`apps/repartidor/test/bajarse_del_envio_test.dart`.
+
+### C2. La liquidación cerrada del rider no muestra los ajustes — *verificado* — **ARREGLADO**
 
 `Liquidacion.deRider` lee `ganancias`, `efectivo_cobrado` y `total`, pero nunca
 `ajustes`. Desde `0062` el total es `ganancias − efectivo_cobrado − ajustes`.
@@ -114,13 +141,23 @@ Un rider con $10.000 ganados, $2.000 de efectivo y $4.000 de cargos ve
 "ganó $10.000 · efectivo $2.000" y al lado un saldo de $4.000: faltan $4.000 sin
 explicación, en la única pantalla que le queda del pago ya hecho.
 
-### C3. La hoja y el PDF listan cargos ya liquidados que el total no cuenta — *sin verificar*
+**Arreglado.** `Liquidacion.ajustes` se lee y se muestra en el cierre de la hoja,
+en el historial de la administración y en el del rider, así que la resta da el
+total que está guardado.
+
+### C3. La hoja y el PDF listan cargos ya liquidados que el total no cuenta — *sin verificar* — **ARREGLADO**
 
 `watchCargosRider` trae **todos** los cargos del rider, sin filtrar por
 liquidación, y la hoja los recorta por fecha en Dart. Un cargo ya liquidado
 vuelve a listarse en un período viejo, pero el renglón de cierre no lo cuenta.
 Es justo lo que `0063` se propuso evitar al poner el detalle en una función que
 repite el filtro del resumen.
+
+**Arreglado.** La hoja ya no lee todos los cargos para recortarlos por fecha en
+la app: los trae `cargos_a_liquidar_rider`, que repite el mismo filtro del
+resumen (`liquidacion_id is null` más el rango). Un cargo ya liquidado dejó de
+listarse en un período viejo. Hay un test que compara el total de los renglones
+contra el `cargos` del resumen.
 
 ### C4. "Mis ganancias" muestra lo ganado y nada de lo que se le descuenta — *sin verificar*
 

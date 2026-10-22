@@ -166,7 +166,7 @@ diciendo que la liquidación *"todavía no está definida"* / *"se están
 definiendo"*. Ese texto es anterior a la migración 0035 y hoy es falso. El local
 tampoco ve nunca la mensualidad ni la publicidad que se le descuenta.
 
-### 9. El panel de administración muestra ceros y "Todo en orden" cuando falla
+### 9. El panel de administración muestra ceros y "Todo en orden" cuando falla — ARREGLADO
 
 `admin/dashboard_page.dart:17-20` lee los cuatro providers con `.value ?? const []`,
 sin `MyAsync`, a diferencia del resto de la app. Si la consulta falla, los
@@ -177,7 +177,13 @@ invalida comercios y riders.
 **Reproducir:** cortar la red y entrar a `/admin`: la operación se ve vacía y
 sana, sin mensaje de error ni botón de reintentar.
 
-### 10. Un envío puede quedar trabado en `cotizado` sin salida
+**Arreglado:** `resumenAdminProvider` junta las cinco consultas del panel en un
+solo `AsyncValue`, así que si cualquiera falla se ve el cartel de error con
+"Reintentar" en vez de ceros y "Todo en orden". Si ya había datos cargados se
+siguen mostrando, que es la política del resto de la app. Probado en
+`apps/modo_ya/test/resumen_admin_test.dart`.
+
+### 10. Un envío puede quedar trabado en `cotizado` sin salida — ARREGLADO
 
 `envios_repository.dart:88-102` (`crearYBuscar`) llama `crear_envio` y
 `confirmar_envio` como **dos RPC sin transacción**. Si la segunda falla, el
@@ -186,14 +192,33 @@ del seguimiento cae en `_ => ''`, `_Progreso` no marca ningún paso, el filtro
 "En curso" lo excluye (`esActivo` descarta `cotizado`) y lo único que queda es
 "Cancelar envío".
 
-### 11. El buzón de avisos de Mercado Pago no tiene pantalla
+**Arreglado (0067).** Tres salidas: `pedir_envio` crea y confirma en una sola
+transacción, así que el hueco no se vuelve a abrir; el seguimiento del local
+explica el estado y ofrece "Buscar rider ahora"; y el cron `vencer-cotizados`
+cancela los de cadetería con más de 15 minutos parados.
+
+Cancela y no confirma solo, porque confirmar sería mandarle un rider al local
+por un viaje que no sabe que existe y que alguien tiene que pagar. El cron mira
+solo `pedido_id is null`: el envío de un pedido espera en `cotizado` **a
+propósito** mientras el local cocina, y un cron ciego habría cancelado pedidos
+pagos en el horno. Probado en `tests/envio_cotizado.sql`.
+
+### 11. El buzón de avisos de Mercado Pago no tiene pantalla — ARREGLADO
 
 `0044_avisos_de_mercado_pago.sql:58-62` crea la política con el comentario "los
 mira la administración", pero `mp_notificaciones` no se referencia en Dart. Que
 el webhook todavía no *actúe* sobre el pedido está explicado y es intencional;
 que nadie pueda *ver* lo que se guardó, no.
 
-### 12. El local ve "$0" como costo del envío en los pedidos con Plus
+**Arreglado:** `mostrarAvisosDeMercadoPago` muestra lo que hay en
+`mp_notificaciones` — acción, recurso, y si la firma vino verificada, inválida o
+sin clave para verificar, porque un aviso con firma inválida no lo mandó
+Mercado Pago. Se despliega el JSON crudo con botón de copiar.
+
+Quedó como panel desde la pantalla de cobros y no como sección del menú: cuando
+un cobro no cerró, lo primero que se quiere mirar es qué dijo Mercado Pago.
+
+### 12. El local ve "$0" como costo del envío en los pedidos con Plus — ARREGLADO
 
 `comercio/pedidos_local_page.dart:270-273` muestra
 `'El envío (${Formato.pesos(pedido.costoEnvio)}) lo cobra MODO YA.'`. Con Plus,
@@ -204,9 +229,15 @@ afirma un importe falso sobre un gasto que es suyo.
 
 ---
 
+**Arreglado:** `Pedido.envioReal` y `Pedido.envioLoPoneElLocal`. El local lee
+"El envío ($4.200) lo ponés vos con tu campaña Plus: se te descuenta de tus
+ventas" en lugar de "$0", y el seguimiento del cliente dice "Gratis con Plus"
+igual que la pantalla de pago. Probado en
+`apps/modo_ya/test/pedido_del_local_test.dart`.
+
 ## Baja
 
-### 13. Erratas de acentuación y voseo en texto que ve el usuario
+### 13. Erratas de acentuación y voseo en texto que ve el usuario — ARREGLADO
 
 El resto de la app está acentuada y vosea, así que son erratas, no una
 convención:
@@ -219,13 +250,27 @@ convención:
 - `apps/repartidor/lib/features/inicio_page.dart:129` — "**Usa** el centro de
   Malargüe…"
 
-### 14. El botón "Confirmar" del código de entrega queda habilitado y no hace nada
+**Arreglado:** las cinco del documento más veinte encontradas barriendo los
+literales de las dos apps. Las que más pesaban estaban en
+`packages/my_core/lib/src/backend.dart`: **todos** los mensajes de error que ve
+el usuario iban sin tildes y sin voseo. También el validador que usan todos los
+formularios y los botones que el rider toca todo el día.
+
+### 14. El botón "Confirmar" del código de entrega queda habilitado y no hace nada — ARREGLADO
 
 `apps/repartidor/lib/features/servicio_page.dart:296-299`:
 `onPressed: () => _c.text.length == 4 ? Navigator.pop(...) : null`. El callback
 nunca es `null`, así que el botón siempre se ve activo, y no hay `onChanged` que
 lo reevalúe. Con 1 a 3 dígitos el rider toca "Confirmar" y no pasa nada, sin
 ningún mensaje.
+
+**Arreglado:** el botón se habilita recién con los cuatro dígitos. El mismo
+error estaba en `pedirTexto`, el diálogo compartido que usan el local para
+cancelar un envío y la administración para rechazar un pedido, y se arregló
+igual. Al escribir ese test apareció otro, preexistente: `pedirTexto` liberaba
+el controlador del campo antes de que terminara la animación de salida y
+rompía. Probado en `apps/repartidor/test/codigo_de_entrega_test.dart` y
+`packages/my_ui/test/pedir_texto_test.dart`.
 
 ### 15. `EstadoAprobacion.rechazado` es inalcanzable desde la app — ARREGLADO A MEDIAS
 
