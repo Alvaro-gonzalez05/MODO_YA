@@ -29,6 +29,9 @@ createServer((req, res) => {
   const ruta = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   let archivo = normalize(join(raiz, ruta));
   if (!archivo.startsWith(raiz)) archivo = join(raiz, 'index.html');
+  // Una carpeta con su propio index.html es una página (/eliminar-cuenta, /terminos…),
+  // igual que en Vercel; si no lo tiene, la ruta es de la app y va al index raíz.
+  if (existsSync(archivo) && statSync(archivo).isDirectory()) archivo = join(archivo, 'index.html');
   if (!existsSync(archivo) || statSync(archivo).isDirectory()) archivo = join(raiz, 'index.html');
   res.writeHead(200, {
     'Content-Type': tipos[extname(archivo)] ?? 'application/octet-stream',

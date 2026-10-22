@@ -526,7 +526,8 @@ fieldset.field{border:0;padding:0;margin:0}
    ===================================================================== */
 footer{background:var(--negro);border-top:1px solid rgba(255,255,255,.08);padding-block:44px 120px;color:rgba(255,255,255,.7);font-size:15px}
 footer .wrap{display:grid;gap:32px}
-@media (min-width:721px){footer .wrap{grid-template-columns:1.4fr 1fr 1fr}}
+@media (min-width:721px){footer .wrap{grid-template-columns:1fr 1fr}}
+@media (min-width:1000px){footer .wrap{grid-template-columns:1.4fr 1fr 1fr 1fr}}
 footer h4{margin:0 0 12px;color:var(--blanco);font-size:13px;letter-spacing:.12em;text-transform:uppercase}
 footer ul{list-style:none;padding:0;margin:0;display:grid;gap:8px}
 footer a{text-decoration:none}
@@ -1335,6 +1336,14 @@ document.addEventListener("error", e => {
         <li>Email: próximamente</li><!-- [LINK] Poner el email real -->
         <li>Malargüe, Mendoza</li>
         <li>Soporte todos los días</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Legales</h4>
+      <ul>
+        <li><a href="/terminos">Términos y Condiciones</a></li>
+        <li><a href="/privacidad">Política de Privacidad</a></li>
+        <li><a href="/eliminar-cuenta">Eliminar mi cuenta</a></li>
       </ul>
     </div>
     <div class="copy">© 2026 Modo Ya · Malargüe, Mendoza</div>

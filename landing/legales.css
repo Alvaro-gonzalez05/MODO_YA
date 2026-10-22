@@ -1,0 +1,138 @@
+/* =====================================================================
+   MODO YA · Páginas legales (/eliminar-cuenta, /terminos, /privacidad)
+   Mismo look que la landing (negro + amarillo), pero el texto va sobre
+   fondo claro: son páginas para leer de corrido, no para mirar.
+   Sin JavaScript obligatorio: el revisor de Google Play tiene que poder
+   leerlas aunque algo falle.
+   ===================================================================== */
+:root{
+  --negro:#0A0A0A;
+  --negro-3:#1E1E1E;
+  --amarillo:#F5C518;
+  --amarillo-palido:#FFF3C4;
+  --blanco:#FFFFFF;
+  --gris:#F4F4F6;
+  --gris-borde:#E3E3E8;
+  --gris-texto:#5B5B66;
+  --texto:#1A1A1F;
+  --error:#D93A2B;
+  --ok:#1E9E5A;
+  --f-display:"Archivo","Arial Black",Impact,sans-serif;
+  --f-body:"Outfit","Segoe UI",system-ui,sans-serif;
+  --gutter:16px;
+}
+@media (min-width:721px){:root{--gutter:clamp(20px,4vw,40px)}}
+
+*{box-sizing:border-box}
+html{background:var(--negro)}
+body{margin:0;background:var(--gris);color:var(--texto);font-family:var(--f-body);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+@media (min-width:721px){body{font-size:17px}}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--amarillo);outline-offset:3px;border-radius:6px}
+.wrap{max-width:860px;margin-inline:auto;padding-inline:var(--gutter)}
+
+/* ---------- Encabezado ---------- */
+.top{position:sticky;top:0;z-index:10;background:rgba(10,10,10,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.06);color:var(--blanco)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px;max-width:1180px}
+.logo{display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.logo svg{width:30px;height:auto}
+.wordmark{font-family:var(--f-display);font-style:italic;font-weight:900;font-stretch:125%;font-size:19px;letter-spacing:-.01em;line-height:1}
+.wordmark .ya{color:var(--amarillo)}
+.volver{font-size:14px;font-weight:600;text-decoration:none;color:rgba(255,255,255,.75);white-space:nowrap}
+.volver:hover{color:var(--amarillo)}
+
+/* ---------- Portada de cada página ---------- */
+.portada{background:var(--negro);color:var(--blanco);padding-block:40px 48px}
+@media (min-width:721px){.portada{padding-block:64px 72px}}
+.etiqueta{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--amarillo);margin-bottom:12px}
+h1,h2,h3{font-family:var(--f-display);font-style:italic;font-weight:900;font-stretch:115%;line-height:1.08;letter-spacing:-.01em;text-wrap:balance}
+h1{margin:0;font-size:clamp(32px,7vw,54px)}
+h1 .ya{color:var(--amarillo)}
+.portada p{margin:16px 0 0;font-size:clamp(16.5px,1.6vw,19px);color:rgba(255,255,255,.78);max-width:56ch}
+.fecha{margin-top:18px !important;font-size:14.5px !important;color:rgba(255,255,255,.6) !important}
+.fecha b{color:var(--blanco)}
+
+/* ---------- Texto ---------- */
+.hoja{background:var(--blanco);border-radius:14px;border:1px solid var(--gris-borde);padding:28px 20px 36px;margin-top:-24px;position:relative}
+@media (min-width:721px){.hoja{padding:44px 52px 52px;margin-top:-32px}}
+.hoja > :first-child{margin-top:0}
+.hoja h2{font-size:clamp(22px,3.4vw,28px);margin:44px 0 12px;scroll-margin-top:80px}
+.hoja h3{font-size:18.5px;font-stretch:105%;margin:28px 0 8px}
+.hoja p{margin:0 0 14px}
+.hoja ul{margin:0 0 16px;padding-left:22px}
+.hoja li{margin-bottom:6px}
+.hoja li::marker{color:#B38E00}
+.hoja a{color:var(--texto);text-decoration-color:var(--amarillo);text-decoration-thickness:2px;text-underline-offset:3px}
+.hoja a:hover{background:var(--amarillo-palido)}
+.cita{margin:18px 0;padding:14px 18px;border-left:4px solid var(--amarillo);background:var(--gris);border-radius:0 10px 10px 0}
+.cita p:last-child{margin:0}
+
+/* Índice */
+.indice{background:var(--gris);border-radius:12px;padding:18px 20px;margin-bottom:8px}
+.indice b{display:block;font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gris-texto);margin-bottom:8px}
+.indice ol{margin:0;padding-left:22px;columns:2 240px;column-gap:28px;font-size:15px}
+.indice li{break-inside:avoid;margin-bottom:4px}
+.indice a{text-decoration:none}
+.indice a:hover{text-decoration:underline}
+
+/* Tablas: en celular se desplazan dentro de su caja, nunca la página */
+.tabla{overflow-x:auto;margin:0 0 18px;border:1px solid var(--gris-borde);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:15px;min-width:460px}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--gris-borde)}
+th{background:var(--gris);font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris-texto)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600;width:42%}
+
+/* Dato que todavía falta cargar: bien visible para encontrarlo antes de publicar */
+.pendiente{background:var(--amarillo-palido);color:#6B5200;border:1px dashed #C9A100;border-radius:4px;padding:0 4px;font-weight:600;font-size:.94em}
+
+/* ---------- Eliminación de cuenta ---------- */
+.dos{display:grid;gap:16px;margin:8px 0 8px}
+@media (min-width:721px){.dos{grid-template-columns:1fr 1fr}}
+.via{border:1px solid var(--gris-borde);border-radius:12px;padding:20px}
+.via h2{margin:0 0 8px !important;font-size:21px !important}
+.via p:last-child{margin:0}
+.paso{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:99px;background:var(--amarillo);color:var(--negro);font-family:var(--f-display);font-style:italic;font-weight:900;font-size:14px;margin-bottom:10px}
+
+.form{display:grid;gap:14px;margin:18px 0 6px;padding:20px;border-radius:12px;background:var(--gris)}
+.form label{display:grid;gap:6px;font-weight:600;font-size:15px}
+.form label small{font-weight:400;color:var(--gris-texto)}
+.form input,.form textarea{font:inherit;font-size:16px;padding:12px 14px;border:1.5px solid #CFCFD6;border-radius:10px;background:var(--blanco);color:var(--texto);width:100%}
+.form textarea{min-height:88px;resize:vertical}
+.form input:focus,.form textarea:focus{outline:none;border-color:var(--negro);box-shadow:0 0 0 3px rgba(245,197,24,.55)}
+.form .error{color:var(--error);font-size:14px;font-weight:600;min-height:1em}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 26px;border-radius:999px;border:2px solid var(--negro);background:var(--negro);color:var(--blanco);
+  font-family:var(--f-display);font-style:italic;font-weight:800;font-stretch:112%;font-size:16px;cursor:pointer;justify-self:start;text-decoration:none;transition:transform .2s}
+.btn:hover{transform:translateX(4px)}
+.btn:active{transform:translateX(4px) scale(.97)}
+.aviso-ok{display:none;margin-top:14px;padding:14px 16px;border-radius:10px;background:#E6F5EC;border:1px solid #B6E0C6}
+.aviso-ok.is-on{display:block}
+.correo{font-weight:700;user-select:all;word-break:break-all}
+
+.listas{display:grid;gap:16px;margin-top:8px}
+@media (min-width:721px){.listas{grid-template-columns:1fr 1fr}}
+.lista{border-radius:12px;padding:18px 20px 6px}
+.lista h2{margin:0 0 10px !important;font-size:20px !important}
+.lista--se-borra{background:#FDECEA}
+.lista--se-borra h2{color:#A12A1F}
+.lista--queda{background:var(--gris)}
+.atencion{margin-top:28px;padding:18px 20px 6px;border-radius:12px;background:var(--amarillo-palido);border:1px solid #F0D777}
+.atencion h2{margin:0 0 10px !important;font-size:20px !important}
+
+/* ---------- Pie ---------- */
+.otras{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0}
+.otras a{display:inline-block;padding:9px 16px;border-radius:99px;border:1.5px solid var(--gris-borde);background:var(--blanco);font-size:14.5px;font-weight:600;text-decoration:none}
+.otras a:hover{border-color:var(--negro)}
+.otras a[aria-current]{background:var(--negro);color:var(--blanco);border-color:var(--negro)}
+.pie{background:var(--negro);color:rgba(255,255,255,.65);font-size:14px;padding-block:28px 40px;margin-top:56px}
+.pie .wrap{display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between}
+.pie a{text-decoration:none}
+.pie a:hover{color:var(--amarillo)}
+.pie nav{display:flex;flex-wrap:wrap;gap:6px 18px}
+
+@media print{
+  .top,.pie,.otras,.indice{display:none}
+  .portada{background:none;color:#000;padding:0}
+  .portada p{color:#000}
+  .hoja{border:0;margin:0;padding:0}
+}

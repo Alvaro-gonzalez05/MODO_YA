@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<title>Eliminar tu cuenta · MODO YA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Cómo eliminar tu cuenta de MODO YA, qué datos se borran y cuáles se conservan.">
+<meta name="theme-color" content="#0A0A0A">
+<link rel="canonical" href="/eliminar-cuenta">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,400..900;1,62..125,400..900&family=Outfit:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/legales.css">
+</head>
+<!-- =====================================================================
+     Página que exige Google Play: tiene que abrirse sin iniciar sesión,
+     nombrar la app y ofrecer una forma concreta de pedir la eliminación.
+     No toca la base: el formulario arma un correo desde la casilla del
+     usuario y la administración ejecuta la baja desde el panel.
+
+     [CORREO] Antes de publicar, buscá "COMPLETAR" en este archivo y poné
+     el correo de contacto real (está en el href y en el texto visible).
+     NO cambiar la dirección /eliminar-cuenta: Google la tiene registrada.
+     ===================================================================== -->
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/" aria-label="MODO YA, inicio">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <g stroke="#F5C518" stroke-width="5" stroke-linecap="round"><path d="M4 40h18M10 52h12M2 64h20"/></g>
+        <path d="M70 4C46 4 28 22 28 45c0 29 42 71 42 71s42-42 42-71C112 22 94 4 70 4z" fill="#F5C518"/>
+        <circle cx="70" cy="45" r="30" fill="#0A0A0A"/>
+        <g transform="translate(52 34) scale(.56)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="14" cy="34" r="8" stroke="#fff" stroke-width="4"/><circle cx="51" cy="34" r="8" stroke="#fff" stroke-width="4"/>
+          <path d="M10 25h22l6-6h8l5 15" stroke="#F5C518" stroke-width="4"/><path d="M22 34h14l6-9" stroke="#fff" stroke-width="4"/>
+        </g>
+      </svg>
+      <span class="wordmark">MODO <span class="ya">YA</span></span>
+    </a>
+    <a class="volver" href="/">← Volver al inicio</a>
+  </div>
+</header>
+
+<main>
+  <section class="portada">
+    <div class="wrap">
+      <span class="etiqueta">Tu cuenta</span>
+      <h1>Eliminar tu cuenta de <span class="ya">MODO YA</span></h1>
+      <p>Podés eliminar tu cuenta de MODO YA cuando quieras, y hay dos formas de hacerlo.</p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <article class="hoja">
+
+      <div class="dos">
+        <section class="via">
+          <span class="paso">1</span>
+          <h2>Desde la aplicación</h2>
+          <p>Entrá a <b>Mi cuenta</b> y elegí <b>Eliminar mi cuenta</b>. Es inmediato y no hace falta que nos escribas.</p>
+        </section>
+        <section class="via">
+          <span class="paso">2</span>
+          <h2>Desde acá</h2>
+          <p>Si no tenés la aplicación instalada o no podés entrar, completá el formulario de abajo con el correo electrónico con el que te registraste.</p>
+        </section>
+      </div>
+
+      <h2 id="formulario">Pedir la eliminación</h2>
+      <p>Te vamos a pedir que confirmes desde ese mismo correo, para asegurarnos de que la cuenta es tuya.</p>
+
+      <form class="form" id="form" action="mailto:COMPLETAR-CORREO-DE-CONTACTO?subject=Eliminar%20mi%20cuenta%20de%20MODO%20YA" method="post" enctype="text/plain" novalidate>
+        <label>Correo electrónico con el que te registraste
+          <input type="email" name="correo" id="correo" autocomplete="email" inputmode="email" required placeholder="nombre@ejemplo.com">
+        </label>
+        <label>Motivo <small>(opcional)</small>
+          <textarea name="motivo" id="motivo" maxlength="500" placeholder="Si querés, contanos por qué te vas."></textarea>
+        </label>
+        <p class="error" id="error" role="alert"></p>
+        <button class="btn" type="submit">Pedir la eliminación</button>
+      </form>
+      <div class="aviso-ok" id="ok" role="status">
+        <b>Se abrió tu aplicación de correo con el pedido listo.</b> Mandalo desde la casilla con la que te registraste.
+        Si no se abrió, escribinos directamente a la dirección de abajo.
+      </div>
+
+      <p style="margin-top:18px">También podés escribirnos a
+        <a class="correo" id="correoContacto" href="mailto:COMPLETAR-CORREO-DE-CONTACTO?subject=Eliminar%20mi%20cuenta%20de%20MODO%20YA"><mark class="pendiente">[COMPLETAR: correo de contacto]</mark></a>
+        desde la casilla con la que te registraste.</p>
+      <p>Procesamos los pedidos dentro de los <b>5 días hábiles</b>.</p>
+
+      <div class="listas">
+        <section class="lista lista--se-borra">
+          <h2>Qué se elimina</h2>
+          <ul>
+            <li>Tu nombre, tu teléfono y tu correo electrónico</li>
+            <li>Tus direcciones de entrega</li>
+            <li>Las tarjetas que hayas guardado</li>
+            <li>Tu suscripción a MODO YA Plus, si tenés una</li>
+            <li>El registro de tu dispositivo para notificaciones</li>
+          </ul>
+        </section>
+        <section class="lista lista--queda">
+          <h2>Qué se conserva, y por qué</h2>
+          <p>Los registros de pedidos, pagos y facturación se conservan por el plazo que exige la normativa comercial e impositiva argentina (actualmente <b>diez años</b>), <b>disociados de tu identidad</b>: quedan los montos, las fechas y los conceptos, pero no tu nombre ni tu teléfono.</p>
+        </section>
+      </div>
+
+      <section class="atencion">
+        <h2>Antes de eliminarla, tené en cuenta</h2>
+        <ul>
+          <li>Si tenés un pedido en curso, la eliminación se procesa cuando termina.</li>
+          <li>Si tenés MODO YA Plus activo, se da de baja y no se vuelve a cobrar. El mes ya pagado no se reintegra.</li>
+          <li><b>La eliminación es definitiva y no se puede deshacer.</b> Si volvés a usar MODO YA, vas a tener que crear una cuenta nueva.</li>
+        </ul>
+      </section>
+
+      <p style="margin-top:24px">Para saber más sobre cómo tratamos tus datos, leé la <a href="/privacidad">Política de Privacidad</a>.</p>
+
+      <nav class="otras" aria-label="Páginas legales">
+        <a href="/eliminar-cuenta" aria-current="page">Eliminar cuenta</a>
+        <a href="/terminos">Términos y Condiciones</a>
+        <a href="/privacidad">Política de Privacidad</a>
+      </nav>
+    </article>
+  </div>
+</main>
+
+<footer class="pie">
+  <div class="wrap">
+    <span>© 2026 MODO YA · Malargüe, Mendoza</span>
+    <nav aria-label="Legales">
+      <a href="/terminos">Términos</a>
+      <a href="/privacidad">Privacidad</a>
+      <a href="/eliminar-cuenta">Eliminar cuenta</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+// Arma el correo con el pedido en vez de mandarlo a un servidor: así sale
+// desde la casilla del usuario, que es justamente la prueba de que la cuenta
+// es suya. Sin JavaScript el form igual funciona con su action mailto.
+const form = document.getElementById("form");
+const error = document.getElementById("error");
+const destino = document.getElementById("correoContacto").getAttribute("href").slice(7).split("?")[0];
+
+form.addEventListener("submit", e => {
+  e.preventDefault();
+  const correo = form.correo.value.trim();
+  const motivo = form.motivo.value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+    error.textContent = "Escribí el correo con el que te registraste, por ejemplo nombre@ejemplo.com.";
+    form.correo.focus();
+    return;
+  }
+  error.textContent = "";
+  const cuerpo = [
+    "Hola, quiero eliminar mi cuenta de MODO YA.",
+    "",
+    "Correo de la cuenta: " + correo,
+    "Motivo: " + (motivo || "(no indicado)"),
+    "",
+    "Entiendo que la eliminación es definitiva."
+  ].join("\n");
+  location.href = "mailto:" + destino
+    + "?subject=" + encodeURIComponent("Eliminar mi cuenta de MODO YA")
+    + "&body=" + encodeURIComponent(cuerpo);
+  document.getElementById("ok").classList.add("is-on");
+});
+</script>
+</body>
+</html>
