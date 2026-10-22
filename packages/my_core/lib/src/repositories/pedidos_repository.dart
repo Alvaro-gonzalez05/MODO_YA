@@ -102,12 +102,19 @@ class PedidosRepository {
       });
 
   /// Crea el pedido. Los precios los calcula el servidor desde el catalogo.
+  ///
+  /// [envioEsperado] es el envio que el cliente acepto en el carrito (el
+  /// `costoEnvio` de la cotizacion). El servidor lo compara con el que calcula
+  /// en ese momento y si no coincide corta con MY007 en vez de crear el pedido
+  /// con otro total: pasaba cuando el fondo de la campania Plus del local se
+  /// consumia entre la cotizacion y el "Confirmar".
   Future<String> crear({
     required String comercioId,
     required String direccionId,
     required List<ItemCarrito> items,
     required MetodoPago metodo,
     String? nota,
+    int? envioEsperado,
   }) =>
       intentar(() async {
         final r = await _db.rpc('crear_pedido', params: {
@@ -116,6 +123,7 @@ class PedidosRepository {
           'p_items': items.map((i) => i.toJson()).toList(),
           'p_nota': (nota ?? '').trim().isEmpty ? null : nota!.trim(),
           'p_metodo': metodo.wire,
+          'p_envio_esperado': envioEsperado,
         });
         return (r as Map)['id'] as String;
       });

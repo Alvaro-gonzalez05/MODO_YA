@@ -74,6 +74,7 @@ van en una migración nueva.
 | `0063_detalle_de_la_liquidacion.sql` | el renglón por renglón de lo que se le va a pagar a un rider y a un local |
 | `0065_cada_uno_ve_su_liquidacion.sql` | el rider y el local leen su propia liquidación, no la de otro |
 | `0066_reclamos_y_documentacion_con_pantalla.sql` | el reclamo se ata al pedido y solo al propio; el documento resubido vuelve a revisión |
+| `0069_el_envio_regalado_se_cobra_si_ocurrio.sql` | **arreglo**: al local se le cobraba el envío que regaló con Plus en pedidos que se cancelaron, y el carrito prometía un envío gratis que el pedido cobraba entero |
 
 ## Decisiones de diseño
 
@@ -706,6 +707,7 @@ el texto del mensaje.
 | `MY004` | no existe el recurso pedido |
 | `MY005` | el comercio está cerrado |
 | `MY006` | datos inválidos (cantidad, opción que no corresponde) |
+| `MY007` | el costo del envío cambió entre la cotización y la confirmación |
 | `42501` | sin permiso o cuenta no aprobada (PostgREST → HTTP 403) |
 
 > No usar la clase `P00xx`: ya está tomada por PL/pgSQL. En particular `P0004`
@@ -772,6 +774,13 @@ pedido y envío, comprueba las tres reglas de privacidad de arriba.
 **`tests/mi_liquidacion.sql`** — aislamiento de las liquidaciones (0065). Dos
 riders y dos locales con plata de verdad en el período: cruzado tiene que dar
 cero y propio tiene que dar completo. 20 comprobaciones.
+
+**`tests/envio_regalado_con_plus.sql`** — el envío que el local regala con Plus
+(0069). Los tres caminos por los que muere un pedido (el pago que vence, la
+cancelación del cliente, el rechazo del local) tienen que devolverle el fondo al
+local, y el envío que sí se entregó tiene que seguir cobrándose. Además: que el
+carrito y `crear_pedido` digan el mismo número, y que un total que cambió en el
+medio corte con `MY007` en vez de crear el pedido con otro precio.
 
 > **Ojo al escribir pruebas de RLS.** Estos scripts corren como `postgres`, que
 > es dueño de las tablas y **saltea RLS por completo**. Cualquier comprobación
