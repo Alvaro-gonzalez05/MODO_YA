@@ -44,6 +44,12 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
       mostrarError(context, 'Elegí cómo vas a pagar.');
       return;
     }
+    final clave = (comercioId: carrito.comercio!.id, direccionId: direccion.id);
+    final cot = ref.read(cotizacionEnvioProvider(clave)).value;
+    if (cot == null) {
+      mostrarError(context, 'Todavía estamos calculando el envío. Esperá un segundo.');
+      return;
+    }
     try {
       final id = await ref.read(pedidosRepositoryProvider).crear(
             comercioId: carrito.comercio!.id,
@@ -51,6 +57,11 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
             items: carrito.items,
             metodo: metodo,
             nota: _nota.text,
+            // El envío que el cliente está viendo en el resumen. Si cambió en
+            // el medio (el fondo de Plus del local se consumió con otro
+            // pedido), el servidor corta y acá se vuelve a cotizar: el total
+            // no le puede cambiar en silencio camino a la pantalla de pago.
+            envioEsperado: cot.costoEnvio,
           );
       ref.read(carritoProvider.notifier).vaciar();
       if (!mounted) return;
@@ -70,6 +81,12 @@ class _CarritoPageState extends ConsumerState<CarritoPage> {
       );
       if (mounted) context.go('/cliente/pedidos/$id');
     } catch (e) {
+      // MY007: el envío cambió entre la cotización y el "Confirmar". Se vuelve
+      // a cotizar antes de mostrar el error, así el resumen ya tiene el número
+      // nuevo cuando el cliente lee el mensaje y vuelve a tocar.
+      if (e is ErrorModoYa && e.codigo == 'MY007') {
+        ref.invalidate(cotizacionEnvioProvider(clave));
+      }
       if (mounted) mostrarError(context, e);
     }
   }

@@ -10,10 +10,10 @@ lo instalado simula el pago. Nada de lo que está acá le hizo daño a nadie
 todavía — pero varios son exactamente el tipo de error que no se nota hasta que
 hay plata real de por medio.
 
-**Estado al 22/10/2026:** 4 de 13 arreglados (B3, C1, C2, C3). Los 9 que quedan
-abiertos no se tocaron por decisión del proyecto: los tres de pagos (A1, A2, A3)
-porque Mercado Pago está en pausa, y el resto porque nadie los tomó todavía.
-**Los tres de pagos bloquean encender el cobro real.**
+**Estado al 22/10/2026:** 6 de 13 arreglados (B1, B2, B3, C1, C2, C3). Los 7 que
+quedan abiertos no se tocaron por decisión del proyecto: los tres de pagos (A1,
+A2, A3) porque Mercado Pago está en pausa, y el resto porque nadie los tomó
+todavía. **Los tres de pagos bloquean encender el cobro real.**
 
 Cada hallazgo dice si está **verificado** (lo comprobé contra el código o la
 base) o **sin verificar** (viene del informe de la auditoría y es creíble, pero
@@ -59,7 +59,7 @@ botón habilitado, así que el cliente lo lee como un fallo y vuelve a tocar.
 
 ## Plata del local y del cliente
 
-### B1. Se le cobra al local el envío de pedidos que nunca existieron — *verificado*
+### B1. Se le cobra al local el envío de pedidos que nunca existieron — *verificado* — **ARREGLADO**
 
 Con Plus, el gasto del envío se asienta en `campania_gastos` **cuando el pedido
 todavía está en `pendiente_pago`**. Si el pedido se cancela, se rechaza o vence,
@@ -70,11 +70,31 @@ el gasto queda.
 compensar — a diferencia de `cargos_comercio`, que admite negativos a propósito.
 Repetir la secuencia vacía el presupuesto de Plus de cualquier local adherido.
 
-### B2. El carrito promete "Gratis con Plus" y la pantalla de pago cobra el envío entero — *verificado*
+**Arreglado** en `0069`. El gasto se sigue asentando al crear el pedido, pero
+ahora es una **reserva** que se suelta cuando el pedido muere: la fila queda
+marcada con `revertido_en` y deja de contar para `fondo_disponible` y para la
+liquidación. El presupuesto vuelve y el local no paga el envío que no se hizo.
+
+Se eligió marcar y no borrar para que tres semanas después se pueda reconstruir
+qué pasó, y no asentar el gasto al entregar porque el gasto es lo único que hace
+bajar `fondo_disponible`: sin la reserva, dos pedidos Plus simultáneos del mismo
+local verían los dos el presupuesto entero. El disparador es un **trigger** sobre
+`pedidos` y no un `perform` dentro de `cancelar_pedido`, porque uno de los tres
+caminos por los que muere un pedido (`cerrar_pagos_vencidos`) es un `update`
+crudo que no pasa por ninguna función de negocio.
+
+Si el gasto ya entró en una liquidación **cerrada** (posible: nace con la fecha
+de hoy y la administración puede cerrar el período con el pedido todavía
+esperando el pago), la liquidación no se reabre: se le acredita al local en la
+siguiente con un cargo negativo en `cargos_comercio`. Probado en
+`tests/envio_regalado_con_plus.sql`, con las tres secuencias y con la repetición
+que vaciaba el presupuesto.
+
+### B2. El carrito promete "Gratis con Plus" y la pantalla de pago cobra el envío entero — *verificado* — **ARREGLADO**
 
 El mismo número con dos reglas distintas:
 
-- `cotizar_para_pedido` (el carrito): gratis si la campaña tiene **algo** de
+- `cotizar_para_cliente` (el carrito): gratis si la campaña tiene **algo** de
   fondo (`campania_plus_activa` solo exige `fondo_disponible > 0`).
 - `crear_pedido`: exige `fondo_disponible(camp) >= cot.total`. Si no alcanza,
   descarta la campaña y cobra el envío completo, **sin avisar**.
@@ -82,6 +102,26 @@ El mismo número con dos reglas distintas:
 Con $500 de fondo y un envío de $2.500, el cliente ve "Gratis con Plus",
 confirma, y en la pantalla siguiente el total subió $2.500 sin explicación.
 No es una carrera: pasa siempre.
+
+**Arreglado** en `0069`. La regla quedó una sola y vive en una sola función,
+`campania_plus_para_envio(comercio, monto)`: o la campaña paga el envío entero o
+no paga nada. La usan las dos, así que el carrito y el pedido no pueden volver a
+discrepar.
+
+El borde que quedaba era real: el fondo alcanza cuando se cotiza y no cuando se
+confirma, porque otro pedido Plus lo consumió en el medio. Gana el cliente en lo
+que importa, que es que **nunca se le cambie el total en silencio**:
+`crear_pedido` recibe el envío que el cliente aceptó (`p_envio_esperado`) y si no
+puede honrarlo corta con `MY007` en vez de crear el pedido con otro precio; el
+carrito vuelve a cotizar y le muestra el número nuevo. No se eligió cubrir el
+envío igual, por encima del presupuesto, porque eso es el agujero sin tope de B1
+entrando por la otra puerta. Y para que la carrera sea rara en vez de frecuente,
+`crear_pedido` toma un candado sobre la fila de la campaña antes de mirar el
+fondo.
+
+La chapita de la vidriera dice ahora "Envío gratis con Plus": la vidriera no
+conoce la dirección, así que no sabe cuánto sale el envío ni si la campaña puede
+pagarlo. El número lo compromete el carrito.
 
 ### B3. "Pedidos por cobrar" de la administración puede hacer que se cobre dos veces — *verificado* — **ARREGLADO**
 

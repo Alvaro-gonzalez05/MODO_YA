@@ -546,8 +546,12 @@ class _TarjetaLocal extends ConsumerWidget {
                           tone: comercio.abierto ? MyBadgeTone.success : MyBadgeTone.dark,
                           dot: true,
                         ),
-                        // El local paga el envío de los clientes con Plus.
-                        if (comercio.plus) const MyBadge('Envío gratis', tone: MyBadgeTone.info),
+                        // El local paga el envío de los clientes con Plus. Dice
+                        // "con Plus" porque la vidriera no conoce la dirección
+                        // y entonces no sabe cuánto sale el envío ni si la
+                        // campaña del local puede pagarlo: el número lo
+                        // compromete el carrito, no esta chapita.
+                        if (comercio.plus) const MyBadge('Envío gratis con Plus', tone: MyBadgeTone.info),
                         // Descuento que el local puso en su propio menú.
                         if (comercio.descuento != null)
                           MyBadge('${comercio.descuento}% OFF', icon: Symbols.sell),
