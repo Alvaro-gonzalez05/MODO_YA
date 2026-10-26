@@ -115,6 +115,10 @@ begin
   insert into _r values ('6. entrega el primero y sigue ocupado',
     case when (select ocupado from public.repartidores where id = dos) then 'OK  le queda uno' else 'MAL  quedo libre' end);
 
+  -- Lo cancela el local y no el rider: desde 0061 el rider no cancela, se baja
+  -- (`abandonar_envio`), y eso devuelve el envío a la búsqueda en vez de
+  -- cerrarlo. Lo que se prueba acá es que quedarse sin envíos lo libere.
+  perform set_config('request.jwt.claims', json_build_object('sub',u_com)::text, true);
   perform public.cancelar_envio(e2.id, 'prueba');
   insert into _r values ('7. sin envios queda libre',
     case when not (select ocupado from public.repartidores where id = dos) then 'OK  libre' else 'MAL  sigue ocupado' end);

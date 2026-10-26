@@ -69,11 +69,13 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub',u_c1)::text, true);
   ped1 := public.crear_pedido(com, dir1,
     jsonb_build_array(jsonb_build_object('producto_id', prod, 'cantidad', 1)), null, 'mercado_pago');
-  -- cli2 paga en efectivo: nace pagado.
+  -- cli2 paga con tarjeta y le aprueban: entra al local. Antes era efectivo,
+  -- que nacía pagado, pero desde 0058 la app no lo acepta.
   perform set_config('request.jwt.claims', json_build_object('sub',u_c2)::text, true);
   ped2 := public.crear_pedido(com, dir2,
-    jsonb_build_array(jsonb_build_object('producto_id', prod, 'cantidad', 1)), null, 'efectivo');
+    jsonb_build_array(jsonb_build_object('producto_id', prod, 'cantidad', 1)), null, 'mercado_pago');
   perform set_config('request.jwt.claims', null, true);
+  ped2 := public.confirmar_pago_online(ped2.id, 'PAY-NOTIF-2', 'acreditado');
 
   insert into _r values ('01 el pedido sin pagar queda esperando',
     case when ped1.estado = 'pendiente_pago' and ped2.estado = 'pagado'

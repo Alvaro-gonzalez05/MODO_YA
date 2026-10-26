@@ -60,9 +60,11 @@ begin
 
   -- cli1 pidio hoy.
   perform set_config('request.jwt.claims', json_build_object('sub',u_c1)::text, true);
+  -- Con tarjeta y aprobado: desde 0058 la app no acepta efectivo.
   ped := public.crear_pedido(com, dir,
-    jsonb_build_array(jsonb_build_object('producto_id', prod, 'cantidad', 1)), null, 'efectivo');
+    jsonb_build_array(jsonb_build_object('producto_id', prod, 'cantidad', 1)), null, 'mercado_pago');
   perform set_config('request.jwt.claims', null, true);
+  ped := public.confirmar_pago_online(ped.id, 'PAY-NOTIF-1', 'acreditado');
 
   -- cli3 tiene Plus.
   insert into public.suscripciones_plus (cliente_id, desde, hasta, precio)
