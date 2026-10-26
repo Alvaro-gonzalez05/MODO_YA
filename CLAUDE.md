@@ -38,7 +38,7 @@ usuario. "El botón de PDF estaba escondido", no "fix: button visibility".
 Postgres en Supabase con RLS en todo. La lógica de negocio vive en funciones
 `security definer`, no en la app. Las vistas usan `security_invoker`.
 
-Las migraciones están numeradas (`0001_…` a `0063_…`) y se aplican con:
+Las migraciones están numeradas (`0001_…` a `0070_…`) y se aplican con:
 
 ```bash
 powershell -NoProfile -Command "& './supabase/scripts/sql.ps1' -Archivo 'ruta/al/archivo.sql'"
@@ -56,8 +56,8 @@ Otras cosas que ya costaron tiempo:
 
 ### Edge Functions
 
-En `supabase/functions/`: `pagar-pedido`, `mp-webhook`, `reembolsar`,
-`enviar-push`, `admin-crear-usuario`. Se despliegan con:
+En `supabase/functions/`: `pagar-pedido`, `mp-webhook`, `mp-procesar-avisos`,
+`reembolsar`, `enviar-push`, `admin-crear-usuario`. Se despliegan con:
 
 ```bash
 powershell -NoProfile -Command "& './supabase/scripts/desplegar_funcion.ps1' -Nombre pagar-pedido"

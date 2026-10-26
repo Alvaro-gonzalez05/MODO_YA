@@ -74,7 +74,10 @@ van en una migración nueva.
 | `0063_detalle_de_la_liquidacion.sql` | el renglón por renglón de lo que se le va a pagar a un rider y a un local |
 | `0065_cada_uno_ve_su_liquidacion.sql` | el rider y el local leen su propia liquidación, no la de otro |
 | `0066_reclamos_y_documentacion_con_pantalla.sql` | el reclamo se ata al pedido y solo al propio; el documento resubido vuelve a revisión |
+| `0067_el_envio_no_queda_trabado_en_cotizado.sql` | **arreglo**: un envío de cadetería podía quedar en `cotizado` sin salida |
+| `0068_el_pago_en_revision_se_resuelve.sql` | **arreglo**: un pago en revisión se resuelve con el aviso de Mercado Pago, no se cobra dos veces y, si el pedido ya murió, se devuelve; la renovación de Plus cobrada y no activada no se vuelve a cobrar |
 | `0069_el_envio_regalado_se_cobra_si_ocurrio.sql` | **arreglo**: al local se le cobraba el envío que regaló con Plus en pedidos que se cancelaron, y el carrito prometía un envío gratis que el pedido cobraba entero |
+| `0070_borrar_cargo_del_local_y_entrega_repetida.sql` | **arreglo**: un cargo ya liquidado de un local no se puede borrar, y confirmar dos veces una entrega no suma dos viajes |
 
 ## Decisiones de diseño
 
@@ -215,10 +218,17 @@ falta nada más. Los webhooks tapan lo que pasa **después**:
 - renovaciones de Plus que Mercado Pago resuelva en diferido.
 
 La Edge Function **`mp-webhook`** recibe el aviso y lo guarda tal cual en
-`mp_notificaciones`. **Por ahora solo guarda**: todavía no toca el pedido,
-porque el cuerpo del aviso cambia según la aplicación de Mercado Pago sea de
-Orders o de Payments y no hay credenciales para ver avisos reales. Guardar desde
-el día uno permite reprocesar lo que ya llegó en vez de haberlo perdido.
+`mp_notificaciones`, y nada más. El que actúa es el cron **`procesar-avisos-mp`**
+(0068, cada minuto): si hay avisos sin resolver llama a **`mp-procesar-avisos`**,
+que le pregunta a Mercado Pago cómo terminó la orden —con el access token, sin
+creerle al cuerpo del aviso, que la firma no cubre— y le pasa el resultado a
+`resolver_pago_de_mp()`. Esa función decide: si el pedido sigue esperando el
+pago lo acredita y lo manda al local, y si ya se canceló marca la devolución.
+Lo que se hizo con cada aviso queda en su `nota`, que la administración ve en la
+pantalla de avisos.
+
+Mientras el cobro está en revisión, `tomar_el_cobro()` no deja cobrar el mismo
+pedido otra vez, y `cerrar_pagos_vencidos()` le da un día en vez de media hora.
 
 Reglas de Mercado Pago que condicionan el diseño:
 
@@ -233,8 +243,9 @@ Reglas de Mercado Pago que condicionan el diseño:
 
 Sin `MP_WEBHOOK_SECRET` no se valida y se guarda igual con `firma_valida` en
 null, para poder probar con el simulador de notificaciones antes de tener la
-clave. **Antes de actuar sobre un pedido hay que exigir `firma_valida`**: si no,
-cualquiera que conozca la URL podría darnos un pago por bueno.
+clave. **Solo los avisos con `firma_valida` se procesan**
+(`mp_avisos_por_procesar()`): si no, cualquiera que conozca la URL podría darnos
+un pago por bueno.
 
 URL a cargar en Mercado Pago (Tus integraciones → la aplicación → Webhooks):
 
@@ -781,6 +792,23 @@ cancelación del cliente, el rechazo del local) tienen que devolverle el fondo a
 local, y el envío que sí se entregó tiene que seguir cobrándose. Además: que el
 carrito y `crear_pedido` digan el mismo número, y que un total que cambió en el
 medio corte con `MY007` en vez de crear el pedido con otro precio.
+
+**`tests/pagos_en_revision.sql`** — el pago que el banco deja en revisión
+(0068). Que no se pueda cobrar dos veces, que el aviso aprobado tarde mande el
+pedido al local si sigue vivo y pida la devolución si ya murió, que el carrito
+abandonado se cierre a la media hora y el cobro en revisión a un día, y que un
+aviso sin firma válida no mueva nada. 22 comprobaciones.
+
+**`tests/renovacion_plus_cobrada_una_vez.sql`** — la renovación de Plus (0068):
+que la clave identifique el período, que el pago y el mes vayan juntos, y que
+una renovación cobrada y no activada salga de la cola en vez de cobrarse de
+nuevo al día siguiente.
+
+**`tests/cargos_del_local.sql`** — borrar un cargo de un local (0070): sin
+liquidar se borra, ya liquidado no, y un cargo negativo le devuelve la plata.
+
+**`tests/entrega_repetida.sql`** — confirmar dos veces la misma entrega (0070)
+rebota y no suma un viaje de más.
 
 > **Ojo al escribir pruebas de RLS.** Estos scripts corren como `postgres`, que
 > es dueño de las tablas y **saltea RLS por completo**. Cualquier comprobación

@@ -10,10 +10,12 @@ lo instalado simula el pago. Nada de lo que está acá le hizo daño a nadie
 todavía — pero varios son exactamente el tipo de error que no se nota hasta que
 hay plata real de por medio.
 
-**Estado al 22/10/2026:** 6 de 13 arreglados (B1, B2, B3, C1, C2, C3). Los 7 que
-quedan abiertos no se tocaron por decisión del proyecto: los tres de pagos (A1,
-A2, A3) porque Mercado Pago está en pausa, y el resto porque nadie los tomó
-todavía. **Los tres de pagos bloquean encender el cobro real.**
+**Estado al 26/10/2026:** los 13 arreglados. Los tres de pagos (A1, A2, A3) y
+los cuatro que quedaban (C4, D1, D2, D3) se integraron el 26/10; sus migraciones
+(`0068` y `0070`) ya estaban aplicadas en la base desde el 22/10. **Para que A1
+y A3 anden de verdad falta desplegar `pagar-pedido` y `mp-procesar-avisos`**:
+la base ya está lista, pero las Edge Functions publicadas siguen siendo las
+viejas.
 
 Cada hallazgo dice si está **verificado** (lo comprobé contra el código o la
 base) o **sin verificar** (viene del informe de la auditoría y es creíble, pero
@@ -23,7 +25,7 @@ no lo chequeé renglón por renglón).
 
 ## Bloquean encender el cobro real
 
-### A1. Un pago "en revisión" se cobra y nunca se devuelve — *sin verificar*
+### A1. Un pago "en revisión" se cobra y nunca se devuelve — *sin verificar* — **ARREGLADO**
 
 Cuando el banco deja un pago en revisión, Mercado Pago devuelve `processing` y
 el pago queda `pendiente`. A partir de ahí no hay camino de vuelta:
@@ -39,7 +41,20 @@ Resultado: el cliente queda cobrado, sin pedido y sin devolución. La app le
 dijo "Te avisamos apenas se confirme", que es una promesa que ningún código
 puede cumplir hoy.
 
-### A2. La renovación de Plus cobrada y no activada se vuelve a cobrar todos los días — *sin verificar*
+**Arreglado** en `0068`. Los avisos ahora tienen consumidor: el cron
+`procesar-avisos-mp` llama cada minuto a la Edge Function `mp-procesar-avisos`,
+que le pregunta a Mercado Pago cómo terminó la orden y se lo pasa a
+`resolver_pago_de_mp()`. Si el pedido sigue esperando, se acredita y entra al
+local; si ya se cerró, se marca la devolución y la hace el cron de reembolsos.
+Solo se procesan avisos con firma válida. `cerrar_pagos_vencidos()` le da un día
+a un cobro que el banco está revisando, en vez de media hora, y si la plata ya
+entró marca el reembolso. Probado en `tests/pagos_en_revision.sql`.
+
+Queda un hueco: todo depende de que llegue el aviso, y el webhook todavía no
+recibió ninguno real. Si Mercado Pago aprueba un pago después del día y el aviso
+no llega, la plata no se devuelve sola.
+
+### A2. La renovación de Plus cobrada y no activada se vuelve a cobrar todos los días — *sin verificar* — **ARREGLADO**
 
 Si el cobro sale bien pero `activar_plus` falla, el `catch` no toca
 `intentos_fallidos` a propósito ("sería contarle un rechazo que no existió").
@@ -48,12 +63,28 @@ vencida: mañana el cron la cobra de nuevo. La clave de idempotencia es la misma
 todos los días, así que o se cobra de más o nunca se activa. El único rastro es
 un `console.error`.
 
-### A3. Dos toques de "Pagar" pueden generar dos cobros — *sin verificar*
+**Arreglado** en `0068` y `pagar-pedido`. La clave lleva el período que se cobra
+(`plus-renovacion-<suscripción>-<hasta>`), el pago y el mes se asientan juntos
+en una transacción (`plus_cobrado`), y la renovación cobrada que no se pudo
+activar queda trabada (`plus_renovacion_trabada`) con el id del pago: el cron no
+la vuelve a cobrar y la resuelve una persona. Probado en
+`tests/renovacion_plus_cobrada_una_vez.sql`.
+
+### A3. Dos toques de "Pagar" pueden generar dos cobros — *sin verificar* — **ARREGLADO**
 
 La clave de idempotencia se deriva del token de la tarjeta, y se pide un token
 nuevo en cada intento: dos intentos = dos claves = dos órdenes. El mensaje "El
 banco está revisando el pago" se muestra en la tarjeta **roja de error** con el
 botón habilitado, así que el cliente lo lee como un fallo y vuelve a tocar.
+
+**Arreglado** en `0068`, `pagar-pedido` y la pantalla de pago. La clave la da la
+base (`tomar_el_cobro`) y cuenta los intentos del pedido, no el token. Mientras
+haya un cobro esperando al banco no entrega clave, así que no se puede cobrar
+dos veces. La pantalla de pago muestra "El banco está revisando tu pago" en
+lugar del formulario (`estado_del_pago_de_mi_pedido`). Probado en
+`tests/pagos_en_revision.sql`.
+
+Lo mismo no se hizo para el alta de Plus: su clave todavía sale del token.
 
 ---
 
@@ -199,7 +230,7 @@ resumen (`liquidacion_id is null` más el rango). Un cargo ya liquidado dejó de
 listarse en un período viejo. Hay un test que compara el total de los renglones
 contra el `cargos` del resumen.
 
-### C4. "Mis ganancias" muestra lo ganado y nada de lo que se le descuenta — *sin verificar*
+### C4. "Mis ganancias" muestra lo ganado y nada de lo que se le descuenta — *sin verificar* — **ARREGLADO**
 
 Suma solo la ganancia de los entregados: no resta el efectivo juntado en la
 puerta ni los cargos. Con dos mandados en el día el cartel dice "HOY $6.000"
@@ -207,27 +238,48 @@ cuando la liquidación va a dar negativa y el rider es el que tiene que poner
 plata. Además la semana se calcula sobre los últimos 100 envíos, así que una
 semana cargada subcuenta sin decirlo.
 
+**Arreglado.** "Hoy" y "Esta semana" salen ahora de `pendiente_de_liquidar_riders`,
+la misma función de "Lo que vas a cobrar" y de la administración, así que
+descuentan el efectivo y los cargos. Si el día da negativo dice "Tenés que
+rendir", y el desglose aparece cuando hay algo que explicar. Probado en
+`apps/repartidor/test/ganancias_de_hoy_test.dart`.
+
 ---
 
 ## Menores
 
-### D1. No hay forma de devolverle plata a un local desde la pantalla — *sin verificar*
+### D1. No hay forma de devolverle plata a un local desde la pantalla — *sin verificar* — **ARREGLADO**
 
 El monto se parsea borrando el signo, así que no se puede cargar un ajuste
 negativo. El esquema sí lo contempla ("Negativo: se le suma") y el formulario
 del rider sí lo permite. Si un local reclama una penalidad con razón, hay que
 entrar por SQL.
 
-### D2. Borrar un cargo de un local no tiene el guard de "ya liquidado" — *sin verificar*
+**Arreglado.** El campo acepta el signo y `montoConSigno` lo respeta: un monto
+negativo se le devuelve al local y en la lista se lee "se le devuelve". Probado
+en `apps/modo_ya/test/cargos_del_local_test.dart`.
+
+### D2. Borrar un cargo de un local no tiene el guard de "ya liquidado" — *sin verificar* — **ARREGLADO**
 
 Para riders, la base exige `liquidacion_id is null` y revienta si no. Para
 locales el borrado va directo a la tabla, protegido solo por que la interfaz
 esconde el botón.
 
-### D3. `confirmar_entrega` no mira el estado: repetirla infla `viajes_completados` — *sin verificar*
+**Arreglado** en `0070`. La app borra con `admin_borrar_cargo_comercio`, que
+rebota un cargo ya liquidado y muestra el error en lugar de no hacer nada. La
+política `cargos_comercio_admin` sigue permitiendo el `delete` directo a la
+administración, igual que la del rider: el guard está en el camino que usa la
+app. Probado en `tests/cargos_del_local.sql`.
+
+### D3. `confirmar_entrega` no mira el estado: repetirla infla `viajes_completados` — *sin verificar* — **ARREGLADO**
 
 Si el envío ya está `entregado`, el trigger de transiciones no se dispara
 (el estado no cambia), no se valida nada y el contador se incrementa de nuevo.
+
+**Arreglado** en `0070`. `confirmar_entrega` mira el estado antes de escribir:
+un envío ya entregado rebota con "Este envío ya estaba entregado", y uno que
+todavía no puede cerrarse rebota según `transicion_valida`. Probado en
+`tests/entrega_repetida.sql`.
 
 ---
 
