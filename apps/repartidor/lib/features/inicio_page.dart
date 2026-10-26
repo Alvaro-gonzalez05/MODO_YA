@@ -55,9 +55,14 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
     final ubicacion = ref.read(ubicacionRiderProvider.notifier);
     try {
       if (conectar) {
+        if (!await ubicacion.tieneTodoElTiempo() && !await _avisoDeUbicacion()) return;
         final l = await ubicacion.enviar();
         if (l is LecturaError) {
           if (mounted) mostrarError(context, l.mensaje);
+          return;
+        }
+        if (l is LecturaSinSegundoPlano) {
+          await _pedirTodoElTiempo();
           return;
         }
         await ref.read(repartidoresRepositoryProvider).setConectado(true);
@@ -65,6 +70,52 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
       } else {
         await ref.read(repartidoresRepositoryProvider).setConectado(false);
         ubicacion.parar();
+      }
+    } catch (e) {
+      if (mounted) mostrarError(context, e);
+    }
+  }
+
+  /// El aviso que Google Play exige **antes** de pedir la ubicación en segundo
+  /// plano ("divulgación destacada"): qué se junta, para qué, y que sigue con
+  /// la app cerrada. Sin este cartel, y con este texto, rechaza la publicación.
+  /// Apple pide lo mismo en la revisión. Devuelve si acepta seguir.
+  Future<bool> _avisoDeUbicacion() async {
+    if (!mounted) return false;
+    return confirmar(
+      context,
+      titulo: 'Tu ubicación mientras estás conectado',
+      mensaje: 'MODO YA Rider recopila tu ubicación para ofrecerte los envíos más cercanos y '
+          'para que el local y el cliente vean por dónde vas, incluso cuando la app está '
+          'cerrada o no la estás usando. Solo mientras estás conectado: al desconectarte '
+          'deja de recopilarla.',
+      aceptar: 'Entendido, seguir',
+    );
+  }
+
+  /// Sin "Permitir todo el tiempo" no se conecta: con la pantalla apagada su
+  /// ubicación se congela, el motor le sigue ofreciendo envíos como si
+  /// estuviera ahí y el local espera a alguien que quizás ya se fue.
+  Future<void> _pedirTodoElTiempo() async {
+    if (!mounted) return;
+    final ir = await confirmar(
+      context,
+      titulo: 'Permití la ubicación todo el tiempo',
+      mensaje: 'Para recibir envíos, MODO YA Rider necesita tu ubicación también con la '
+          'pantalla apagada. En Ubicación elegí "Permitir todo el tiempo" y volvé a conectarte.',
+      aceptar: 'Abrir ajustes',
+    );
+    if (ir) await ref.read(ubicacionRiderProvider.notifier).abrirAjustes();
+  }
+
+  /// Le sacaron el permiso estando conectado: se lo desconecta para que no le
+  /// lleguen ofertas que no va a poder seguir.
+  Future<void> _desconectarSinPermiso() async {
+    try {
+      await ref.read(repartidoresRepositoryProvider).setConectado(false);
+      ref.read(ubicacionRiderProvider.notifier).parar();
+      if (mounted) {
+        mostrarError(context, 'Te desconectamos: sin la ubicación todo el tiempo no te podemos ofrecer envíos.');
       }
     } catch (e) {
       if (mounted) mostrarError(context, e);
@@ -88,6 +139,14 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
         ubic.empezar();
       });
     }
+
+    // Vale también para el que reabre la app ya conectado: la primera lectura
+    // dice si sigue teniendo el permiso.
+    ref.listen(ubicacionRiderProvider, (antes, ahora) {
+      if (conectado && ahora is LecturaSinSegundoPlano && antes is! LecturaSinSegundoPlano) {
+        _desconectarSinPermiso();
+      }
+    });
 
     ref.listen(ofertasProvider, (_, ahora) {
       final primera = ahora.value?.firstOrNull;
@@ -299,7 +358,7 @@ class _EstadoUbicacion extends ConsumerWidget {
     final l = lectura;
     if (l is LecturaSinSegundoPlano) {
       // Con "solo mientras se usa la app", al apagar la pantalla deja de
-      // mandar y no le llegan ofertas.
+      // mandar: no se puede conectar hasta que lo cambie.
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -309,7 +368,7 @@ class _EstadoUbicacion extends ConsumerWidget {
               const SizedBox(width: MySpacing.xs),
               Expanded(
                 child: Text(
-                  'Con la pantalla apagada no te llegan envíos. En Ubicación elegí "Permitir todo el tiempo".',
+                  'Para conectarte, en Ubicación elegí "Permitir todo el tiempo".',
                   style: MyType.bodySm.copyWith(color: MyColors.error),
                 ),
               ),

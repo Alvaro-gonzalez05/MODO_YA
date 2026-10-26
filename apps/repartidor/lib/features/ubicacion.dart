@@ -24,7 +24,8 @@ class LecturaError extends Lectura {
 }
 
 /// Hay permiso de ubicación pero solo "mientras se usa la app": con la
-/// pantalla apagada deja de mandar. Se muestra un aviso para cambiarlo.
+/// pantalla apagada deja de mandar. **No alcanza para conectarse**: el motor le
+/// ofrecería envíos con una posición que se congela apenas guarda el celular.
 class LecturaSinSegundoPlano extends LecturaOk {
   const LecturaSinSegundoPlano(super.lat, super.lng);
 }
@@ -41,7 +42,9 @@ const permitirSimularUbicacion = kDebugMode || bool.fromEnvironment('MY_SIMULAR_
 ///
 /// En Android corre en un foreground service: sigue mandando con la pantalla
 /// apagada o la app minimizada, con una notificacion fija mientras esta
-/// conectado. Para eso pide "Permitir todo el tiempo".
+/// conectado. En iOS, con las actualizaciones en segundo plano y el indicador
+/// azul de la barra. En los dos pide "Permitir todo el tiempo", y sin eso el
+/// rider no se puede conectar.
 class UbicacionRider extends Notifier<Lectura?> {
   Timer? _timer;
   StreamSubscription<Position>? _gps;
@@ -60,6 +63,7 @@ class UbicacionRider extends Notifier<Lectura?> {
   }
 
   bool get _esAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _esIos => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   /// Pide el permiso y, en el celular, el de segundo plano. Devuelve un error
   /// para mostrar o null si se puede seguir.
@@ -72,17 +76,30 @@ class UbicacionRider extends Notifier<Lectura?> {
     if (permiso == LocationPermission.denied || permiso == LocationPermission.deniedForever) {
       return 'Sin permiso de ubicación no te podemos ofrecer envíos cercanos.';
     }
-    // En Android, pedirlo otra vez con "mientras se usa" ya concedido abre la
-    // pantalla del sistema para elegir "Permitir todo el tiempo".
-    if (_esAndroid && permiso == LocationPermission.whileInUse) {
+    // Pedirlo otra vez con "mientras se usa" ya concedido abre, en Android, la
+    // pantalla del sistema para elegir "Permitir todo el tiempo", y en iOS el
+    // cartel de "Cambiar a Permitir siempre" (si el Info.plist lo declara).
+    if ((_esAndroid || _esIos) && permiso == LocationPermission.whileInUse) {
       permiso = await Geolocator.requestPermission();
     }
-    _segundoPlano = !_esAndroid || permiso == LocationPermission.always;
+    // En la PC y la web no hay segundo plano que pedir: se usan para probar.
+    _segundoPlano = !(_esAndroid || _esIos) || permiso == LocationPermission.always;
     return null;
   }
 
   /// Abre los ajustes de la app para cambiar el permiso a "todo el tiempo".
   Future<void> abrirAjustes() => Geolocator.openAppSettings();
+
+  /// Si ya tiene "Permitir todo el tiempo", sin pedir nada. En la PC y la web
+  /// no hay segundo plano: cuenta como que sí.
+  Future<bool> tieneTodoElTiempo() async {
+    if (!(_esAndroid || _esIos) || (simular && permitirSimularUbicacion)) return true;
+    try {
+      return await Geolocator.checkPermission() == LocationPermission.always;
+    } catch (_) {
+      return false;
+    }
+  }
 
   LecturaOk _lectura(double lat, double lng) =>
       _segundoPlano ? LecturaOk(lat, lng) : LecturaSinSegundoPlano(lat, lng);
@@ -100,7 +117,19 @@ class UbicacionRider extends Notifier<Lectura?> {
             setOngoing: true,
           ),
         )
-      : const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 15);
+      : _esIos
+          ? AppleSettings(
+              accuracy: LocationAccuracy.high,
+              distanceFilter: 15,
+              activityType: ActivityType.automotiveNavigation,
+              // iOS pausa las actualizaciones cuando cree que el celular está
+              // quieto: un rider esperando en la puerta del local dejaría de
+              // aparecer en el mapa justo cuando más se lo necesita.
+              pauseLocationUpdatesAutomatically: false,
+              allowBackgroundLocationUpdates: true,
+              showBackgroundLocationIndicator: true,
+            )
+          : const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 15);
 
   Future<Lectura> leer() async {
     if (simular && permitirSimularUbicacion) {
@@ -153,10 +182,25 @@ class UbicacionRider extends Notifier<Lectura?> {
       onError: (Object e) => state = LecturaError('No pudimos leer tu ubicación ($e).'),
     );
     // Aunque no se mueva, cada 30 s confirma que sigue ahí.
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      await _revisarPermiso();
       final p = _ultima;
       if (p != null) _mandar(_lectura(p.latitude, p.longitude));
     });
+  }
+
+  /// Si le saca el permiso de "todo el tiempo" desde los ajustes estando
+  /// conectado, el stream del GPS no avisa nada: sigue andando mientras la app
+  /// esté adelante. Se mira acá, sin volver a pedir, y la lectura pasa a
+  /// [LecturaSinSegundoPlano] para que el inicio lo desconecte.
+  Future<void> _revisarPermiso() async {
+    if (!(_esAndroid || _esIos)) return;
+    try {
+      _segundoPlano = await Geolocator.checkPermission() == LocationPermission.always;
+    } catch (_) {
+      // Sin respuesta del sistema se deja como estaba: desconectarlo por un
+      // error de lectura sería peor que esperar a la próxima vuelta.
+    }
   }
 
   void parar() {
