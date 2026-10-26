@@ -1,10 +1,19 @@
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#0A0A0A">
-  <p style="font-size:22px;font-weight:900;font-style:italic;margin:0 0 20px">MODO <span style="color:#C99A00">YA</span></p>
-  <h1 style="font-size:20px;margin:0 0 12px">Confirmá el cambio de email</h1>
-  <p style="font-size:15px;line-height:1.5;margin:0 0 20px">Pediste cambiar el email de tu cuenta de MODO YA de {{ .Email }} a {{ .NewEmail }}. Tocá el botón para confirmarlo.</p>
-  <p style="margin:0 0 24px">
-    <a href="{{ .SiteURL }}/confirmar?token_hash={{ .TokenHash }}&type=email_change"
-       style="display:inline-block;background:#F5C518;color:#0A0A0A;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:999px">Confirmar el cambio</a>
-  </p>
-  <p style="font-size:13px;color:#6B6B76;line-height:1.5;margin:0">Si no lo pediste vos, ignorá este mail y cambiá tu contraseña.</p>
-</div>
+<!doctype html>
+<html lang="es"><body style="margin:0;padding:0;background:#F4F4F6">
+<!-- Encabezado negro con la franja amarilla, y la línea punteada de la "ruta" al costado del texto,
+     como en la web. Tablas y estilos en línea a propósito: Gmail y Outlook ignoran el CSS moderno. -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F4F6"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border-radius:16px;overflow:hidden">
+  <tr><td style="background:#0A0A0A;padding:22px 32px" align="left"><img src="https://www.modoya.app/correo/logo-claro.png" width="200" alt="MODO YA" style="display:block;border:0"></td></tr>
+  <tr><td style="height:5px;background:#F5C518;font-size:0;line-height:0">&nbsp;</td></tr>
+  <tr><td style="padding:32px 32px 8px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-left:5px dashed #F5C518;padding:4px 0 4px 20px;font-family:Arial,Helvetica,sans-serif">
+      <h1 style="margin:0 0 14px;font-size:24px;line-height:1.25;color:#0A0A0A">Confirmá el cambio de email</h1>
+      <p style="margin:0 0 26px;font-size:16px;line-height:1.55;color:#3D3D45">Pediste cambiar el email de tu cuenta de MODO YA de <b>{{ .Email }}</b> a <b>{{ .NewEmail }}</b>. Tocá el botón para confirmarlo.</p>
+      <a href="{{ .SiteURL }}/confirmar?token_hash={{ .TokenHash }}&type=email_change" style="display:inline-block;background:#F5C518;color:#0A0A0A;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;text-decoration:none;padding:14px 28px;border-radius:999px">Confirmar el cambio</a>
+      <p style="margin:26px 0 0;font-size:13px;line-height:1.55;color:#6B6B76">Si no lo pediste vos, ignorá este mail y cambiá tu contraseña.</p>
+    </td></tr></table>
+  </td></tr>
+  <tr><td style="padding:22px 32px 28px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#8A8A94;text-align:center">MODO YA · Delivery y mandados en Malargüe<br><a href="https://www.modoya.app/terminos" style="color:#8A8A94">Términos</a> · <a href="https://www.modoya.app/privacidad" style="color:#8A8A94">Privacidad</a> · <a href="https://www.modoya.app" style="color:#8A8A94">modoya.app</a></td></tr>
+</table></td></tr></table>
+</body></html>
