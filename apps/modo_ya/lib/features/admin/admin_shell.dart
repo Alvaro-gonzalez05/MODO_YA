@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import '../../comun/eliminar_cuenta.dart';
 import '../../comun/menu_usuario.dart';
 import '../../comun/notificaciones.dart';
 
@@ -52,7 +53,14 @@ class AdminShell extends ConsumerWidget {
       onSelect: (i) => navigationShell.goBranch(i, initialLocation: i == navigationShell.currentIndex),
       usuarioNombre: sesion.nombre,
       usuarioDetalle: 'Administración',
-      accionesUsuario: accionesDeUsuario(context, ref),
+      accionesUsuario: [
+        MyAccionUsuario(
+          icon: Symbols.person_remove,
+          label: 'Dar de baja a un cliente',
+          onTap: () => darDeBajaCliente(context, ref),
+        ),
+        ...accionesDeUsuario(context, ref),
+      ],
       estado: MyPastillaEstado(
         texto: 'Servicio operativo',
         detalle: conectados == 1 ? '1 rider conectado' : '$conectados riders conectados',

@@ -93,6 +93,30 @@ class AuthRepository {
   Future<void> recuperarPassword(String email) =>
       intentar(() => _auth.resetPasswordForEmail(email.trim()));
 
+  /// Elimina la cuenta del cliente que está usando la app (0073) y cierra la
+  /// sesión. Los pedidos quedan, sin sus datos, para las liquidaciones.
+  ///
+  /// Las tarjetas guardadas se borran antes en Mercado Pago, una por una y sin
+  /// frenar si alguna falla: la base las borra igual, y una tarjeta que quedó
+  /// en el customer de Mercado Pago no se puede usar sin la cuenta.
+  Future<void> eliminarMiCuenta() => intentar(() async {
+        final tarjetas = await Backend.db.from('tarjetas_guardadas').select('id');
+        for (final t in tarjetas) {
+          try {
+            await Backend.db.functions.invoke('pagar-pedido', body: {
+              'accion': 'borrar_tarjeta',
+              'tarjeta_id': t['id'],
+            });
+          } catch (_) {}
+        }
+        await Backend.db.rpc('eliminar_mi_cuenta');
+        // El usuario ya no existe en el servidor: cerrar la sesión allá puede
+        // fallar, y lo que importa es que el celular la olvide.
+        try {
+          await _auth.signOut(scope: SignOutScope.local);
+        } catch (_) {}
+      });
+
   Future<void> salir() => intentar(() => _auth.signOut());
 
   Future<void> cambiarPassword(String nueva) =>

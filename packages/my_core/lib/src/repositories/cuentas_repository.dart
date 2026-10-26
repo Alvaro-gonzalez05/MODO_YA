@@ -117,6 +117,11 @@ class CuentasRepository {
       });
 
   /// Usuario (email) con el que entra un local o un rider. Solo admin.
+  /// Da de baja a un cliente que lo pidió por el formulario de
+  /// /eliminar-cuenta. Mismo efecto que si lo hiciera él desde la app.
+  Future<void> eliminarCliente(String email) =>
+      intentar(() => _db.rpc('admin_eliminar_cliente', params: {'p_email': email.trim()}));
+
   Future<String?> usuarioDe({String? comercioId, String? repartidorId}) => intentar(() async {
         final r = await _db.rpc('admin_usuario_de', params: {
           'p_comercio': comercioId,

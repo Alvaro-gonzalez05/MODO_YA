@@ -6,6 +6,7 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import '../../comun/cambiar_password.dart';
+import '../../comun/eliminar_cuenta.dart';
 import '../../comun/formulario_emergente.dart';
 import '../../comun/menu_usuario.dart';
 import 'carrito.dart';
@@ -279,6 +280,18 @@ class CuentaClientePage extends ConsumerWidget {
                 onPressed: () => cerrarSesion(context, ref),
               ),
             ],
+          ),
+          const SizedBox(height: MySpacing.sm),
+          // Más chico que los otros dos a propósito: tiene que estar a mano
+          // (lo exigen las tiendas) pero no al lado de "Cerrar sesión" con el
+          // mismo peso, donde se toca sin querer.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => eliminarMiCuenta(context, ref),
+              icon: Icon(Symbols.person_remove, size: 18, color: MyColors.error),
+              label: Text('Eliminar mi cuenta', style: MyType.labelMd.copyWith(color: MyColors.error)),
+            ),
           ),
         ],
       ),
