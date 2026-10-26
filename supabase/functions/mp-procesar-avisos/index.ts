@@ -6,7 +6,9 @@
 // nada: el cliente quedaba cobrado, sin pedido y sin devolucion (hallazgo A1 de
 // docs/hallazgos-de-la-auditoria-2.md).
 //
-// La dispara el cron `procesar-avisos-mp` cada minuto, no una persona.
+// La dispara el cron `procesar-avisos-mp` cada minuto, no una persona. Ademas de
+// los avisos, pregunta por los pagos en revision por los que no llego ninguno
+// (0072): si el webhook no funciona, sin esto no se resolverian nunca.
 //
 // Por que una funcion aparte y no esto dentro de `mp-webhook`:
 //
@@ -90,11 +92,22 @@ async function mpGet(ruta: string) {
   throw new Error(`Mercado Pago contestó ${r.status}`);
 }
 
-/** Los tres datos que `resolver_pago_de_mp` necesita de una orden. */
+interface Datos {
+  ordenId: string | null;
+  pagoId: string | null;
+  estadoMp: string;
+  detalleMp: string;
+  /** Pesos devueltos, si hubo devolucion. Distingue una parcial de la total. */
+  devuelto: number | null;
+}
+
+/** Los datos que `resolver_pago_de_mp` necesita de una orden. */
 // deno-lint-ignore no-explicit-any
-function deLaOrden(orden: any, recursoId: string) {
+function deLaOrden(orden: any, recursoId: string): Datos {
   const pago = orden?.transactions?.payments?.[0] ?? {};
   const reembolsos = orden?.transactions?.refunds ?? [];
+  // deno-lint-ignore no-explicit-any
+  const devuelto = reembolsos.reduce((s: number, r: any) => s + Number(r?.amount ?? 0), 0);
   return {
     ordenId: orden?.id ? String(orden.id) : recursoId,
     pagoId: pago?.id ? String(pago.id) : null,
@@ -104,17 +117,38 @@ function deLaOrden(orden: any, recursoId: string) {
       ? 'refunded'
       : String(pago?.status ?? orden?.status ?? ''),
     detalleMp: String(pago?.status_detail ?? orden?.status_detail ?? ''),
+    // Antes cualquier devolucion se tomaba como el pago entero: una parcial
+    // dejaba el pago como si no hubiera entrado nada.
+    devuelto: reembolsos.length > 0 ? Math.round(devuelto) : null,
   };
 }
 
 // deno-lint-ignore no-explicit-any
-function delPago(pago: any, recursoId: string) {
+function delPago(pago: any, recursoId: string): Datos {
+  const devuelto = Number(pago?.transaction_amount_refunded ?? 0);
   return {
     ordenId: pago?.order?.id ? String(pago.order.id) : null,
     pagoId: pago?.id ? String(pago.id) : recursoId,
     estadoMp: String(pago?.status ?? ''),
     detalleMp: String(pago?.status_detail ?? ''),
+    devuelto: devuelto > 0 ? Math.round(devuelto) : null,
   };
+}
+
+// deno-lint-ignore no-explicit-any
+async function resolver(servicio: any, datos: Datos, estado: Estado) {
+  const { data: nota, error } = await servicio.rpc('resolver_pago_de_mp', {
+    p_mp_order: datos.ordenId,
+    p_mp_payment: datos.pagoId,
+    p_estado: estado,
+    // El detalle de Mercado Pago va crudo: `pagos.detalle` lo lee la
+    // administracion, no el cliente, y ahi el nombre original vale mas que
+    // una traduccion.
+    p_detalle: datos.detalleMp || null,
+    p_monto_reembolsado: estado === 'reembolsado' ? datos.devuelto : null,
+  });
+  if (error) throw new Error(error.message);
+  return nota as string | null;
 }
 
 Deno.serve(async (req) => {
@@ -139,7 +173,7 @@ Deno.serve(async (req) => {
     const recurso = String(a.recurso_id);
 
     try {
-      let datos: { ordenId: string | null; pagoId: string | null; estadoMp: string; detalleMp: string };
+      let datos: Datos;
 
       if (!MP_TOKEN) {
         // Sin credenciales se le cree al cuerpo del aviso. Es el unico camino
@@ -174,16 +208,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const { data: nota, error: errResolver } = await servicio.rpc('resolver_pago_de_mp', {
-        p_mp_order: datos.ordenId,
-        p_mp_payment: datos.pagoId,
-        p_estado: estado,
-        // El detalle de Mercado Pago va crudo: `pagos.detalle` lo lee la
-        // administracion, no el cliente, y ahi el nombre original vale mas que
-        // una traduccion.
-        p_detalle: datos.detalleMp || null,
-      });
-      if (errResolver) throw new Error(errResolver.message);
+      const nota = await resolver(servicio, datos, estado);
 
       await servicio.rpc('mp_aviso_procesado', {
         p_aviso: a.aviso_id,
@@ -205,5 +230,40 @@ Deno.serve(async (req) => {
     }
   }
 
-  return responder({ resueltos, sinEfecto, fallidos, simulado: MP_TOKEN === '' });
+  // ---- Los pagos en revision por los que no llego ningun aviso --------------
+  //
+  // Todo lo de arriba depende de que Mercado Pago avise, y si el webhook esta
+  // mal configurado no avisa nunca: el pago en revision quedaba asi, y si el
+  // banco lo aprobaba despues del dia de gracia el pedido ya estaba cancelado y
+  // la plata no se devolvia. Aca se le pregunta por cada uno (0072).
+  let consultados = 0;
+  const { data: porConsultar, error: errConsulta } = await servicio.rpc('pagos_por_consultar');
+  if (errConsulta) console.error('pagos_por_consultar', errConsulta);
+
+  for (const p of (porConsultar ?? [])) {
+    try {
+      // Sin credenciales no hay a quien preguntarle. Se marca igual para no
+      // despertar a esta funcion cada minuto por el mismo pago.
+      if (MP_TOKEN) {
+        const datos = deLaOrden(await mpGet(`/v1/orders/${p.mp_order_id}`), String(p.mp_order_id));
+        const estado = estadoDelPago(datos.estadoMp);
+        if (estado !== null && estado !== 'pendiente') {
+          const nota = await resolver(servicio, datos, estado);
+          console.log(`consulta ${p.mp_order_id} -> ${estado}: ${nota}`);
+          resueltos++;
+        }
+      }
+      consultados++;
+    } catch (e) {
+      const texto = e instanceof Error ? e.message : String(e);
+      // Un 4xx no se arregla reintentando, pero tampoco se tacha nada: se
+      // vuelve a mirar a los 10 minutos y, pasada la semana, sale de la lista.
+      console.error('consultar pago', p.mp_order_id, texto);
+      fallidos++;
+    } finally {
+      await servicio.rpc('pago_consultado', { p_pago: p.pago_id });
+    }
+  }
+
+  return responder({ resueltos, sinEfecto, fallidos, consultados, simulado: MP_TOKEN === '' });
 });

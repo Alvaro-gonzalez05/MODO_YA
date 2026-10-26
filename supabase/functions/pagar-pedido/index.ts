@@ -109,14 +109,20 @@ function importe(pesos: number): string {
   return pesos.toFixed(2);
 }
 
+/** Mercado Pago contesto que no y **no creo ninguna orden** (4xx sin `data`):
+ * token vencido o ya usado, datos mal, importe invalido. Es seguro que no se
+ * cobro nada, asi que el intento se puede dar por terminado. */
+class SinOrden extends Error {}
+
 /** Crea una orden y devuelve lo unico que nos importa de la respuesta.
  *
  * Ojo con los codigos HTTP: una tarjeta rechazada vuelve como **402**, no como
  * 200, pero con la orden entera adentro de `data`. Eso no es un error nuestro,
  * es un "no" del banco y hay que contarselo al cliente. Si en cambio viene un
  * 4xx **sin** orden (token vencido, credenciales mal, importe invalido), ahi si
- * rompimos nosotros: se lanza para que quede en el log y no se le mienta al
- * cliente diciendole que la tarjeta fallo.
+ * rompimos nosotros: se lanza `SinOrden` para que quede en el log y no se le
+ * mienta al cliente diciendole que la tarjeta fallo. Un 5xx o una red caida
+ * lanzan un error comun: ahi no se sabe si Mercado Pago llego a cobrar.
  */
 async function crearOrden(cuerpo: unknown, idempotencia: string) {
   const r = await mpCrudo('/v1/orders', {
@@ -129,7 +135,8 @@ async function crearOrden(cuerpo: unknown, idempotencia: string) {
   const orden = r.ok ? r.cuerpo : (r.cuerpo?.data ?? null);
   if (!orden) {
     const detalle = r.cuerpo?.errors?.[0]?.message ?? r.cuerpo?.message;
-    throw new Error(detalle ?? `Mercado Pago respondio ${r.status}`);
+    const texto = detalle ?? `Mercado Pago respondio ${r.status}`;
+    throw r.status >= 400 && r.status < 500 ? new SinOrden(texto) : new Error(texto);
   }
 
   // El estado que vale es el del pago; el de la orden lo acompaña.
@@ -243,6 +250,37 @@ function motivo(detalle: string): string {
     cc_rejected_card_error: 'No se pudo procesar la tarjeta. Probá de nuevo.',
   };
   return mapa[detalle] ?? 'El pago fue rechazado. Probá con otra tarjeta.';
+}
+
+/** Que hacer cuando `crearOrden` lanza en vez de devolver una orden.
+ *
+ * Antes la excepcion se escapaba: la funcion contestaba un 500 sin cuerpo y el
+ * pago quedaba "tomado". El reintento usaba **la misma clave**, y Mercado Pago
+ * podia contestar el mismo error guardado para siempre: el cliente no podia
+ * pagar mas ese pedido.
+ *
+ *   * `SinOrden` (4xx sin orden): seguro que no se cobro. Se anota el intento
+ *     como rechazado, asi el proximo toma una clave nueva.
+ *   * cualquier otra cosa (5xx, red): no se sabe si Mercado Pago llego a
+ *     cobrar. El pago queda tomado y el reintento, pasados unos minutos, va con
+ *     la misma clave: si la orden existia, Mercado Pago devuelve esa.
+ */
+async function cobroSinOrden(
+  e: unknown,
+  anotarRechazo: (texto: string) => Promise<void>,
+  simulado: boolean,
+) {
+  const texto = e instanceof Error ? e.message : String(e);
+  if (e instanceof SinOrden) {
+    console.error('mercado pago no creo la orden', texto);
+    const detalle = 'No se pudo procesar la tarjeta. Revisá los datos o cargala de nuevo.';
+    await anotarRechazo(detalle).catch((err) => console.error('anotar el rechazo', err));
+    return responder({ estado: 'rechazado', aprobado: false, detalle, simulado });
+  }
+  console.error('mercado pago no contesto', texto);
+  return responder({
+    error: 'No pudimos comunicarnos con Mercado Pago. Esperá un par de minutos y probá de nuevo.',
+  }, 502);
 }
 
 /** Vuelve a cobrarle Plus a todos los que se les vence hoy.
@@ -444,8 +482,29 @@ Deno.serve(async (req) => {
   if (accion === 'plus') {
     if (!c.token) return responder({ error: 'Faltan los datos de la tarjeta.' }, 400);
 
-    const { data: precio } = await servicio.rpc('precio_plus');
-    const monto = Number(precio ?? 2500);
+    // La clave de idempotencia la da la base, igual que en los pedidos (0072):
+    // salia del token de la tarjeta, y como la app pide uno nuevo en cada
+    // intento, dos toques de "Suscribirme" eran dos cobros.
+    const { data: tomaPlus, error: errTomaPlus } = await servicio.rpc('tomar_el_cobro_plus', {
+      p_cliente: cliente.id,
+    });
+    if (errTomaPlus) {
+      console.error('tomar_el_cobro_plus', errTomaPlus);
+      return responder({ error: 'No se pudo empezar el cobro. Probá de nuevo.' }, 500);
+    }
+    const tp = (Array.isArray(tomaPlus) ? tomaPlus[0] : tomaPlus) ?? {};
+    if (!tp.clave) {
+      // En revision, en curso o recien pagado: no son errores, hay un cobro
+      // hecho o en vuelo. Se contestan como pendiente para que la app no lo
+      // muestre en rojo e invite a pagar de nuevo.
+      if (['en_revision', 'en_curso', 'ya_pago'].includes(tp.motivo)) {
+        return responder({ estado: 'pendiente', aprobado: false, detalle: tp.mensaje, simulado });
+      }
+      return responder({ error: tp.mensaje ?? 'No se pudo empezar el cobro.' }, 409);
+    }
+    const pagoPlus = tp.pago_id as string;
+    const monto = Number(tp.monto);
+
     let estado: 'acreditado' | 'rechazado' | 'pendiente' = 'acreditado';
     let detalle: string | null = null;
     let mpId: string | null = null;
@@ -463,25 +522,34 @@ Deno.serve(async (req) => {
       // si el cliente lo pide (suscribirse ES autorizar el cobro mensual).
       const customerId = c.card_id ? null : await customerDe(servicio, cliente, user.email);
 
-      const r = await crearOrden({
-        type: 'online',
-        processing_mode: 'automatic',
-        total_amount: importe(monto),
-        external_reference: `plus-${cliente.id}`,
-        payer: customerId ? { email: user.email, customer_id: customerId } : { email: user.email },
-        transactions: {
-          payments: [{
-            amount: importe(monto),
-            payment_method: {
-              id: c.metodo_pago_id,
-              type: 'credit_card',
-              token: c.token,
-              installments: 1,
-              statement_descriptor: 'MODO YA PLUS',
-            },
-          }],
-        },
-      }, `plus-${cliente.id}-${c.token.slice(-16)}`);
+      let r: Awaited<ReturnType<typeof crearOrden>>;
+      try {
+        r = await crearOrden({
+          type: 'online',
+          processing_mode: 'automatic',
+          total_amount: importe(monto),
+          external_reference: `plus-${cliente.id}`,
+          payer: customerId ? { email: user.email, customer_id: customerId } : { email: user.email },
+          transactions: {
+            payments: [{
+              amount: importe(monto),
+              payment_method: {
+                id: c.metodo_pago_id,
+                type: 'credit_card',
+                token: c.token,
+                installments: 1,
+                statement_descriptor: 'MODO YA PLUS',
+              },
+            }],
+          },
+        }, tp.clave as string);
+      } catch (e) {
+        return await cobroSinOrden(e, async (texto) => {
+          await servicio.rpc('plus_alta_resultado', {
+            p_pago: pagoPlus, p_estado: 'rechazado', p_detalle: texto,
+          });
+        }, simulado);
+      }
 
       mpId = r.pagoId ?? r.ordenId;
       mpOrden = r.ordenId;
@@ -500,35 +568,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (estado === 'pendiente') {
-      // Queda el rastro del cobro, que antes no quedaba: si Mercado Pago lo
-      // aprueba despues, sin esta fila el aviso no tiene con que pago
-      // emparejarlo y la plata se pierde de vista. Activar el mes sigue siendo
-      // de una persona (ver el informe de 0068).
-      const { error: rastro } = await servicio.from('pagos').insert({
-        metodo: 'mercado_pago', estado: 'pendiente', monto,
-        mp_payment_id: mpId, mp_order_id: mpOrden, cuotas: 1, detalle,
-      });
-      if (rastro) console.error('PLUS EN REVISION SIN RASTRO', mpId, rastro);
+    // El pago lo creo `tomar_el_cobro_plus`; aca se le dice como termino. Si
+    // salio aprobado, el pago y el mes van en una sola transaccion. Si quedo en
+    // revision, el pago guarda la orden y el cliente: cuando el banco lo
+    // apruebe, el aviso o la consulta de `mp-procesar-avisos` le activan el mes
+    // sin que lo tenga que hacer una persona.
+    const { data: sus, error } = await servicio.rpc('plus_alta_resultado', {
+      p_pago: pagoPlus,
+      p_estado: estado,
+      p_mp_payment: mpId,
+      p_mp_order: mpOrden,
+      p_detalle: detalle,
+    });
+    if (error) {
+      console.error('plus_alta_resultado', mpId, error);
+      if (estado === 'acreditado') {
+        return responder({ error: 'Se cobró la suscripción pero no se pudo activar. Escribinos.' }, 500);
+      }
     }
 
     if (estado !== 'acreditado') {
       return responder({ estado, aprobado: false, detalle, simulado });
-    }
-
-    // El pago y la activacion en una sola transaccion: antes el insert en
-    // `pagos` descartaba su error y `activar_plus` se llamaba con
-    // `p_pago: null`, asi que el cliente podia recibir el mes sin que quedara
-    // registro del cobro.
-    const { data: sus, error } = await servicio.rpc('plus_cobrado', {
-      p_cliente: cliente.id,
-      p_precio: monto,
-      p_mp_payment: mpId,
-      p_mp_order: mpOrden,
-    });
-    if (error) {
-      console.error('plus_cobrado', mpId, error);
-      return responder({ error: 'Se cobró la suscripción pero no se pudo activar. Escribinos.' }, 500);
     }
 
     return responder({ estado, aprobado: true, simulado, suscripcion: sus });
@@ -601,26 +661,40 @@ Deno.serve(async (req) => {
     // Cliente de Mercado Pago (para poder guardar tarjetas).
     const customerId = c.guardar ? await customerDe(servicio, cliente, user.email) : null;
 
-    const r = await crearOrden({
-      type: 'online',
-      processing_mode: 'automatic',
-      total_amount: importe(pedido.total),
-      external_reference: pedido.id,
-      description: `MODO YA pedido ${pedido.codigo}`,
-      payer: customerId ? { email: user.email, customer_id: customerId } : { email: user.email },
-      transactions: {
-        payments: [{
-          amount: importe(pedido.total),
-          payment_method: {
-            id: c.metodo_pago_id,
-            type: 'credit_card',
-            token: c.token,
-            installments: cuotas,
-            statement_descriptor: 'MODO YA',
-          },
-        }],
-      },
-    }, claveDelCobro);
+    let r: Awaited<ReturnType<typeof crearOrden>>;
+    try {
+      r = await crearOrden({
+        type: 'online',
+        processing_mode: 'automatic',
+        total_amount: importe(pedido.total),
+        external_reference: pedido.id,
+        description: `MODO YA pedido ${pedido.codigo}`,
+        payer: customerId ? { email: user.email, customer_id: customerId } : { email: user.email },
+        transactions: {
+          payments: [{
+            amount: importe(pedido.total),
+            payment_method: {
+              id: c.metodo_pago_id,
+              type: 'credit_card',
+              token: c.token,
+              installments: cuotas,
+              statement_descriptor: 'MODO YA',
+            },
+          }],
+        },
+      }, claveDelCobro);
+    } catch (e) {
+      return await cobroSinOrden(e, async (texto) => {
+        await servicio.rpc('confirmar_pago_online', {
+          p_pedido: pedido.id,
+          p_mp_payment: null,
+          p_estado: 'rechazado',
+          p_cuotas: cuotas,
+          p_detalle: texto,
+          p_mp_order: null,
+        });
+      }, simulado);
+    }
 
     mpOrderId = r.ordenId;
     mpPaymentId = r.pagoId ?? r.ordenId;
