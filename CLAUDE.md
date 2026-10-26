@@ -57,7 +57,7 @@ Otras cosas que ya costaron tiempo:
 ### Edge Functions
 
 En `supabase/functions/`: `pagar-pedido`, `mp-webhook`, `mp-procesar-avisos`,
-`reembolsar`, `enviar-push`, `admin-crear-usuario`. Se despliegan con:
+`reembolsar`, `enviar-push`, `admin-crear-usuario`, `ruta`. Se despliegan con:
 
 ```bash
 powershell -NoProfile -Command "& './supabase/scripts/desplegar_funcion.ps1' -Nombre pagar-pedido"

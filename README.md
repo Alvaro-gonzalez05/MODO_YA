@@ -202,19 +202,24 @@ el cliente. Tambien cadeteria, rechazos, reglas de opciones y tiempo real.
 
 ## Provisorio (antes de produccion)
 
-- **Mapas:** las baldosas salen del servidor publico de OpenStreetMap, que no
-  admite uso productivo. Hay que pasar al archivo propio `malargue.pmtiles`
-  (un cambio en `packages/my_ui/lib/src/widgets/mapa.dart`).
-- **Ruta del rider en el mapa:** la calcula el servidor publico de OSRM, que
-  tampoco admite uso productivo (mismo archivo).
+Los pasos, en orden, estan en `docs/salir-a-produccion.md` y
+`docs/publicar-en-las-tiendas.md`. En corto:
+
+- **Dominio:** no hay. Bloquea el correo y las tiendas.
+- **Mapas:** baldosas y ruta salen de servidores publicos (OpenStreetMap y
+  OSRM) que no admiten uso productivo. El proveedor ya se elige sin tocar
+  codigo: las baldosas en `env/publico.json` y la ruta con un secreto de la
+  Edge Function `ruta`.
 - **Pagos:** las credenciales de produccion ya estan cargadas y la `v1.15.0`
   publicada ya tokeniza tarjetas reales, pero todavia no salio ningun cobro
   real aprobado. Ver "Estado de los pagos" mas abajo.
-- **Ubicacion del rider en segundo plano:** hoy se manda con la app abierta.
-- **Mails:** la confirmacion de email esta desactivada (cualquiera se registra
-  sin validar su correo). Falta SMTP propio para volver a activarla y para
-  recuperar contrasenas (ver `docs/preguntas-para-la-clienta.md`).
+- **Mails:** sin SMTP propio. La confirmacion de email esta apagada y la app no
+  ofrece recuperar la contrasena hasta que lo haya (`MY_CORREO_ACTIVO`).
+- **Eliminar la cuenta desde la app:** falta, y las dos tiendas lo exigen.
 - **Fuentes:** se descargan en tiempo de ejecucion; conviene empaquetarlas.
+
+La ubicacion del rider en segundo plano ya esta: sin "Permitir todo el tiempo"
+no se puede conectar.
 
 ## Estado de los pagos
 
