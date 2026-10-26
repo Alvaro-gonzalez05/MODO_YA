@@ -38,6 +38,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  Future<void> _olvide() async {
+    final email = await pedirTexto(
+      context,
+      titulo: '¿Olvidaste tu contraseña?',
+      label: 'Tu email',
+      aceptar: 'Mandarme el link',
+      inicial: _email.text.trim(),
+      ayuda: 'Te mandamos un link para elegir una contraseña nueva. '
+          'Si tenés un local o sos rider, pedile una nueva a la administración.',
+    );
+    if (email == null || email.trim().isEmpty || !mounted) return;
+    try {
+      await ref.read(authRepositoryProvider).recuperarPassword(email);
+      if (!mounted) return;
+      // Mismo mensaje exista o no la cuenta: decir "no hay ninguna cuenta con
+      // ese email" le serviría a cualquiera para averiguar quién usa MODO YA.
+      await mostrarExito(
+        context,
+        titulo: 'Revisá tu email',
+        mensaje: 'Si hay una cuenta con ${email.trim()}, te llega un link para elegir una '
+            'contraseña nueva. Mirá también en spam.',
+        icono: Symbols.mark_email_read,
+      );
+    } catch (e) {
+      if (mounted) mostrarError(context, e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,6 +103,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     const SizedBox(height: MySpacing.xs),
                     MyBotonAccion(label: 'Entrar', onPressed: _entrar),
+                    if (Entorno.correoActivo)
+                      TextButton(
+                        onPressed: _olvide,
+                        child: const Text('¿Olvidaste tu contraseña?'),
+                      ),
                   ],
                 ),
               ),

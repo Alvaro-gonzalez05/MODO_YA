@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<title>Contraseña nueva · MODO YA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0A0A0A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,400..900;1,62..125,400..900&family=Outfit:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/legales.css">
+</head>
+<!-- =====================================================================
+     A dónde lleva el mail de "¿Olvidaste tu contraseña?". La plantilla del
+     mail (supabase/correo/recuperar.html) arma el link con el token_hash, y
+     esta página lo canjea recién al guardar: si lo canjeara al abrir, el
+     antivirus del correo que abre los links para revisarlos lo gastaría
+     antes que la persona.
+
+     Habla directo con la API de Auth, sin librerías: son dos llamadas.
+     ===================================================================== -->
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/" aria-label="MODO YA, inicio">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <g stroke="#F5C518" stroke-width="5" stroke-linecap="round"><path d="M4 40h18M10 52h12M2 64h20"/></g>
+        <path d="M70 4C46 4 28 22 28 45c0 29 42 71 42 71s42-42 42-71C112 22 94 4 70 4z" fill="#F5C518"/>
+        <circle cx="70" cy="45" r="30" fill="#0A0A0A"/>
+        <g transform="translate(52 34) scale(.56)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="14" cy="34" r="8" stroke="#fff" stroke-width="4"/><circle cx="51" cy="34" r="8" stroke="#fff" stroke-width="4"/>
+          <path d="M10 25h22l6-6h8l5 15" stroke="#F5C518" stroke-width="4"/><path d="M22 34h14l6-9" stroke="#fff" stroke-width="4"/>
+        </g>
+      </svg>
+      <span class="wordmark">MODO <span class="ya">YA</span></span>
+    </a>
+  </div>
+</header>
+
+<main>
+  <section class="portada">
+    <div class="wrap">
+      <span class="etiqueta">Tu cuenta</span>
+      <h1>Elegí una contraseña <span class="ya">nueva</span></h1>
+      <p>Después entrás a la app con tu email y esta contraseña.</p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <article class="hoja">
+      <form class="form" id="form" novalidate>
+        <label>Contraseña nueva <small>(al menos 8 caracteres)</small>
+          <input type="password" id="clave" autocomplete="new-password" minlength="8" required>
+        </label>
+        <label>Repetila
+          <input type="password" id="repetida" autocomplete="new-password" minlength="8" required>
+        </label>
+        <p class="error" id="error" role="alert"></p>
+        <button class="btn" type="submit" id="guardar">Guardar contraseña</button>
+      </form>
+      <div class="aviso-ok" id="ok" role="status">
+        <p><b>Listo.</b> Ya podés entrar a la app de MODO YA con tu contraseña nueva.</p>
+      </div>
+    </article>
+  </div>
+</main>
+
+<footer class="pie">
+  <div class="wrap">
+    <span>© 2026 MODO YA · Malargüe, Mendoza</span>
+    <nav aria-label="Legales">
+      <a href="/terminos">Términos</a>
+      <a href="/privacidad">Privacidad</a>
+      <a href="/eliminar-cuenta">Eliminar cuenta</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+/* La clave publicable está hecha para ir en el navegador (igual que en la
+   portada). Lo que protege la cuenta es el token del mail, que es de un solo uso. */
+const SUPABASE = {
+  url: "https://wqahdncdqnzrusrmdyui.supabase.co",
+  key: "sb_publishable_kAgKdriyxNzmYPwfYhGZNw_katA01GI"
+};
+const q = new URLSearchParams(location.search);
+const token = q.get("token_hash");
+const form = document.getElementById("form");
+const error = document.getElementById("error");
+const guardar = document.getElementById("guardar");
+
+if (!token) {
+  error.textContent = "Este link no sirve. Pedí uno nuevo desde la app, en “¿Olvidaste tu contraseña?”.";
+  guardar.disabled = true;
+}
+
+async function auth(ruta, metodo, cuerpo, sesion) {
+  const r = await fetch(`${SUPABASE.url}/auth/v1/${ruta}`, {
+    method: metodo,
+    headers: {
+      apikey: SUPABASE.key,
+      "Content-Type": "application/json",
+      ...(sesion ? { Authorization: `Bearer ${sesion}` } : {})
+    },
+    body: JSON.stringify(cuerpo)
+  });
+  const datos = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const e = new Error(datos.msg || datos.message || datos.error_description || `HTTP ${r.status}`);
+    e.codigo = datos.error_code || datos.code;
+    throw e;
+  }
+  return datos;
+}
+
+form.addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  error.textContent = "";
+  const clave = document.getElementById("clave").value;
+  if (clave.length < 8) { error.textContent = "Tiene que tener al menos 8 caracteres."; return; }
+  if (clave !== document.getElementById("repetida").value) { error.textContent = "Las dos no coinciden."; return; }
+
+  guardar.disabled = true;
+  let sesion;
+  try {
+    sesion = (await auth("verify", "POST", { type: "recovery", token_hash: token })).access_token;
+  } catch (e) {
+    error.textContent = "El link venció o ya se usó. Pedí uno nuevo desde la app.";
+    return;
+  }
+  try {
+    await auth("user", "PUT", { password: clave }, sesion);
+    form.hidden = true;
+    document.getElementById("ok").classList.add("is-on");
+  } catch (e) {
+    // El token ya se gastó en el paso anterior: si esto falla hay que pedir
+    // otro link, no reintentar acá.
+    error.textContent = e.codigo === "weak_password"
+      ? "Esa contraseña es muy fácil de adivinar o apareció en una filtración. Pedí otro link y elegí otra."
+      : "No pudimos guardarla. Pedí otro link desde la app y probá de nuevo.";
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#0A0A0A">
+  <p style="font-size:22px;font-weight:900;font-style:italic;margin:0 0 20px">MODO <span style="color:#C99A00">YA</span></p>
+  <h1 style="font-size:20px;margin:0 0 12px">Confirmá el cambio de email</h1>
+  <p style="font-size:15px;line-height:1.5;margin:0 0 20px">Pediste cambiar el email de tu cuenta de MODO YA de {{ .Email }} a {{ .NewEmail }}. Tocá el botón para confirmarlo.</p>
+  <p style="margin:0 0 24px">
+    <a href="{{ .SiteURL }}/confirmar?token_hash={{ .TokenHash }}&type=email_change"
+       style="display:inline-block;background:#F5C518;color:#0A0A0A;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:999px">Confirmar el cambio</a>
+  </p>
+  <p style="font-size:13px;color:#6B6B76;line-height:1.5;margin:0">Si no lo pediste vos, ignorá este mail y cambiá tu contraseña.</p>
+</div>

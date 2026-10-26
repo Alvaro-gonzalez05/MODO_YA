@@ -84,6 +84,15 @@ class AuthRepository {
         return r.session != null;
       });
 
+  /// Manda el mail para elegir una contraseña nueva.
+  ///
+  /// El link no vuelve a la app sino a la página `nueva-clave` de la web
+  /// (la plantilla del mail lo arma con `{{ .TokenHash }}`): así sirve igual si
+  /// el mail se abre en otro dispositivo, y no depende de que la app sepa
+  /// abrir links.
+  Future<void> recuperarPassword(String email) =>
+      intentar(() => _auth.resetPasswordForEmail(email.trim()));
+
   Future<void> salir() => intentar(() => _auth.signOut());
 
   Future<void> cambiarPassword(String nueva) =>
