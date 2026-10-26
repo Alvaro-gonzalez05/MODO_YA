@@ -39,6 +39,15 @@ class PagoPage extends ConsumerWidget {
               marca: d.marca,
             );
 
+      if (r.enRevision) {
+        // El cobro **ya se hizo** y el banco lo está mirando. Antes esto caía
+        // en la tarjeta roja de error con el botón habilitado: el cliente lo
+        // leía como un fallo, volvía a tocar "Pagar" y se le cobraba dos veces
+        // (hallazgo A3). Al invalidar, la pantalla se rearma mostrando que el
+        // pago está en revisión en lugar de pedir la tarjeta otra vez.
+        ref.invalidate(estadoDelPagoProvider(pedido.id));
+        return null;
+      }
       if (!r.aprobado) return r.detalle ?? 'El pago fue rechazado.';
       if (!context.mounted) return null;
 
@@ -60,6 +69,7 @@ class PagoPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pedidoAsync = ref.watch(pedidoProvider(pedidoId));
+    final pagoEnRevision = ref.watch(estadoDelPagoProvider(pedidoId)).value == 'en_revision';
 
     return MyPantallaClara(
       child: MyPagina(
@@ -85,6 +95,30 @@ class PagoPage extends ConsumerWidget {
                     icon: pedido.estado == EstadoPedido.cancelado ? Symbols.cancel : Symbols.check_circle,
                     title: pedido.estado == EstadoPedido.cancelado ? 'El pedido se canceló' : 'Este pedido ya está pago',
                     message: 'Podés ver cómo viene en "Mis pedidos".',
+                    action: MyBoton(
+                      label: 'Ver el pedido',
+                      onPressed: () => context.go('/cliente/pedidos/${pedido.id}'),
+                    ),
+                  ),
+                );
+              }
+              if (pagoEnRevision) {
+                // Hay un cobro hecho y el banco no contestó todavía. Volver a
+                // mostrar el formulario es invitar a pagar dos veces el mismo
+                // pedido, y la base ya no lo permitiría igual
+                // (`tomar_el_cobro`). Cuando el pago se resuelve, el pedido
+                // cambia de estado y esta pantalla se va sola: `pedidoProvider`
+                // está en vivo.
+                return MyCard(
+                  child: MyEmptyState(
+                    icon: Symbols.hourglass_top,
+                    title: 'El banco está revisando tu pago',
+                    // "Ya cobramos" y "si no sale no se te cobra" juntos se
+                    // contradecían: lo que hay es un cobro que el banco todavía
+                    // puede rechazar.
+                    message: 'No lo pagues de nuevo: el cobro de ${Formato.pesos(pedido.total)} ya está '
+                        'hecho y el banco lo está revisando. Si lo aprueba, el pedido le llega a '
+                        '${pedido.comercioNombre}; si no, no se te cobra nada.',
                     action: MyBoton(
                       label: 'Ver el pedido',
                       onPressed: () => context.go('/cliente/pedidos/${pedido.id}'),

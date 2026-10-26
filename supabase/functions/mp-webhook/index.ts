@@ -1,12 +1,14 @@
 // mp-webhook
 //
 // Recibe los avisos de Mercado Pago (Webhooks) y los guarda tal como llegaron
-// en `mp_notificaciones`. Por ahora **solo guarda**: no toca el pedido.
+// en `mp_notificaciones`. **Solo guarda**: el que actua sobre el pago es
+// `mp-procesar-avisos`, que lo llama el cron `procesar-avisos-mp` leyendo esta
+// misma tabla (0068).
 //
-// Por que solo guardar: el cuerpo del aviso cambia segun la aplicacion de
-// Mercado Pago sea de Orders o de Payments, y todavia no tenemos credenciales
-// para ver avisos de verdad. Guardando desde el dia uno, cuando se agregue el
-// procesamiento se puede reprocesar lo que ya llego en vez de haberlo perdido.
+// Por que el reparto: Mercado Pago exige un 200 en menos de 22 segundos y
+// reintenta cada 15 minutos si no llega. Preguntarle por la orden desde aca
+// arriesga el timeout, y un timeout es un aviso repetido. Guardar primero
+// tambien deja reprocesar lo que ya llego en vez de haberlo perdido.
 //
 // Reglas de Mercado Pago que importan aca:
 //   * Hay que contestar 200 o 201 en menos de 22 segundos. Si no, reintenta
@@ -18,9 +20,10 @@
 //
 // Sin `MP_WEBHOOK_SECRET` configurado no se valida nada y se guarda igual, con
 // `firma_valida` en null. Es a proposito: deja probar el simulador de
-// notificaciones de Mercado Pago antes de tener la clave. Mientras solo se
-// guarde no hay riesgo; **antes de actuar sobre un pedido hay que exigir que la
-// firma sea valida**, porque si no cualquiera podria darnos un pago por bueno.
+// notificaciones de Mercado Pago antes de tener la clave. Guardar no mueve
+// plata, y `mp_avisos_por_procesar()` exige `firma_valida` antes de dejar que
+// un aviso toque un pago: si no, cualquiera que conozca la URL podria darnos un
+// pago por bueno.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 

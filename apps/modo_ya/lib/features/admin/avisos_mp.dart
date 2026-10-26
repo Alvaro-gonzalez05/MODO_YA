@@ -9,8 +9,8 @@ import 'package:my_ui/my_ui.dart';
 ///
 /// La tabla existe desde 0044 con el comentario "los mira la administración",
 /// pero no había pantalla: lo que se guardaba no lo veía nadie. Esto es solo
-/// mirar — no toca el pago ni el pedido, igual que el webhook, que por ahora
-/// guarda y no actúa.
+/// mirar — el que actúa sobre el pago es el cron `procesar-avisos-mp` (0068), y
+/// lo que hizo con cada aviso queda en la nota.
 ///
 /// Va como panel sobre la pantalla de cobros y no como sección del menú: se
 /// mira cuando un cobro no cerró y se quiere saber qué dijo Mercado Pago.
@@ -41,8 +41,8 @@ class _Avisos extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Se guardan tal como llegan. Por ahora ninguno mueve el pedido solo: '
-              'están para entender qué pasó con un cobro.',
+              'Se guardan tal como llegan y se resuelven solos cada minuto. La nota dice '
+              'qué se hizo con cada uno; el que no la tiene todavía no se procesó.',
               style: MyType.bodySm.copyWith(color: MyColors.secondary),
             ),
             const SizedBox(height: MySpacing.md),
