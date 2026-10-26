@@ -36,6 +36,17 @@ y `/nueva-clave`.
 
 ## 2. Correo real
 
+**Hecho el 26/10/2026.** Resend (cuenta modoya.codea@gmail.com, región São
+Paulo) manda desde `MODO YA <no-responder@modoya.app>`; el dominio está
+verificado con DKIM (`resend._domainkey`), dos CNAME (`send`, `rsend`) y DMARC
+en Namecheap. La integración de Resend cargó el SMTP en Supabase, y
+`configurar_auth.ps1 -Sitio https://www.modoya.app -ExigirConfirmacion` dejó las
+plantillas en castellano y la confirmación de email obligatoria.
+`MY_CORREO_ACTIVO` ya está en `true` en `env/publico.json`: la próxima versión
+muestra "¿Olvidaste tu contraseña?".
+
+Lo que sigue de este paso es para referencia.
+
 Hoy Supabase manda los mails con su servicio de prueba: como mucho dos por
 hora y **solo a los miembros del proyecto**. Por eso la confirmación de email
 está apagada y la app no ofrece "¿Olvidaste tu contraseña?".
