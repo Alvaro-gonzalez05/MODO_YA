@@ -29,12 +29,17 @@
 // Si la tarjeta rebota el pedido NO se cancela: queda esperando para que el
 // cliente pruebe con otra (lo cierra cerrar_pagos_vencidos a la media hora).
 //
+// Quien puede cobrar y con que clave de idempotencia lo decide la base
+// (`tomar_el_cobro`, 0068). La clave no sale del token de la tarjeta: la app
+// pide un token nuevo en cada intento, asi que dos toques de "Pagar" daban dos
+// claves y Mercado Pago cobraba dos veces.
+//
 // MODO SIMULADO: sin MP_ACCESS_TOKEN configurado —o cuando la app manda un
 // token simulado porque se compilo sin clave publica— no se llama a Mercado
-// Pago y
-// se responde como si la tarjeta hubiera sido aprobada (rechazada si el nombre
-// del titular es "RECHAZADA", para poder probar ese camino). Sirve para mostrar
-// la pantalla antes de tener la cuenta; nunca cobra plata de verdad.
+// Pago y se responde como si la tarjeta hubiera sido aprobada. El nombre del
+// titular elige el camino, para poder probarlos todos: "RECHAZADA" rebota y
+// "REVISION" deja el pago esperando al banco. Sirve para mostrar la pantalla
+// antes de tener la cuenta; nunca cobra plata de verdad.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -246,6 +251,16 @@ function motivo(detalle: string): string {
  * da un token a partir del `card_id`, que es como se cobran las suscripciones.
  * Si la tarjeta rebota se anota el motivo; al tercer intento la base deja de
  * incluirla y el cliente renueva a mano.
+ *
+ * **La clave de idempotencia identifica el periodo, no la suscripcion**
+ * (hallazgo A2). Antes era `plus-renovacion-<suscripcion>`, la misma todos los
+ * dias: con la ventana de idempotencia de Mercado Pago vencida —las corridas
+ * estan a 24 h— era un cobro nuevo cada dia, y sin vencer era la respuesta
+ * cacheada y la renovacion no se activaba nunca.
+ *
+ * Y si el cobro sale bien pero no se puede dar el mes, la suscripcion **sale de
+ * la cola** (`plus_renovacion_trabada`): dejarla vencida es lo que hacia que el
+ * cron la devolviera al dia siguiente.
  */
 // deno-lint-ignore no-explicit-any
 async function renovarPlus(servicio: any) {
@@ -255,17 +270,45 @@ async function renovarPlus(servicio: any) {
     return responder({ error: 'No se pudo leer a quien renovarle.' }, 500);
   }
 
+  // El `hasta` de la suscripcion ES el periodo que se esta cobrando, y es lo
+  // que hace unica la clave. `plus_por_renovar` no lo devuelve y agregarle una
+  // columna pedia borrar la funcion (0068 es aditiva), asi que se lee aca de
+  // una sola vez para todas.
+  // deno-lint-ignore no-explicit-any
+  const ids = (pendientes ?? []).map((s: any) => s.suscripcion_id);
+  const periodoDe = new Map<string, string>();
+  if (ids.length > 0) {
+    const { data: filas, error: errPeriodos } = await servicio
+      .from('suscripciones_plus').select('id, hasta').in('id', ids);
+    if (errPeriodos) {
+      console.error('periodo de las suscripciones', errPeriodos);
+      return responder({ error: 'No se pudo leer el período a cobrar.' }, 500);
+    }
+    for (const f of (filas ?? [])) periodoDe.set(f.id, String(f.hasta));
+  }
+
   let renovadas = 0;
   let fallidas = 0;
+  let trabadas = 0;
 
   for (const s of (pendientes ?? [])) {
+    const periodo = periodoDe.get(s.suscripcion_id);
+    if (!periodo) {
+      // Sin periodo no hay clave que distinga este mes del que viene. Antes de
+      // arriesgar un cobro repetido, no se cobra.
+      fallidas++;
+      console.error('renovar plus: no se pudo leer el período', s.suscripcion_id);
+      continue;
+    }
+    const referencia = `plus-renovacion-${s.suscripcion_id}-${periodo}`;
+
     // Se distingue "la tarjeta rebotó" de "cobramos y algo fallo despues": lo
     // primero se le cuenta como intento, lo segundo no (seria contarle un
-    // rechazo que no existio, y encima ya pago).
+    // rechazo que no existio, y encima ya pago) pero traba la suscripcion.
     let cobrado = false;
+    let mpId = '';
+    let mpOrden: string | null = null;
     try {
-      let mpId: string;
-
       if (SIMULADO) {
         mpId = `simulado-renovacion-${crypto.randomUUID()}`;
       } else {
@@ -278,7 +321,7 @@ async function renovarPlus(servicio: any) {
           type: 'online',
           processing_mode: 'automatic',
           total_amount: importe(s.precio),
-          external_reference: `plus-renovacion-${s.suscripcion_id}`,
+          external_reference: referencia,
           transactions: {
             payments: [{
               amount: importe(s.precio),
@@ -290,36 +333,44 @@ async function renovarPlus(servicio: any) {
               },
             }],
           },
-        }, `plus-renovacion-${s.suscripcion_id}`);
+        }, referencia);
 
         if (r.estado !== 'acreditado') throw new Error(motivo(r.detalleMp));
         mpId = r.pagoId ?? r.ordenId ?? '';
+        mpOrden = r.ordenId;
       }
       cobrado = true;
 
-      const { data: pago } = await servicio
-        .from('pagos')
-        .insert({
-          metodo: 'mercado_pago', estado: 'acreditado', monto: s.precio,
-          mp_payment_id: mpId, cuotas: 1, acreditado_en: new Date().toISOString(),
-        })
-        .select().single();
-
-      const { error: alta } = await servicio.rpc('activar_plus', {
+      // El pago y la activacion van en una sola transaccion de la base: antes
+      // el insert en `pagos` descartaba su error y `activar_plus` se llamaba
+      // con `p_pago: null`, asi que el cliente podia recibir el mes sin que
+      // quedara registro del cobro.
+      const { error: alta } = await servicio.rpc('plus_cobrado', {
         p_cliente: s.cliente_id,
         p_precio: s.precio,
-        p_pago: pago?.id ?? null,
+        p_mp_payment: mpId,
+        p_mp_order: mpOrden,
       });
       if (alta) throw new Error(alta.message);
 
       renovadas++;
     } catch (e) {
-      fallidas++;
       const texto = e instanceof Error ? e.message : String(e);
       if (cobrado) {
-        // Se le cobro y no se le pudo dar el mes: hay que arreglarlo a mano.
-        console.error('RENOVACION COBRADA SIN ACTIVAR', s.suscripcion_id, texto);
+        trabadas++;
+        // Se le cobro y no se le pudo dar el mes. Lo grave no es el mes que
+        // falta: es que la suscripcion sigue vencida y manana el cron la
+        // devuelve. Queda trabada, con el id del pago para encontrarlo en el
+        // panel de Mercado Pago, hasta que una persona lo arregle.
+        console.error('RENOVACION COBRADA SIN ACTIVAR', s.suscripcion_id, mpId, texto);
+        const { error: trabar } = await servicio.rpc('plus_renovacion_trabada', {
+          p_suscripcion: s.suscripcion_id,
+          p_mp_payment: mpId,
+          p_error: texto.slice(0, 300),
+        });
+        if (trabar) console.error('NO SE PUDO TRABAR LA RENOVACION', s.suscripcion_id, trabar);
       } else {
+        fallidas++;
         console.error('renovar plus', s.suscripcion_id, texto);
         await servicio.rpc('plus_renovacion_fallo', {
           p_suscripcion: s.suscripcion_id,
@@ -329,8 +380,8 @@ async function renovarPlus(servicio: any) {
     }
   }
 
-  console.log(`renovar_plus: ${renovadas} renovadas, ${fallidas} fallidas`);
-  return responder({ renovadas, fallidas, simulado: SIMULADO });
+  console.log(`renovar_plus: ${renovadas} renovadas, ${fallidas} fallidas, ${trabadas} trabadas`);
+  return responder({ renovadas, fallidas, trabadas, simulado: SIMULADO });
 }
 
 Deno.serve(async (req) => {
@@ -395,9 +446,10 @@ Deno.serve(async (req) => {
 
     const { data: precio } = await servicio.rpc('precio_plus');
     const monto = Number(precio ?? 2500);
-    let estado: 'acreditado' | 'rechazado' = 'acreditado';
+    let estado: 'acreditado' | 'rechazado' | 'pendiente' = 'acreditado';
     let detalle: string | null = null;
     let mpId: string | null = null;
+    let mpOrden: string | null = null;
 
     if (simulado) {
       const rechazar = (c.titular ?? '').trim().toUpperCase() === 'RECHAZADA';
@@ -432,12 +484,15 @@ Deno.serve(async (req) => {
       }, `plus-${cliente.id}-${c.token.slice(-16)}`);
 
       mpId = r.pagoId ?? r.ordenId;
+      mpOrden = r.ordenId;
       // Plus se cobra o no se cobra: si queda en revision no se le da el mes.
-      estado = r.estado === 'acreditado' ? 'acreditado' : 'rechazado';
+      estado = r.estado;
       detalle = estado === 'acreditado'
         ? null
-        : r.estado === 'pendiente'
-          ? 'El banco está revisando el pago. Probá de nuevo en un rato.'
+        : estado === 'pendiente'
+          // No se le dice "probá de nuevo": el cobro esta hecho y volver a
+          // intentarlo es pagar dos veces el mismo mes.
+          ? 'El banco está revisando el pago. Si lo aprueba te activamos Plus; no lo intentes de nuevo.'
           : motivo(r.detalleMp);
 
       if (estado === 'acreditado' && customerId) {
@@ -445,29 +500,38 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (estado !== 'acreditado') {
-      return responder({ aprobado: false, detalle, simulado });
+    if (estado === 'pendiente') {
+      // Queda el rastro del cobro, que antes no quedaba: si Mercado Pago lo
+      // aprueba despues, sin esta fila el aviso no tiene con que pago
+      // emparejarlo y la plata se pierde de vista. Activar el mes sigue siendo
+      // de una persona (ver el informe de 0068).
+      const { error: rastro } = await servicio.from('pagos').insert({
+        metodo: 'mercado_pago', estado: 'pendiente', monto,
+        mp_payment_id: mpId, mp_order_id: mpOrden, cuotas: 1, detalle,
+      });
+      if (rastro) console.error('PLUS EN REVISION SIN RASTRO', mpId, rastro);
     }
 
-    const { data: pago } = await servicio
-      .from('pagos')
-      .insert({
-        metodo: 'mercado_pago', estado: 'acreditado', monto,
-        mp_payment_id: mpId, cuotas: 1, acreditado_en: new Date().toISOString(),
-      })
-      .select().single();
+    if (estado !== 'acreditado') {
+      return responder({ estado, aprobado: false, detalle, simulado });
+    }
 
-    const { data: sus, error } = await servicio.rpc('activar_plus', {
+    // El pago y la activacion en una sola transaccion: antes el insert en
+    // `pagos` descartaba su error y `activar_plus` se llamaba con
+    // `p_pago: null`, asi que el cliente podia recibir el mes sin que quedara
+    // registro del cobro.
+    const { data: sus, error } = await servicio.rpc('plus_cobrado', {
       p_cliente: cliente.id,
       p_precio: monto,
-      p_pago: pago?.id ?? null,
+      p_mp_payment: mpId,
+      p_mp_order: mpOrden,
     });
     if (error) {
-      console.error('activar_plus', error);
+      console.error('plus_cobrado', mpId, error);
       return responder({ error: 'Se cobró la suscripción pero no se pudo activar. Escribinos.' }, 500);
     }
 
-    return responder({ aprobado: true, simulado, suscripcion: sus });
+    return responder({ estado, aprobado: true, simulado, suscripcion: sus });
   }
 
   // ---- Pagar ----------------------------------------------------------------
@@ -482,6 +546,33 @@ Deno.serve(async (req) => {
   }
   if (!c.token) return responder({ error: 'Faltan los datos de la tarjeta.' }, 400);
 
+  // La base dice si se puede cobrar y con que clave de idempotencia (0068).
+  //
+  // La clave la da ella y no el token de la tarjeta: la app pide un token nuevo
+  // en cada intento, asi que dos toques de "Pagar" daban dos claves distintas y
+  // Mercado Pago cobraba dos veces (hallazgo A3). Ahora la clave cuenta el
+  // intento del pedido, y un cobro que el banco todavia esta revisando no deja
+  // arrancar otro.
+  const { data: toma, error: errToma } = await servicio.rpc('tomar_el_cobro', {
+    p_pedido: pedido.id,
+  });
+  if (errToma) {
+    console.error('tomar_el_cobro', errToma);
+    return responder({ error: 'No se pudo empezar el cobro. Probá de nuevo.' }, 500);
+  }
+  const t = (Array.isArray(toma) ? toma[0] : toma) ?? {};
+  if (!t.clave) {
+    // "En revision" y "en curso" NO son errores: hay un cobro hecho o en
+    // vuelo. Se contestan como pago pendiente para que la app los muestre como
+    // informacion y no en la tarjeta roja — que es justamente lo que hacia que
+    // el cliente lo leyera como un fallo y volviera a tocar "Pagar".
+    if (t.motivo === 'en_revision' || t.motivo === 'en_curso') {
+      return responder({ estado: 'pendiente', aprobado: false, detalle: t.mensaje, simulado });
+    }
+    return responder({ error: t.mensaje ?? 'Este pedido ya no está esperando el pago.' }, 409);
+  }
+  const claveDelCobro = t.clave as string;
+
   const cuotas = Math.min(Math.max(c.cuotas ?? 1, 1), 24);
   let estado: 'acreditado' | 'rechazado' | 'pendiente' = 'acreditado';
   let detalle: string | null = null;
@@ -489,19 +580,27 @@ Deno.serve(async (req) => {
   let mpOrderId: string | null = null;
 
   if (simulado) {
-    // Sin credenciales: se responde sin cobrar nada.
-    const rechazar = (c.titular ?? '').trim().toUpperCase() === 'RECHAZADA';
-    estado = rechazar ? 'rechazado' : 'acreditado';
-    detalle = rechazar ? motivo('insufficient_amount') : 'Pago simulado (sin credenciales de Mercado Pago)';
+    // Sin credenciales: se responde sin cobrar nada. El nombre del titular
+    // elige el camino, igual que las tarjetas de prueba de Mercado Pago:
+    // "RECHAZADA" rebota y "REVISION" deja el pago en revision, que es el
+    // unico modo de ejercitar los hallazgos A1 y A3 sin tocar la API real.
+    const comoSalio = (c.titular ?? '').trim().toUpperCase();
+    estado = comoSalio === 'RECHAZADA'
+      ? 'rechazado'
+      : comoSalio === 'REVISION'
+        ? 'pendiente'
+        : 'acreditado';
+    detalle = estado === 'rechazado'
+      ? motivo('insufficient_amount')
+      : estado === 'pendiente'
+        ? 'El banco está revisando el pago. Te avisamos apenas se confirme.'
+        : 'Pago simulado (sin credenciales de Mercado Pago)';
     mpPaymentId = `simulado-${crypto.randomUUID()}`;
     mpOrderId = `simulado-orden-${crypto.randomUUID()}`;
   } else {
     // Cliente de Mercado Pago (para poder guardar tarjetas).
     const customerId = c.guardar ? await customerDe(servicio, cliente, user.email) : null;
 
-    // Si el cliente toca "Pagar" dos veces con la misma tarjeta, Mercado Pago
-    // cobra una sola vez. Con otra tarjeta el token cambia, asi que el
-    // reintento si se procesa.
     const r = await crearOrden({
       type: 'online',
       processing_mode: 'automatic',
@@ -521,7 +620,7 @@ Deno.serve(async (req) => {
           },
         }],
       },
-    }, `pedido-${pedido.id}-${c.token.slice(-16)}`);
+    }, claveDelCobro);
 
     mpOrderId = r.ordenId;
     mpPaymentId = r.pagoId ?? r.ordenId;

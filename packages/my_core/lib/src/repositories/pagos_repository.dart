@@ -81,15 +81,24 @@ class EstadoPlus {
 
 /// Resultado de intentar cobrar un pedido.
 class ResultadoPago {
-  const ResultadoPago({required this.aprobado, this.detalle, this.simulado = false});
+  const ResultadoPago({required this.aprobado, this.estado, this.detalle, this.simulado = false});
 
   final bool aprobado;
+
+  /// Cómo quedó el pago: 'acreditado', 'pendiente' o 'rechazado'.
+  final String? estado;
 
   /// Por qué no salió, en castellano ("La tarjeta no tiene fondos suficientes").
   final String? detalle;
 
   /// El cobro no fue real: todavía no están las credenciales de Mercado Pago.
   final bool simulado;
+
+  /// El cobro se hizo y el banco todavía no se decidió.
+  ///
+  /// **No es un rechazo.** Mostrárselo al cliente como un error es lo que lo
+  /// hacía volver a tocar "Pagar" y pagar dos veces el mismo pedido.
+  bool get enRevision => estado == 'pendiente';
 }
 
 /// Cobros con tarjeta dentro de la app.
@@ -222,9 +231,22 @@ class PagosRepository {
         if (d['error'] != null) throw ErrorModoYa(d['error'] as String);
         return ResultadoPago(
           aprobado: d['aprobado'] == true,
+          estado: d['estado'] as String?,
           detalle: d['detalle'] as String?,
           simulado: d['simulado'] == true,
         );
+      });
+
+  /// Qué pasó con el cobro de un pedido del cliente: `sin_pago`, `en_revision`,
+  /// `acreditado`, `rechazado` o `reembolsado`.
+  ///
+  /// Lo contesta una función de la base porque el cliente **no puede leer
+  /// `pagos`** (lo prohíbe el RLS). Sin esto la pantalla de pago le vuelve a
+  /// pedir la tarjeta a alguien que ya tiene un cobro hecho esperando al banco,
+  /// y ese segundo cobro es plata de verdad.
+  Future<String> estadoDelPago(String pedidoId) => intentar(() async {
+        final r = await _db.rpc('estado_del_pago_de_mi_pedido', params: {'p_pedido': pedidoId});
+        return (r as String?) ?? 'sin_pago';
       });
 
   /// Estado de MODO YA Plus del cliente que está usando la app.

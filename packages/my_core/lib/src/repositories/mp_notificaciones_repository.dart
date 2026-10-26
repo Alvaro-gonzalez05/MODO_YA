@@ -41,8 +41,9 @@ class AvisoMercadoPago {
   /// null = todavia no habia clave del webhook configurada cuando llego.
   final bool? firmaValida;
 
-  /// Hoy el aviso se guarda y no se actua sobre el pedido (0044): queda en
-  /// false y es informacion, no un pendiente de nadie.
+  /// El cron `procesar-avisos-mp` ya lo resolvio (0068). Lo que hizo queda en
+  /// [nota]. En false quiere decir que todavia no le toco el turno, o que no se
+  /// pudo resolver y se esta reintentando.
   final bool procesada;
   final String? nota;
 

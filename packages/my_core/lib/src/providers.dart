@@ -578,3 +578,20 @@ final mpNotificacionesRepositoryProvider = Provider((_) => const MpNotificacione
 final avisosMercadoPagoProvider = StreamProvider<List<AvisoMercadoPago>>(
   (ref) => ref.watch(mpNotificacionesRepositoryProvider).watch(),
 );
+
+// ---- Un cobro que el banco está revisando no se le vuelve a pedir -----------
+
+/// Qué pasó con el cobro de un pedido del cliente: `sin_pago`, `en_revision`,
+/// `acreditado`, `rechazado` o `reembolsado`.
+///
+/// Existe porque el cliente no puede leer `pagos` (RLS) y la pantalla de pago
+/// necesita saber que ya hay un cobro hecho esperando al banco: si no, le
+/// vuelve a pedir la tarjeta, y ese segundo cobro es plata de verdad (hallazgo
+/// A3 de docs/hallazgos-de-la-auditoria-2.md).
+///
+/// No es un stream porque `pagos` no emite realtime para el cliente. Se
+/// refresca con `ref.invalidate` después de intentar pagar; mientras el banco
+/// se decide, lo que se mueve solo es el estado del pedido, que sí está en vivo.
+final estadoDelPagoProvider = FutureProvider.family<String, String>(
+  (ref, pedidoId) => ref.watch(pagosRepositoryProvider).estadoDelPago(pedidoId),
+);
