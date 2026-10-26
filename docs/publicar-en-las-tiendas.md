@@ -9,7 +9,7 @@ que falta para las tiendas.
 | | Estado |
 |---|---|
 | Web con privacidad, términos y eliminar cuenta | Hechas en `landing/`; falta el dominio y publicarlas (`docs/salir-a-produccion.md`, paso 1) |
-| **Eliminar la cuenta desde la app** | **Falta.** La página `/eliminar-cuenta` dice que está en "Mi cuenta", pero la app no lo tiene. Apple rechaza una app que permite crear cuenta y no borrarla desde adentro (guía 5.1.1(v)), y Google Play también lo controla |
+| Eliminar la cuenta desde la app | **Hecho** (0073): Mi cuenta → Eliminar mi cuenta. Las bajas que piden por la web las hace la administración desde su menú → "Dar de baja a un cliente" |
 | Correo de contacto real en `landing/` | Falta (buscar `COMPLETAR`) |
 | Íconos y capturas | Íconos hechos (`flutter_launcher_icons`); faltan las capturas de cada tienda |
 

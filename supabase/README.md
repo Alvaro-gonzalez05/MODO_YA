@@ -80,6 +80,7 @@ van en una migración nueva.
 | `0070_borrar_cargo_del_local_y_entrega_repetida.sql` | **arreglo**: un cargo ya liquidado de un local no se puede borrar, y confirmar dos veces una entrega no suma dos viajes |
 | `0071_solo_se_reparte_en_la_ciudad.sql` | **arreglo**: no se puede guardar una dirección, ubicar un local ni cotizar un envío fuera de la zona de reparto |
 | `0072_lo_que_quedo_abierto_de_los_pagos.sql` | **arreglo**: el alta de Plus no se cobra dos veces, un pago en revisión se consulta aunque no llegue el aviso, y una devolución parcial no anula el pago |
+| `0073_eliminar_la_cuenta.sql` | el cliente elimina su cuenta: se borran el usuario y sus datos, y los pedidos quedan anónimos para las liquidaciones |
 
 ## Decisiones de diseño
 
@@ -730,6 +731,7 @@ el texto del mensaje.
 | `MY006` | datos inválidos (cantidad, opción que no corresponde) |
 | `MY007` | el costo del envío cambió entre la cotización y la confirmación |
 | `MY008` | la dirección (o el punto de retiro, o el local) queda fuera de la zona de reparto |
+| `MY009` | no se puede eliminar la cuenta con un pedido en curso |
 | `42501` | sin permiso o cuenta no aprobada (PostgREST → HTTP 403) |
 
 > No usar la clase `P00xx`: ya está tomada por PL/pgSQL. En particular `P0004`
@@ -825,6 +827,12 @@ rebota y no suma un viaje de más.
 capital no se guarda como dirección, ni se cotiza como mandado, ni ubica un
 local; sin zonas cargadas manda el radio de la ciudad y con una zona activa
 manda el polígono.
+
+**`tests/eliminar_cuenta.sql`** — el cliente elimina su cuenta (0073): con un
+pedido en curso no se puede; después se borran el usuario, las direcciones, las
+tarjetas, Plus y el dispositivo, y los pedidos quedan sin nombre, teléfono ni
+dirección. También que un local no pueda darse de baja solo y que la
+administración pueda dar de baja por email.
 
 **`tests/alta_de_plus_y_pagos_sin_aviso.sql`** — lo que quedó de los pagos
 (0072): el alta de Plus no se cobra dos veces y, aprobada tarde, se activa

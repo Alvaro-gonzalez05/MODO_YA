@@ -215,7 +215,6 @@ Los pasos, en orden, estan en `docs/salir-a-produccion.md` y
   real aprobado. Ver "Estado de los pagos" mas abajo.
 - **Mails:** sin SMTP propio. La confirmacion de email esta apagada y la app no
   ofrece recuperar la contrasena hasta que lo haya (`MY_CORREO_ACTIVO`).
-- **Eliminar la cuenta desde la app:** falta, y las dos tiendas lo exigen.
 - **Fuentes:** se descargan en tiempo de ejecucion; conviene empaquetarlas.
 
 La ubicacion del rider en segundo plano ya esta: sin "Permitir todo el tiempo"
