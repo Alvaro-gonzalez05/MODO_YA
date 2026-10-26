@@ -646,8 +646,17 @@ class LiquidacionesRepository {
             if (fecha != null) 'fecha': _dia(fecha),
           }));
 
+  /// Solo mientras no esté liquidado, igual que el del rider.
+  ///
+  /// Va por RPC y no con un `delete` a la tabla porque el guard tiene que
+  /// estar en la base: la lista es un stream en vivo, y si la liquidación se
+  /// cierra desde otro dispositivo justo antes de que llegue el evento, el
+  /// botón de borrar sigue dibujado. El `delete` directo se llevaba un renglón
+  /// que ya estaba adentro de una liquidación cerrada, y el total guardado no
+  /// se recalcula: al local le quedaba el descuento sin la línea que lo
+  /// explica. Para corregir uno ya liquidado se carga otro con monto negativo.
   Future<void> borrarCargo(String id) =>
-      intentar(() => _db.from('cargos_comercio').delete().eq('id', id));
+      intentar(() => _db.rpc('admin_borrar_cargo_comercio', params: {'p_cargo': id}));
 
   Future<void> cerrarComercio(String comercioId, DateTime desde, DateTime hasta, {String? observacion}) =>
       intentar(() => _db.rpc('cerrar_liquidacion_comercio', params: {

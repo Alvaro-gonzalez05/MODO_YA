@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
@@ -426,6 +427,27 @@ class _Historial extends ConsumerWidget {
   }
 }
 
+/// Lee el monto escrito **respetando el signo**.
+///
+/// Antes el parseo era `int.tryParse(texto.replaceAll(RegExp(r'\D'), ''))`, que
+/// borra el `-` antes de leerlo, y el campo era `soloNumeros` así que el signo
+/// no se podía ni tipear. Un ajuste negativo era imposible de cargar desde la
+/// pantalla, aunque el esquema lo contempla desde 0035 ("Negativo: se le suma,
+/// una devolución") y el formulario del rider sí lo permita.
+///
+/// Es la única vía para devolverle una penalidad a un local cuando ya se
+/// liquidó: borrar el cargo no sirve (los totales guardados no se recalculan)
+/// y entrar por SQL no es una respuesta.
+int? montoConSigno(String texto) {
+  final limpio = texto.replaceAll(RegExp(r'[^\d-]'), '');
+  final digitos = limpio.replaceAll('-', '');
+  if (digitos.isEmpty) return null;
+  final n = int.tryParse(digitos);
+  if (n == null) return null;
+  // El signo cuenta solo adelante: "-1500" devuelve, "1500-" es un tipeo.
+  return limpio.startsWith('-') ? -n : n;
+}
+
 /// Cargos de un local: la mensualidad del plan, la publicidad y los ajustes.
 Future<void> mostrarCargos(BuildContext context, WidgetRef ref, String comercioId, String nombre) =>
     mostrarFormularioEmergente(
@@ -462,7 +484,7 @@ class _CargosState extends ConsumerState<_Cargos> {
   }
 
   Future<void> _agregar() async {
-    final monto = int.tryParse(_monto.text.replaceAll(RegExp(r'\D'), ''));
+    final monto = montoConSigno(_monto.text);
     if (monto == null || monto == 0 || _detalle.text.trim().isEmpty) {
       mostrarError(context, 'Escribí un detalle y un monto.');
       return;
@@ -501,13 +523,22 @@ class _CargosState extends ConsumerState<_Cargos> {
           ],
         ),
         const SizedBox(height: MySpacing.sm),
+        Text(
+          'Se le descuenta de lo que cobra en su próxima liquidación. '
+          'Un monto negativo se lo devuelve.',
+          style: MyType.bodySm.copyWith(color: MyColors.secondary),
+        ),
+        const SizedBox(height: MySpacing.sm),
         MyCampo(controller: _detalle, label: 'Detalle', hint: 'Plan Básico de septiembre', icon: Symbols.description),
         MyCampo(
           controller: _monto,
-          label: 'Monto a descontarle',
-          hint: '15000',
+          label: 'Cuánto',
+          hint: '15000 · -15000 para devolverle',
           icon: Symbols.payments,
-          soloNumeros: true,
+          keyboard: const TextInputType.numberWithOptions(signed: true),
+          // `soloNumeros` filtra con `digitsOnly`, que se come el signo mientras
+          // se tipea: el campo quedaba sin forma de cargar una devolución.
+          formatos: [FilteringTextInputFormatter.allow(RegExp(r'[\d-]'))],
         ),
         MyBotonAccion(label: 'Agregar cargo', icon: Symbols.add, onPressed: _agregar),
         const Divider(height: MySpacing.lg),
@@ -524,18 +555,37 @@ class _CargosState extends ConsumerState<_Cargos> {
               }),
               title: Text(c.detalle, style: MyType.labelMd),
               subtitle: Text(
-                '${Formato.fechaCorta(c.fecha)}${c.liquidado ? ' · ya liquidado' : ''}',
+                '${Formato.fechaCorta(c.fecha)}'
+                // Un negativo no es un descuento: hay que poder distinguirlo
+                // de un ojo, o la lista se lee como si se le cobrara todo.
+                '${c.monto < 0 ? ' · se le devuelve' : ''}'
+                '${c.liquidado ? ' · ya liquidado' : ''}',
                 style: MyType.bodySm.copyWith(color: MyColors.secondary),
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(Formato.pesos(c.monto), style: MyType.labelLg),
+                  Text(
+                    Formato.pesos(c.monto),
+                    style: MyType.labelLg.copyWith(
+                      color: c.monto < 0 ? MyColors.tertiary : null,
+                    ),
+                  ),
                   if (!c.liquidado)
                     IconButton(
                       tooltip: 'Borrar',
                       icon: Icon(Symbols.delete, size: 20, color: MyColors.error),
-                      onPressed: () => ref.read(liquidacionesRepositoryProvider).borrarCargo(c.id),
+                      // La lista es un stream: si la liquidación se cerró desde
+                      // otro dispositivo y el evento no llegó, el botón todavía
+                      // está acá y la base rebota el borrado. Sin mostrar el
+                      // error el toque no hacía nada y no se entendía por qué.
+                      onPressed: () async {
+                        try {
+                          await ref.read(liquidacionesRepositoryProvider).borrarCargo(c.id);
+                        } catch (e) {
+                          if (context.mounted) mostrarError(context, e);
+                        }
+                      },
                     ),
                 ],
               ),

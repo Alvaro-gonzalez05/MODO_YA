@@ -243,26 +243,52 @@ class _Cerradas extends ConsumerWidget {
 
 /// Lo del día y los últimos viajes: el dato que el rider mira varias veces por
 /// jornada, sin tener que entrar a la liquidación.
+///
+/// El número grande sale de `pendiente_de_liquidar_riders` con el período
+/// "hoy a hoy", la **misma** función que alimenta "Lo que vas a cobrar" y la
+/// bandeja de la administración. Antes se calculaba acá sumando
+/// `gananciaRepartidor` de los entregados, y era el único de los tres cálculos
+/// que podía dar un número de signo distinto al de la liquidación: no restaba
+/// el efectivo que el rider junta en la puerta (un mandado se cobra entero en
+/// mano, 0052) ni los cargos de 0062. Con dos mandados en el día el cartel
+/// decía "HOY $6.000" cuando la liquidación iba a dar negativa y el que tenía
+/// que poner plata era el rider.
+///
+/// La semana también sale de ahí y no de los últimos 100 envíos, que es todo
+/// lo que trae `enviosDelRepartidorProvider`: una semana cargada subcontaba sin
+/// decirlo.
+///
+/// Contrapartida asumida: la función descuenta lo que ya entró en una
+/// liquidación cerrada. Si la administración cierra un período que incluye hoy,
+/// el cartel vuelve a cero. Es correcto —ya se lo pagaron— y es lo mismo que
+/// muestra la otra pestaña.
 class _Hoy extends ConsumerWidget {
   const _Hoy();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    final (semanaDesde, semanaHasta) = RangoDePeriodo.estaSemana.periodo;
+
+    final delDia = ref.watch(miLiquidacionDeRiderProvider((desde: hoy, hasta: hoy)));
+    final deLaSemana = ref.watch(miLiquidacionDeRiderProvider((desde: semanaDesde, hasta: semanaHasta)));
     final envios = ref.watch(enviosDelRepartidorProvider);
 
     return MyAsync(
-      valor: envios,
-      onReintentar: () => ref.invalidate(enviosDelRepartidorProvider),
-      datos: (lista) {
-        final entregados = lista.where((e) => e.estado == EstadoEnvio.entregado).toList();
-        final ahora = DateTime.now();
-        bool esHoy(DateTime d) => d.year == ahora.year && d.month == ahora.month && d.day == ahora.day;
-        final inicioSemana = DateTime(ahora.year, ahora.month, ahora.day)
-            .subtract(Duration(days: ahora.weekday - 1));
-
-        int suma(Iterable<Envio> es) => es.fold(0, (s, e) => s + e.cotizacion.gananciaRepartidor);
-        final hoy = entregados.where((e) => esHoy(e.entregadoEn ?? e.creadoEn));
-        final semana = entregados.where((e) => (e.entregadoEn ?? e.creadoEn).isAfter(inicioSemana));
+      valor: delDia,
+      onReintentar: () => ref.invalidate(pendientesRidersProvider),
+      datos: (r) {
+        // Sin movimientos la función no devuelve fila (ver 0065): es un día en
+        // cero, no un error.
+        final total = r?.total ?? 0;
+        final ganancias = r?.ganancias ?? 0;
+        final efectivo = r?.efectivo ?? 0;
+        final cargos = r?.cargos ?? 0;
+        final viajes = r?.envios ?? 0;
+        final entregados = (envios.value ?? const <Envio>[])
+            .where((e) => e.estado == EstadoEnvio.entregado)
+            .toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -271,14 +297,36 @@ class _Hoy extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const MyBadge('HOY', tone: MyBadgeTone.dark),
+                  Wrap(
+                    spacing: MySpacing.xs,
+                    children: [
+                      const MyBadge('HOY', tone: MyBadgeTone.dark),
+                      if (total < 0) const MyBadge('TENÉS QUE RENDIR', tone: MyBadgeTone.dark),
+                    ],
+                  ),
                   const SizedBox(height: MySpacing.sm),
-                  Text(Formato.pesos(suma(hoy)), style: MyType.displayLg.copyWith(color: Colors.white)),
                   Text(
-                    '${hoy.length} viaje${hoy.length == 1 ? '' : 's'} entregado'
-                    '${hoy.length == 1 ? '' : 's'}',
+                    Formato.pesos(total.abs()),
+                    style: MyType.displayLg.copyWith(color: Colors.white),
+                  ),
+                  Text(
+                    total < 0
+                        ? 'Juntaste más de lo que ganaste'
+                        : '$viajes viaje${viajes == 1 ? '' : 's'} entregado'
+                            '${viajes == 1 ? '' : 's'}',
                     style: MyType.bodyMd.copyWith(color: Colors.white70),
                   ),
+                  // El desglose solo cuando hay algo que explicar: si el día es
+                  // ganancia pura, repetir el mismo número confunde.
+                  if (efectivo != 0 || cargos != 0) ...[
+                    const SizedBox(height: MySpacing.xs),
+                    Text(
+                      'Ganaste ${Formato.pesos(ganancias)}'
+                      '${efectivo == 0 ? '' : ' · juntaste ${Formato.pesos(efectivo)} en la puerta'}'
+                      '${cargos == 0 ? '' : ' · cargos ${Formato.pesos(cargos)}'}',
+                      style: MyType.bodySm.copyWith(color: Colors.white70),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -286,13 +334,13 @@ class _Hoy extends ConsumerWidget {
             MyStatRow(tiles: [
               MyStatTile(
                 icon: Symbols.date_range,
-                value: Formato.pesos(suma(semana)),
+                value: Formato.pesos(deLaSemana.value?.total ?? 0),
                 label: 'Esta semana',
               ),
               MyStatTile(
                 icon: Symbols.package_2,
-                value: '${entregados.length}',
-                label: 'Entregados (últimos 100)',
+                value: '${deLaSemana.value?.envios ?? 0}',
+                label: 'Entregados esta semana',
               ),
             ]),
             const SizedBox(height: MySpacing.lg),
@@ -318,7 +366,11 @@ class _Hoy extends ConsumerWidget {
                             Text(
                               '${Formato.fechaCorta(e.entregadoEn ?? e.creadoEn)} '
                               '${Formato.hora(e.entregadoEn ?? e.creadoEn)} - '
-                              '${Formato.km(e.cotizacion.distanciaKm)}',
+                              '${Formato.km(e.cotizacion.distanciaKm)}'
+                              // Sin esto un mandado se lee como ganancia pura:
+                              // el rider cobró el total en mano y tiene que
+                              // rendirlo (0052).
+                              '${e.hayQueCobrar ? ' · juntaste ${Formato.pesos(e.cobrarAlEntregar)}' : ''}',
                               style: MyType.bodySm.copyWith(color: MyColors.secondary),
                             ),
                           ],
