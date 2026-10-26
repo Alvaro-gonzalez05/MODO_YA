@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+# Las dos páginas a las que llevan los mails no tienen nada que buscar.
+Disallow: /confirmar
+Disallow: /nueva-clave
+
+Sitemap: https://www.modoya.app/sitemap.xml
