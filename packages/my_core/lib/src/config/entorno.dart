@@ -28,6 +28,28 @@ abstract final class Entorno {
   /// pagos simulados, para poder probar la pantalla sin cuenta.
   static const mpPublicKey = String.fromEnvironment('MY_MP_PUBLIC_KEY');
 
+  /// De dónde salen las baldosas del mapa (`{z}`, `{x}`, `{y}`). El valor por
+  /// defecto es el servidor público de OpenStreetMap, que sirve para
+  /// desarrollar pero **no admite uso productivo**: para publicar se compila
+  /// con la URL de un proveedor (con su clave, que es pública como la de
+  /// Mercado Pago) o la de baldosas propias. Ver docs/salir-a-produccion.md.
+  static const mapaBaldosas = String.fromEnvironment(
+    'MY_MAPA_BALDOSAS',
+    defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  );
+
+  /// Lo que hay que reconocer al pie del mapa. Cambia con el proveedor.
+  static const mapaAtribucion = String.fromEnvironment(
+    'MY_MAPA_ATRIBUCION',
+    defaultValue: 'OpenStreetMap',
+  );
+
+  /// Si Supabase ya manda mails de verdad (SMTP propio). Sin eso el servicio de
+  /// Supabase solo le escribe a los miembros del proyecto y como mucho dos
+  /// por hora: ofrecer "¿Olvidaste tu contraseña?" sería prometer un mail que
+  /// no llega. Se prende en env/publico.json cuando el correo está andando.
+  static const correoActivo = bool.fromEnvironment('MY_CORREO_ACTIVO');
+
   static const supabaseUrl = String.fromEnvironment('MY_SUPABASE_URL');
   static const supabaseKey = String.fromEnvironment('MY_SUPABASE_KEY');
 

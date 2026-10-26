@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:my_core/my_core.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
@@ -14,23 +15,24 @@ export 'package:latlong2/latlong.dart' show LatLng;
 
 /// Mapas de MODO YA.
 ///
-/// PROVISORIO: las baldosas salen del servidor publico de OpenStreetMap. Su
-/// politica de uso lo permite para desarrollo y volumen bajo, pero NO para una
-/// app en produccion. Antes de salir hay que cambiar [_capaBase] por el archivo
-/// propio malargue.pmtiles que define el stack (vector_map_tiles_pmtiles).
-/// Todo el resto de la app no se entera: usa estos widgets.
+/// Las baldosas salen de [Entorno.mapaBaldosas], que se fija al compilar. Sin
+/// configurar es el servidor publico de OpenStreetMap: sirve para desarrollar,
+/// pero su politica de uso NO lo permite para una app en produccion. El
+/// proveedor de produccion se elige en env/publico.json, sin tocar codigo (ver
+/// docs/salir-a-produccion.md). Todo el resto de la app no se entera: usa estos
+/// widgets.
 abstract final class MyMapa {
   /// Plaza San Martin, Malargue.
   static const centroMalargue = LatLng(-35.4756, -69.5847);
 
   static Widget _capaBase() => TileLayer(
-        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        urlTemplate: Entorno.mapaBaldosas,
         userAgentPackageName: 'com.modoya.app',
         maxZoom: 19,
       );
 
   static Widget _atribucion() => const SimpleAttributionWidget(
-        source: Text('OpenStreetMap'),
+        source: Text(Entorno.mapaAtribucion),
         backgroundColor: Color(0xCCFFFFFF),
       );
 
@@ -43,12 +45,13 @@ abstract final class MyMapa {
 
   /// La ruta manejando de [desde] hasta [hasta].
   ///
-  /// PROVISORIO: la calcula el servidor publico de OSRM. Igual que las
-  /// baldosas de [_capaBase], su politica de uso lo permite para desarrollo y
-  /// volumen bajo pero NO para una app en produccion: no tiene SLA, limita por
-  /// IP y pide expresamente que nadie lo use en serio. Antes de salir hay que
-  /// levantar un OSRM propio con el extracto de Cuyo (o contratar un servicio)
-  /// y cambiar solo [_urlDeRuta]. El resto de la app no se entera.
+  /// La pide la Edge Function `ruta`, que es la que sabe a que proveedor
+  /// preguntarle y guarda su clave como secreto. Asi, pasar del servidor
+  /// publico de OSRM (que no admite uso productivo) a uno pago o propio es
+  /// cargar un secreto en Supabase, sin sacar una version nueva de la app.
+  ///
+  /// Sin Supabase configurado (pantallas sueltas, pruebas) se le pregunta
+  /// directo al OSRM publico, como antes.
   ///
   /// Nunca falla ni tira excepcion: si el servicio no contesta, tarda o
   /// devuelve algo que no se entiende, vuelve la linea recta entre los dos
@@ -56,6 +59,7 @@ abstract final class MyMapa {
   /// dibujar.
   static Future<MyRuta> ruta({required LatLng desde, required LatLng hasta}) async {
     final recta = MyRuta(puntos: [desde, hasta], esRecta: true);
+    if (Entorno.tieneSupabase) return _rutaPorServidor(desde, hasta, recta);
     try {
       final r = await http
           .get(_urlDeRuta(desde, hasta))
@@ -81,6 +85,29 @@ abstract final class MyMapa {
         puntos: puntos,
         duracion: segundos == null ? null : Duration(seconds: segundos),
       );
+    } catch (_) {
+      return recta;
+    }
+  }
+
+  static Future<MyRuta> _rutaPorServidor(LatLng desde, LatLng hasta, MyRuta recta) async {
+    try {
+      final r = await Backend.db.functions.invoke('ruta', body: {
+        'desde': {'lat': desde.latitude, 'lng': desde.longitude},
+        'hasta': {'lat': hasta.latitude, 'lng': hasta.longitude},
+      }).timeout(const Duration(seconds: 8));
+      final cuerpo = r.data as Map<String, dynamic>;
+      final puntos = [
+        for (final p in (cuerpo['puntos'] as List).cast<List>())
+          LatLng((p[0] as num).toDouble(), (p[1] as num).toDouble()),
+      ];
+      if (puntos.length < 2) return recta;
+      // Mismo cosido de puntas que en la consulta directa: el camino viene
+      // pegado al eje de la calle y la casa puede estar en mitad de cuadra.
+      if (metrosEntre(puntos.first, desde) > 5) puntos.insert(0, desde);
+      if (metrosEntre(puntos.last, hasta) > 5) puntos.add(hasta);
+      final segundos = (cuerpo['segundos'] as num?)?.round();
+      return MyRuta(puntos: puntos, duracion: segundos == null ? null : Duration(seconds: segundos));
     } catch (_) {
       return recta;
     }
