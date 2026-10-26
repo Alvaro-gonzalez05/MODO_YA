@@ -12,10 +12,11 @@ hay plata real de por medio.
 
 **Estado al 26/10/2026:** los 13 arreglados. Los tres de pagos (A1, A2, A3) y
 los cuatro que quedaban (C4, D1, D2, D3) se integraron el 26/10; sus migraciones
-(`0068` y `0070`) ya estaban aplicadas en la base desde el 22/10. **Para que A1
-y A3 anden de verdad falta desplegar `pagar-pedido` y `mp-procesar-avisos`**:
-la base ya está lista, pero las Edge Functions publicadas siguen siendo las
-viejas.
+(`0068` y `0070`) ya estaban aplicadas en la base desde el 22/10, y `0072` cerró
+lo que quedaba abierto de A1 y A3. **Para que A1 y A3 anden de verdad falta
+publicar `pagar-pedido` y `mp-procesar-avisos`**: la base ya está lista, pero
+las Edge Functions publicadas siguen siendo las viejas. Ojo: la `v1.15.0` ya
+compila con la clave pública de producción.
 
 Cada hallazgo dice si está **verificado** (lo comprobé contra el código o la
 base) o **sin verificar** (viene del informe de la auditoría y es creíble, pero
@@ -50,9 +51,16 @@ Solo se procesan avisos con firma válida. `cerrar_pagos_vencidos()` le da un d�
 a un cobro que el banco está revisando, en vez de media hora, y si la plata ya
 entró marca el reembolso. Probado en `tests/pagos_en_revision.sql`.
 
-Queda un hueco: todo depende de que llegue el aviso, y el webhook todavía no
-recibió ninguno real. Si Mercado Pago aprueba un pago después del día y el aviso
-no llega, la plata no se devuelve sola.
+El hueco que quedaba —todo dependía de que llegara el aviso— lo cerró `0072`:
+los pagos en revisión con una orden real se le consultan a Mercado Pago cada 10
+minutos durante una semana, llegue o no el aviso. Probado en
+`tests/alta_de_plus_y_pagos_sin_aviso.sql`. (Y el webhook sí funciona en
+producción: el 13/10 llegaron tres avisos reales con firma válida.)
+
+Lo mismo con las devoluciones hechas desde el panel: antes cualquier
+devolución dejaba el pago como `reembolsado` entero; desde `0072` una parcial
+anota cuánto volvió, deja el pago acreditado y lo marca para que lo mire una
+persona.
 
 ### A2. La renovación de Plus cobrada y no activada se vuelve a cobrar todos los días — *sin verificar* — **ARREGLADO**
 
@@ -84,7 +92,15 @@ dos veces. La pantalla de pago muestra "El banco está revisando tu pago" en
 lugar del formulario (`estado_del_pago_de_mi_pedido`). Probado en
 `tests/pagos_en_revision.sql`.
 
-Lo mismo no se hizo para el alta de Plus: su clave todavía sale del token.
+El alta de Plus tenía el mismo agujero (la clave salía del token) y lo cerró
+`0072` con `tomar_el_cobro_plus`. De paso, un alta que el banco aprueba tarde
+ahora activa el mes sola, sin que lo tenga que hacer una persona.
+
+Y un bug vecino, encontrado en la misma revisión: si Mercado Pago contestaba un
+4xx **sin orden** (token vencido, datos mal), `pagar-pedido` se caía con un 500
+y el reintento usaba la misma clave, con lo que Mercado Pago podía devolver el
+mismo error para siempre. Ahora ese intento queda como rechazado y el próximo
+lleva una clave nueva.
 
 ---
 

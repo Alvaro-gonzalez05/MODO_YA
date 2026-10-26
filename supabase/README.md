@@ -78,6 +78,8 @@ van en una migración nueva.
 | `0068_el_pago_en_revision_se_resuelve.sql` | **arreglo**: un pago en revisión se resuelve con el aviso de Mercado Pago, no se cobra dos veces y, si el pedido ya murió, se devuelve; la renovación de Plus cobrada y no activada no se vuelve a cobrar |
 | `0069_el_envio_regalado_se_cobra_si_ocurrio.sql` | **arreglo**: al local se le cobraba el envío que regaló con Plus en pedidos que se cancelaron, y el carrito prometía un envío gratis que el pedido cobraba entero |
 | `0070_borrar_cargo_del_local_y_entrega_repetida.sql` | **arreglo**: un cargo ya liquidado de un local no se puede borrar, y confirmar dos veces una entrega no suma dos viajes |
+| `0071_solo_se_reparte_en_la_ciudad.sql` | **arreglo**: no se puede guardar una dirección, ubicar un local ni cotizar un envío fuera de la zona de reparto |
+| `0072_lo_que_quedo_abierto_de_los_pagos.sql` | **arreglo**: el alta de Plus no se cobra dos veces, un pago en revisión se consulta aunque no llegue el aviso, y una devolución parcial no anula el pago |
 
 ## Decisiones de diseño
 
@@ -229,6 +231,14 @@ pantalla de avisos.
 
 Mientras el cobro está en revisión, `tomar_el_cobro()` no deja cobrar el mismo
 pedido otra vez, y `cerrar_pagos_vencidos()` le da un día en vez de media hora.
+
+Y para no depender de que el aviso llegue (0072), el mismo cron despierta a
+`mp-procesar-avisos` cuando hay pagos en revisión con una orden real: les
+pregunta a Mercado Pago por cada uno cada 10 minutos, durante una semana
+(`pagos_por_consultar()`).
+
+El webhook funciona en producción: el 13/10/2026 llegaron tres avisos reales con
+firma válida.
 
 Reglas de Mercado Pago que condicionan el diseño:
 
@@ -719,6 +729,7 @@ el texto del mensaje.
 | `MY005` | el comercio está cerrado |
 | `MY006` | datos inválidos (cantidad, opción que no corresponde) |
 | `MY007` | el costo del envío cambió entre la cotización y la confirmación |
+| `MY008` | la dirección (o el punto de retiro, o el local) queda fuera de la zona de reparto |
 | `42501` | sin permiso o cuenta no aprobada (PostgREST → HTTP 403) |
 
 > No usar la clase `P00xx`: ya está tomada por PL/pgSQL. En particular `P0004`
@@ -810,6 +821,16 @@ liquidar se borra, ya liquidado no, y un cargo negativo le devuelve la plata.
 **`tests/entrega_repetida.sql`** — confirmar dos veces la misma entrega (0070)
 rebota y no suma un viaje de más.
 
+**`tests/zona_de_reparto.sql`** — la zona de reparto (0071). Un pin en Mendoza
+capital no se guarda como dirección, ni se cotiza como mandado, ni ubica un
+local; sin zonas cargadas manda el radio de la ciudad y con una zona activa
+manda el polígono.
+
+**`tests/alta_de_plus_y_pagos_sin_aviso.sql`** — lo que quedó de los pagos
+(0072): el alta de Plus no se cobra dos veces y, aprobada tarde, se activa
+sola; qué pagos en revisión se consultan sin aviso; y que una devolución
+parcial no deje el pago como si no hubiera entrado nada.
+
 > **Ojo al escribir pruebas de RLS.** Estos scripts corren como `postgres`, que
 > es dueño de las tablas y **saltea RLS por completo**. Cualquier comprobación
 > de políticas necesita `set local role authenticated` (y volver con
@@ -836,5 +857,13 @@ responde 200. No escribe nada.
 - **Custom Access Token Hook** para llevar el rol en el JWT. Hoy las políticas
   lo leen de `perfiles` con funciones `security definer`, que funciona bien; el
   hook ahorraría una consulta por request.
-- **Zonas de cobertura**: la tabla existe, falta cargar el polígono de Malargüe
-  y rechazar destinos fuera del área.
+- **El polígono de Malargüe.** Desde 0071 se rechazan destinos fuera del área,
+  pero con el radio de la ciudad (`ciudades.radio_km`, 15 km). Cuando se sepa
+  exactamente hasta dónde llegan los riders, se carga una fila en `zonas` y
+  pasa a mandar el polígono, sin tocar código:
+
+  ```sql
+  insert into public.zonas (ciudad_id, nombre, poligono)
+  select id, 'Malargüe', extensions.ST_GeogFromText('POLYGON((lng lat, ..., lng lat))')
+    from public.ciudades where nombre = 'Malargue';
+  ```

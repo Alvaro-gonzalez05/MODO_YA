@@ -205,9 +205,11 @@ el cliente. Tambien cadeteria, rechazos, reglas de opciones y tiempo real.
 - **Mapas:** las baldosas salen del servidor publico de OpenStreetMap, que no
   admite uso productivo. Hay que pasar al archivo propio `malargue.pmtiles`
   (un cambio en `packages/my_ui/lib/src/widgets/mapa.dart`).
-- **Pagos:** se cobra con tarjeta dentro de la app, pero contra el **sandbox**
-  de Mercado Pago. Ver "Estado de los pagos" mas abajo: es lo unico que separa
-  a MODO YA de estar cobrando de verdad.
+- **Ruta del rider en el mapa:** la calcula el servidor publico de OSRM, que
+  tampoco admite uso productivo (mismo archivo).
+- **Pagos:** las credenciales de produccion ya estan cargadas y la `v1.15.0`
+  publicada ya tokeniza tarjetas reales, pero todavia no salio ningun cobro
+  real aprobado. Ver "Estado de los pagos" mas abajo.
 - **Ubicacion del rider en segundo plano:** hoy se manda con la app abierta.
 - **Mails:** la confirmacion de email esta desactivada (cualquiera se registra
   sin validar su correo). Falta SMTP propio para volver a activarla y para
@@ -216,46 +218,43 @@ el cliente. Tambien cadeteria, rechazos, reglas de opciones y tiempo real.
 
 ## Estado de los pagos
 
-**Al 28/09/2026: la app cobra de verdad, pero con plata de prueba.** Falta una
-sola cosa —las credenciales de produccion de Mercado Pago— y quien las tenga
-puede terminarlo sin escribir codigo.
+**Al 26/10/2026: las credenciales de produccion estan cargadas y la app
+publicada ya puede cobrar de verdad, pero todavia no hubo un cobro real
+aprobado.** Los tres intentos del 13/10 rebotaron con `failed`.
 
 ### Que esta hecho y probado
 
-El circuito entero corre contra Mercado Pago real, en modo sandbox, con la
-**API de Orders** (la vieja de Payments quedo en mantenimiento):
+El circuito corre con la **API de Orders** (la vieja de Payments quedo en
+mantenimiento). Se probo entero en sandbox; en produccion solo se vieron los
+tres rechazos del 13/10.
 
 | | Estado |
 |---|---|
-| Cobro de un pedido con tarjeta | Probado: aprobado, rechazado y en revision |
-| Alta de MODO YA Plus | Probado |
+| Cobro de un pedido con tarjeta | Probado en sandbox: aprobado, rechazado y en revision |
+| Alta de MODO YA Plus | Probado en sandbox; desde 0072 no se puede cobrar dos veces |
 | Renovacion mensual de Plus | Escrita y probada del lado de la base; el cobro no se pudo probar (ver abajo) |
 | Tarjetas guardadas | Escrito; **no se puede probar en sandbox** (ver abajo) |
-| Webhook (`mp-webhook`) | Publicado y probado con avisos firmados; nunca recibio uno real |
+| Webhook (`mp-webhook`) | **Funciona en produccion**: el 13/10 llegaron tres avisos reales con firma valida |
+| Avisos y pagos en revision (`mp-procesar-avisos`) | Escrita y probada del lado de la base; **falta publicarla** |
+
+Donde esta cada credencial: la clave publica de produccion esta en
+`env/publico.json` desde el 16/10 (se commitea: es publica por diseno), el
+access token y la clave del webhook son secretos de Supabase
+(`.\supabase\scripts\guardar_secreto.ps1`). `env/dev.json` no tiene clave
+publica a proposito: el server local simula los pagos.
 
 ### Que falta, en orden
 
-1. **Credenciales de produccion.** Hoy hay cargadas unas de una *cuenta de
-   prueba* de Mercado Pago. Con las de produccion:
-   - la clave publica va en `env/dev.json` **y** en `env/publico.json` (esta
-     ultima si se commitea: es publica por diseno y es la que compila los
-     instaladores);
-   - el access token va como secreto, con
-     `.\supabase\scripts\guardar_secreto.ps1 MP_ACCESS_TOKEN`.
-2. **El webhook no recibio ni un aviso.** La URL quedo cargada en el panel de
-   Mercado Pago y su clave secreta esta en el secreto `MP_WEBHOOK_SECRET`, pero
-   `mp_notificaciones` sigue vacia: ni del simulador ni de los pagos de prueba.
-   Hay que entrar al panel y ver si la URL quedo en otra aplicacion. **Mientras
-   el webhook no funcione, una devolucion hecha desde el panel de Mercado Pago
-   no llega a la base y la liquidacion de ese local queda mal.**
+1. **Publicar `pagar-pedido` y `mp-procesar-avisos`.** La `pagar-pedido`
+   publicada es del 28/09: no tiene la proteccion contra el doble cobro (0068 y
+   0072). `mp-procesar-avisos` no existe en el servidor, y el cron que la llama
+   cada minuto da 404.
+2. **Un cobro real chico, con devolucion**, para validar las dos puntas (guia
+   en `docs/probar-mercado-pago.md`).
 3. **Cobros recurrentes (Card on File MIT).** Hay que pedirselos a Mercado Pago
    para la cuenta. Sin eso, Plus no se renueva solo: rebota tres veces y el
    cliente renueva a mano (el sistema ya lo contempla, pero conviene saberlo).
-4. ~~Cortar efectivo y transferencia~~ **HECHO** (0058). En la app solo se
-   paga con tarjeta, y la base lo valida igual por si una version vieja manda
-   `efectivo`. Los mandados no se tocaron: se siguen pagando al rider en mano.
-5. **Sacar la version** con `[obligatoria]` en el mensaje del tag, y hacer un
-   cobro real chico con devolucion para validar las dos puntas.
+4. ~~Cortar efectivo y transferencia~~ **HECHO** (0058).
 
 ### Dos cosas que cuestan una tarde si no se saben
 
@@ -269,13 +268,12 @@ El circuito entero corre contra Mercado Pago real, en modo sandbox, con la
   revision. Como el formulario exige nombre y apellido y Mercado Pago solo mira
   la primera palabra, se escriben asi: `APRO PEREZ`, `FUND PEREZ`.
 
-### Por que la app publicada sigue andando
+### Versiones viejas instaladas
 
-`env/publico.json` no tiene clave publica, asi que los instaladores publicados
-arman un token simulado. Como el servidor **si** tiene credenciales, ese token
-no serviria para cobrar: la Edge Function detecta que el token es simulado y
-resuelve la llamada como simulada, en vez de intentar cobrarlo y dejar al
-cliente sin poder pagar por una actualizacion que no hizo.
+Una version compilada sin clave publica (hasta la 1.14) arma un token simulado.
+El servidor lo detecta y resuelve el pago como simulado en vez de intentar
+cobrarlo, asi que esas versiones no cobran plata real. La `v1.15.0` en adelante
+si cobra.
 
 ## Del diseno que no se implemento a proposito
 
