@@ -9,6 +9,16 @@ crear cuentas ni cargar claves desde el código).
 
 ## 1. Un dominio y la web publicada
 
+**Hecho el 26/10/2026:** el dominio es `modoya.app` (Namecheap) y la web está
+en Vercel, proyecto `modo_ya-landing`, carpeta `landing/` de este repo. Se
+publica sola con cada push a `main`. `modoya.app` redirige a
+`https://www.modoya.app`, que es la dirección que tiene Supabase para los links
+de los mails. DNS en Namecheap: `A @ 216.150.1.1` y `CNAME www` al host que da
+Vercel. Falta lo de "Verify contacts" en Namecheap: si no se confirma el email
+del dueño, el registrador suspende el dominio.
+
+Lo que sigue de este paso es para referencia.
+
 **Bloquea todo lo demás.** Sin dominio no hay correo propio, y Google Play y
 Apple piden una dirección pública para la política de privacidad y para
 eliminar la cuenta.
