@@ -38,7 +38,7 @@ usuario. "El botón de PDF estaba escondido", no "fix: button visibility".
 Postgres en Supabase con RLS en todo. La lógica de negocio vive en funciones
 `security definer`, no en la app. Las vistas usan `security_invoker`.
 
-Las migraciones están numeradas (`0001_…` a `0075_…`) y se aplican con:
+Las migraciones están numeradas (`0001_…` a `0077_…`) y se aplican con:
 
 ```bash
 powershell -NoProfile -Command "& './supabase/scripts/sql.ps1' -Archivo 'ruta/al/archivo.sql'"
@@ -109,6 +109,10 @@ node tools/dev.mjs modo_ya 5051
 Compila en `D:\dev\modoya-dev` y sirve el build. **Trampa:** si ya hay un build
 viejo ahí, lo sirve al instante mientras recompila — hay que verificar que el
 bundle servido sea el nuevo antes de sacar conclusiones o capturas.
+
+Cada compilación **recarga sola la página** (en la app instalada eso no
+existe). Si "se refresca sola" sin que nadie toque código, el log dice qué
+archivo la disparó: `>> Compilando modo_ya (cambió …)`.
 
 ## Entorno Windows — trampas conocidas
 

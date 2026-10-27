@@ -193,10 +193,11 @@ class _ComoSeCalcula extends StatelessWidget {
           const SizedBox(height: MySpacing.xs),
           Text(
             'Se suma lo que vendiste de tu menú en los pedidos entregados y se '
-            'resta la mensualidad del plan, la publicidad, los envíos que '
+            'resta la comisión por pedido, lo que cobra Mercado Pago por las '
+            'tarjetas, la mensualidad del plan, la publicidad, los envíos que '
             'regalaste con Plus y las penalidades por rechazar un pedido ya '
-            'cobrado. El envío no entra: esa plata es de MODO YA, que le paga '
-            'al rider su parte.',
+            'cobrado o no responderlo a tiempo. El envío no entra: esa plata es '
+            'de MODO YA, que le paga al rider su parte.',
             style: MyType.bodySm.copyWith(color: MyColors.onSecondaryFixed),
           ),
         ],

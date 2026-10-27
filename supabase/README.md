@@ -83,6 +83,8 @@ van en una migración nueva.
 | `0073_eliminar_la_cuenta.sql` | el cliente elimina su cuenta: se borran el usuario y sus datos, y los pedidos quedan anónimos para las liquidaciones |
 | `0074_cuentas_de_locales_en_modoya_app.sql` | **arreglo**: los usuarios de locales y riders pasan de `@modoya.com` (de otra empresa, con correo real) a `@modoya.app` |
 | `0075_comision_por_pedido.sql` | comisión de MODO YA y costo de Mercado Pago como porcentaje de cada pedido, descontados al local en la liquidación. **Arreglo**: cambiar las tarifas ya no borraba la penalidad por rechazo |
+| `0076_pedido_que_el_local_no_acepta.sql` | **arreglo**: un pedido pagado que el local no acepta ni rechaza en 15 minutos se rechaza solo, con devolución y la misma penalidad (cron `vencer-pedidos-sin-aceptar`). Antes quedaba trabado para siempre |
+| `0077_el_rider_encadena_y_la_busqueda_no_se_rinde.sql` | el rider que lleva un envío recibe ofertas de otros locales (después de los libres); la búsqueda de rider de un pedido o un mandado ya no se corta a las 3 horas |
 
 ## Decisiones de diseño
 
@@ -391,6 +393,20 @@ que A no vea nada de B (detalle, resumen, cargos, la tabla por RLS y la
 liquidación cerrada) y que A sí vea todo lo suyo. Cerrar de más también es un
 bug: un rider que no ve su liquidación es el problema que esto vino a resolver.
 
+### El pedido que el local no responde (0076)
+
+Un pedido pagado queda en `pagado` hasta que el local lo acepta o lo rechaza.
+Si no hace ninguna de las dos (cerró la app, se quedó sin internet), a los
+**15 minutos** `vencer_pedidos_sin_aceptar()` (cron cada minuto) lo da por
+rechazado: al cliente se le devuelve el 100% y el local carga la misma
+penalidad que si hubiera apretado "Rechazar". Así no responder nunca sale más
+barato que rechazar. Si fue un corte de luz, la administración borra el cargo
+antes de cerrar la liquidación. El cliente lo ve venir: mientras espera, la app
+le dice que a los 15 minutos se le devuelve todo.
+
+La devolución y la penalidad viven en `devolver_pedido_rechazado()`, que usan
+las dos puntas. `tests/pedido_sin_aceptar.sql`.
+
 ### Comisión por pedido (0075)
 
 Además de la mensualidad, MODO YA se queda con un porcentaje de los productos
@@ -546,6 +562,26 @@ Cada envío sigue siendo independiente: su código de entrega, sus estados y su
 ganancia. Lo único que cambió es `ocupado`, que pasa a ser "tiene algún envío
 activo" (`recalcular_ocupado`): entregar o cancelar el primero no lo libera si
 le queda el segundo.
+
+### Encadenar envíos de otros locales (0077)
+
+Desde 0077 el rider que lleva **un** envío (de cualquier local, en cualquier
+estado) también recibe ofertas de otros locales, dentro del radio de búsqueda,
+y el tope sigue siendo dos. El orden de `repartidores_cercanos()` es: el que ya
+va a ese mismo local, después los libres y recién después los ocupados (en cada
+grupo, primero los riders propios del local y después por distancia). Así un
+rider libre no se queda mirando mientras otro acumula.
+
+La app del rider no cambió: la oferta ya aparecía encima de cualquier pantalla
+y el inicio ya listaba dos envíos ("Servicio en curso · 1 de 2").
+
+### La búsqueda no se rinde (0077)
+
+Desde 0029 un envío pasaba a `sin_repartidor` a las 3 horas de buscar. Para un
+pedido de la app eso dejaba al cliente con la plata cobrada y el pedido en
+"listo" para siempre. Ahora los pedidos de la app y los mandados se siguen
+ofreciendo hasta que alguien acepte o se cancelen; el tope de 3 horas queda
+solo para la cadetería del local, que el local relanza desde su pantalla.
 
 En la app del rider la oferta dice **OTRO PEDIDO** y de qué envío en curso es
 compañero, el inicio lista los dos y cada servicio avisa del otro.
@@ -867,6 +903,19 @@ pedido en curso no se puede; después se borran el usuario, las direcciones, las
 tarjetas, Plus y el dispositivo, y los pedidos quedan sin nombre, teléfono ni
 dirección. También que un local no pueda darse de baja solo y que la
 administración pueda dar de baja por email.
+
+**`tests/pedido_sin_aceptar.sql`** — el vencimiento (0076): el pagado hace 20
+minutos se rechaza con devolución y penalidad; el de hace 5, el aceptado y el
+sin pagar no se tocan; una segunda pasada no cobra dos veces; el botón de
+rechazar deja el mismo cargo. Usa la penalidad real del tarifario: el
+vencimiento pasa por toda la base, y un pedido trabado de verdad no puede
+llevarse una penalidad de prueba.
+
+**`tests/rider_encadena.sql`** — el reparto (0077): el rider con un envío
+recibe ofertas de otro local pero después de los libres, el que va al mismo
+local sigue primero, con dos no le llega un tercero, y un pedido de la app
+sigue buscando rider después de 3 horas mientras la cadetería del local se
+corta.
 
 **`tests/comision_por_pedido.sql`** — la comisión por pedido (0075): el
 pedido congela el porcentaje y un tarifario nuevo no lo cambia; un rechazado no
