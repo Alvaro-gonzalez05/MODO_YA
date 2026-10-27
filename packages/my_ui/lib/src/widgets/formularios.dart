@@ -9,6 +9,83 @@ import 'animaciones.dart';
 import 'controls.dart';
 import 'surfaces.dart';
 
+/// Pone el punto de miles mientras se escribe ("15000" se ve "15.000"), para
+/// no tener que contar ceros en un precio o un tope. Solo enteros: la app
+/// maneja pesos sin centavos.
+///
+/// El texto del campo queda con puntos: para leerlo, [MilesFormatter.leer].
+class MilesFormatter extends TextInputFormatter {
+  const MilesFormatter({this.negativos = false});
+
+  /// Deja escribir un "-" adelante (un ajuste que devuelve plata).
+  final bool negativos;
+
+  static final _noDigito = RegExp(r'[^0-9]');
+
+  /// `9800` → `"9.800"`. Para cargar un valor guardado en el campo.
+  static String formatear(int n) {
+    final s = n.abs().toString();
+    final b = StringBuffer(n < 0 ? '-' : '');
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) b.write('.');
+      b.write(s[i]);
+    }
+    return b.toString();
+  }
+
+  /// `"-15.000"` → `-15000`; null si no hay ningún número.
+  static int? leer(String texto) {
+    final t = texto.trim();
+    final digitos = t.replaceAll(_noDigito, '');
+    if (digitos.isEmpty) return null;
+    final n = int.tryParse(digitos);
+    if (n == null) return null;
+    return t.startsWith('-') ? -n : n;
+  }
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue viejo, TextEditingValue nuevo) {
+    var texto = nuevo.text;
+    var cursor = nuevo.selection.end.clamp(0, texto.length);
+
+    // Borrar justo un punto no hace nada visible (se vuelve a poner). Se
+    // entiende que quiso borrar el número de antes, como en cualquier
+    // calculadora.
+    if (viejo.text.length == texto.length + 1 &&
+        cursor < viejo.text.length &&
+        viejo.text[cursor] == '.' &&
+        viejo.text.replaceRange(cursor, cursor + 1, '') == texto &&
+        cursor > 0) {
+      texto = texto.replaceRange(cursor - 1, cursor, '');
+      cursor -= 1;
+    }
+
+    final negativo = negativos && texto.trimLeft().startsWith('-');
+    final digitos = texto.replaceAll(_noDigito, '');
+    final antes = texto.substring(0, cursor).replaceAll(_noDigito, '').length;
+    if (digitos.isEmpty) {
+      final t = negativo ? '-' : '';
+      return TextEditingValue(text: t, selection: TextSelection.collapsed(offset: t.length));
+    }
+
+    final limpio = digitos.replaceFirst(RegExp(r'^0+(?=\d)'), '');
+    final n = int.tryParse(limpio);
+    // Un número más largo que un int no es un precio: se deja como estaba.
+    if (n == null) return viejo;
+    final resultado = formatear(negativo ? -n : n);
+
+    // El cursor queda después del mismo dígito en el que estaba.
+    final objetivo = (antes - (digitos.length - limpio.length)).clamp(0, limpio.length);
+    var pos = negativo ? 1 : 0;
+    var vistos = 0;
+    while (vistos < objetivo && pos < resultado.length) {
+      if (resultado[pos] != '.' && resultado[pos] != '-') vistos++;
+      pos++;
+    }
+    return TextEditingValue(text: resultado, selection: TextSelection.collapsed(offset: pos));
+  }
+}
+
 /// Campo de formulario con rotulo en mayusculas arriba, como en el diseno.
 class MyCampo extends StatelessWidget {
   const MyCampo({
@@ -30,6 +107,8 @@ class MyCampo extends StatelessWidget {
     this.formatos,
     this.foco,
     this.mayusculas = false,
+    this.miles = false,
+    this.negativos = false,
   });
 
   final TextEditingController controller;
@@ -54,6 +133,13 @@ class MyCampo extends StatelessWidget {
   /// Escribe en mayúsculas mientras se tipea (nombre del titular).
   final bool mayusculas;
 
+  /// Número con punto de miles mientras se escribe (precios, topes, montos).
+  /// El valor se lee con [MilesFormatter.leer].
+  final bool miles;
+
+  /// Con [miles], deja escribir un "-" adelante.
+  final bool negativos;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -66,9 +152,18 @@ class MyCampo extends StatelessWidget {
           TextFormField(
             controller: controller,
             focusNode: foco,
-            keyboardType: soloNumeros ? TextInputType.number : keyboard,
+            keyboardType: miles
+                ? TextInputType.numberWithOptions(signed: negativos)
+                : soloNumeros
+                    ? TextInputType.number
+                    : keyboard,
             textCapitalization: mayusculas ? TextCapitalization.characters : TextCapitalization.none,
-            inputFormatters: formatos ?? (soloNumeros ? [FilteringTextInputFormatter.digitsOnly] : null),
+            inputFormatters: formatos ??
+                (miles
+                    ? [MilesFormatter(negativos: negativos)]
+                    : soloNumeros
+                        ? [FilteringTextInputFormatter.digitsOnly]
+                        : null),
             maxLines: ocultar ? 1 : lineas,
             obscureText: ocultar,
             onChanged: onChanged,

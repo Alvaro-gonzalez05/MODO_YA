@@ -76,7 +76,10 @@ foreach ($a in $archivos) {
   $json = [IO.File]::ReadAllText($a, [Text.Encoding]::UTF8) | ConvertFrom-Json
   $json | Add-Member -NotePropertyName MY_MAPA_BALDOSAS -NotePropertyValue $baldosas -Force
   $json | Add-Member -NotePropertyName MY_MAPA_ATRIBUCION -NotePropertyValue $atribucion -Force
-  [IO.File]::WriteAllText($a, ($json | ConvertTo-Json), (New-Object Text.UTF8Encoding $false))
+  # ConvertTo-Json de PowerShell 5.1 sangra con 4 espacios y deja dos despues
+  # de los dos puntos: se lleva al formato del resto del repo.
+  $texto = (($json | ConvertTo-Json) -replace '":  ', '": ' -replace '(?m)^    ', '  ') + "`n"
+  [IO.File]::WriteAllText($a, $texto, (New-Object Text.UTF8Encoding $false))
   Write-Host "actualizado: $a"
 }
 

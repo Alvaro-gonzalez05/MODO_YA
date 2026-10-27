@@ -120,10 +120,12 @@ Future<void> cargarARider(
             MyCampo(
               controller: monto,
               label: 'Cuánto',
-              hint: '4000',
+              hint: '4.000',
               icon: Symbols.payments,
+              miles: true,
+              negativos: true,
               validar: (v) {
-                final n = int.tryParse(v.replaceAll('-', ''));
+                final n = MilesFormatter.leer(v);
                 if (n == null || n == 0) return 'Escribí un monto';
                 return null;
               },
@@ -138,7 +140,7 @@ Future<void> cargarARider(
                         repartidorId: repartidorId,
                         concepto: elegido,
                         detalle: detalle.text,
-                        monto: int.parse(monto.text.replaceAll(' ', '')),
+                        monto: MilesFormatter.leer(monto.text)!,
                         envioId: envioId,
                       );
                   // Sin el período a mano se invalida toda la familia: son dos

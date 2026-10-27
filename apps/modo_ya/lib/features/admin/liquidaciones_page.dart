@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
@@ -533,12 +532,12 @@ class _CargosState extends ConsumerState<_Cargos> {
         MyCampo(
           controller: _monto,
           label: 'Cuánto',
-          hint: '15000 · -15000 para devolverle',
+          hint: '15.000 · -15.000 para devolverle',
           icon: Symbols.payments,
-          keyboard: const TextInputType.numberWithOptions(signed: true),
           // `soloNumeros` filtra con `digitsOnly`, que se come el signo mientras
           // se tipea: el campo quedaba sin forma de cargar una devolución.
-          formatos: [FilteringTextInputFormatter.allow(RegExp(r'[\d-]'))],
+          miles: true,
+          negativos: true,
         ),
         MyBotonAccion(label: 'Agregar cargo', icon: Symbols.add, onPressed: _agregar),
         const Divider(height: MySpacing.lg),

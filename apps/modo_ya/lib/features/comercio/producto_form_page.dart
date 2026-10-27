@@ -24,7 +24,8 @@ class _ProductoFormPageState extends ConsumerState<ProductoFormPage> {
   final _form = GlobalKey<FormState>();
   late final _nombre = TextEditingController(text: widget.producto?.nombre);
   late final _descripcion = TextEditingController(text: widget.producto?.descripcion);
-  late final _precio = TextEditingController(text: widget.producto?.precio.toString());
+  late final _precio = TextEditingController(
+      text: widget.producto == null ? null : MilesFormatter.formatear(widget.producto!.precio));
 
   late String? _seccionId = widget.producto?.seccionId;
   late bool _disponible = widget.producto?.disponible ?? true;
@@ -79,7 +80,7 @@ class _ProductoFormPageState extends ConsumerState<ProductoFormPage> {
       final items = [
         for (final i in g.items)
           if (i.nombre.text.trim().isNotEmpty)
-            OpcionItem(nombre: i.nombre.text.trim(), precioExtra: int.tryParse(i.precio.text) ?? 0),
+            OpcionItem(nombre: i.nombre.text.trim(), precioExtra: MilesFormatter.leer(i.precio.text) ?? 0),
       ];
       if (g.nombre.text.trim().isEmpty && items.isEmpty) continue;
       if (g.nombre.text.trim().isEmpty || items.isEmpty) {
@@ -101,7 +102,7 @@ class _ProductoFormPageState extends ConsumerState<ProductoFormPage> {
             seccionId: _seccionId,
             nombre: _nombre.text,
             descripcion: _descripcion.text,
-            precio: int.parse(_precio.text),
+            precio: MilesFormatter.leer(_precio.text)!,
             disponible: _disponible,
             opciones: opciones,
             foto: _foto,
@@ -199,10 +200,10 @@ class _ProductoFormPageState extends ConsumerState<ProductoFormPage> {
           MyCampo(
             controller: _precio,
             label: 'Precio (pesos)',
-            hint: '8200',
+            hint: '8.200',
             icon: Symbols.payments,
-            soloNumeros: true,
-            validar: (t) => (int.tryParse(t) ?? 0) <= 0 ? 'Poné un precio' : null,
+            miles: true,
+            validar: (t) => (MilesFormatter.leer(t) ?? 0) <= 0 ? 'Poné un precio' : null,
           ),
           const MyOverline('Sección'),
           const SizedBox(height: MySpacing.xs),
@@ -295,7 +296,7 @@ class _ProductoFormPageState extends ConsumerState<ProductoFormPage> {
 class _ItemEditable {
   _ItemEditable({String nombre = '', int precio = 0})
       : nombre = TextEditingController(text: nombre),
-        precio = TextEditingController(text: precio == 0 ? '' : '$precio');
+        precio = TextEditingController(text: precio == 0 ? '' : MilesFormatter.formatear(precio));
 
   final TextEditingController nombre;
   final TextEditingController precio;
@@ -404,6 +405,7 @@ class _EditorGrupo extends StatelessWidget {
                     child: TextField(
                       controller: grupo.items[i].precio,
                       keyboardType: TextInputType.number,
+                      inputFormatters: const [MilesFormatter()],
                       decoration: const InputDecoration(hintText: '+ \$0', prefixText: '+\$ '),
                     ),
                   ),

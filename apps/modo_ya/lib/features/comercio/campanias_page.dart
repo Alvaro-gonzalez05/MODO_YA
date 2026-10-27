@@ -472,8 +472,8 @@ Future<void> nuevaCampania(BuildContext context, WidgetRef ref, TipoCampania tip
   final comercioId = ref.read(sesionProvider).comercioId;
   if (comercioId == null) return;
 
-  final presupuesto = TextEditingController(text: diario == null ? '' : '${diario * 30}');
-  final porDia = TextEditingController(text: diario?.toString() ?? '');
+  final presupuesto = TextEditingController(text: diario == null ? '' : MilesFormatter.formatear(diario * 30));
+  final porDia = TextEditingController(text: diario == null ? '' : MilesFormatter.formatear(diario));
   final form = GlobalKey<FormState>();
 
   await mostrarFormularioEmergente(
@@ -496,18 +496,18 @@ Future<void> nuevaCampania(BuildContext context, WidgetRef ref, TipoCampania tip
             MyCampo(
               controller: porDia,
               label: 'Cuánto por día',
-              hint: '9000',
+              hint: '9.000',
               icon: Symbols.today,
-              soloNumeros: true,
-              validar: (v) => (int.tryParse(v) ?? 0) <= 0 ? 'Escribí cuánto por día' : null,
+              miles: true,
+              validar: (v) => (MilesFormatter.leer(v) ?? 0) <= 0 ? 'Escribí cuánto por día' : null,
             ),
           MyCampo(
             controller: presupuesto,
             label: 'Tope total de la campaña',
-            hint: '60000',
+            hint: '60.000',
             icon: Symbols.savings,
-            soloNumeros: true,
-            validar: (v) => (int.tryParse(v) ?? 0) <= 0 ? 'Escribí el tope' : null,
+            miles: true,
+            validar: (v) => (MilesFormatter.leer(v) ?? 0) <= 0 ? 'Escribí el tope' : null,
           ),
           MyBotonAccion(
             label: 'Activar',
@@ -518,8 +518,8 @@ Future<void> nuevaCampania(BuildContext context, WidgetRef ref, TipoCampania tip
                 await ref.read(campaniasRepositoryProvider).crear(
                       comercioId: comercioId,
                       tipo: tipo,
-                      presupuesto: int.parse(presupuesto.text),
-                      presupuestoDiario: tipo == TipoCampania.publicidad ? int.parse(porDia.text) : null,
+                      presupuesto: MilesFormatter.leer(presupuesto.text)!,
+                      presupuestoDiario: tipo == TipoCampania.publicidad ? MilesFormatter.leer(porDia.text) : null,
                     );
                 if (h.mounted) Navigator.pop(h);
               } catch (e) {
