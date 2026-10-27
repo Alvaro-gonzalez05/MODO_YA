@@ -9,10 +9,12 @@ import '../../comun/credenciales.dart';
 
 /// Alta de un local o de un rider por la administración.
 ///
-/// El usuario y la contraseña los genera el servidor (Edge Function
-/// admin-crear-usuario): pizzeria.don.luis@modoya.com y una contraseña al
-/// azar, que se muestra una sola vez. Así el dueño del local o el rider
-/// conserva su email personal para registrarse como cliente si quiere.
+/// Se le pide su **email real**: con eso entra a la app y, si se olvida la
+/// contraseña, la recupera solo por mail. Si no tiene (o ya lo usa como
+/// cliente), el servidor (Edge Function admin-crear-usuario) le genera un
+/// usuario `pizzeria.don.luis@modoya.app`, que no recibe mails: la contraseña
+/// nueva se la da la administración desde su ficha. La contraseña siempre sale
+/// al azar y se muestra una sola vez.
 class AltaCuentaPage extends ConsumerStatefulWidget {
   const AltaCuentaPage({super.key, required this.esLocal});
 
@@ -28,14 +30,17 @@ class _AltaCuentaPageState extends ConsumerState<AltaCuentaPage> {
   final _telefono = TextEditingController();
   final _calle = TextEditingController();
   final _referencia = TextEditingController();
+  final _email = TextEditingController();
 
   Rubro? _rubro;
   LatLng? _ubicacion;
   var _vehiculo = Vehiculo.moto;
 
+  String? get _emailReal => _email.text.trim().isEmpty ? null : _email.text.trim().toLowerCase();
+
   @override
   void dispose() {
-    for (final c in [_nombre, _telefono, _calle, _referencia]) {
+    for (final c in [_nombre, _telefono, _calle, _referencia, _email]) {
       c.dispose();
     }
     super.dispose();
@@ -63,6 +68,7 @@ class _AltaCuentaPageState extends ConsumerState<AltaCuentaPage> {
     try {
       final alta = widget.esLocal
           ? await repo.crearComercio(
+              email: _emailReal,
               nombre: _nombre.text,
               telefono: _telefono.text,
               calle: _calle.text,
@@ -72,6 +78,7 @@ class _AltaCuentaPageState extends ConsumerState<AltaCuentaPage> {
               lng: _ubicacion!.longitude,
             )
           : await repo.crearRepartidor(
+              email: _emailReal,
               nombre: _nombre.text,
               telefono: _telefono.text,
               vehiculo: _vehiculo,
@@ -118,6 +125,18 @@ class _AltaCuentaPageState extends ConsumerState<AltaCuentaPage> {
             icon: Symbols.call,
             keyboard: TextInputType.phone,
           ),
+          MyCampo(
+            controller: _email,
+            label: 'Email (recomendado)',
+            hint: esLocal ? 'pizzeriadonluis@gmail.com' : 'juanperez@gmail.com',
+            icon: Symbols.mail,
+            keyboard: TextInputType.emailAddress,
+            obligatorio: false,
+            validar: (t) => t.trim().isEmpty || RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(t.trim())
+                ? null
+                : 'Ese email no es válido',
+            onChanged: (_) => setState(() {}),
+          ),
           if (esLocal) ...[
             const MyOverline('Rubro'),
             const SizedBox(height: MySpacing.xs),
@@ -158,11 +177,15 @@ class _AltaCuentaPageState extends ConsumerState<AltaCuentaPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const MyOverline('Usuario que se va a generar'),
+                      MyOverline(_emailReal != null ? 'Va a entrar con' : 'Sin email: usuario que se va a generar'),
                       const SizedBox(height: 2),
-                      Text(_usuarioPrevisto, style: MyType.labelLg),
+                      Text(_emailReal ?? _usuarioPrevisto, style: MyType.labelLg),
                       Text(
-                        'La contraseña se genera sola y la ves al crear la cuenta.',
+                        _emailReal != null
+                            ? 'La contraseña se genera sola y la ves al crear la cuenta. '
+                                'Si se la olvida, la recupera sola por mail.'
+                            : 'La contraseña se genera sola y la ves al crear la cuenta. '
+                                'Este usuario no recibe mails: si se la olvida, se la generás vos desde su ficha.',
                         style: MyType.bodySm.copyWith(color: MyColors.secondary),
                       ),
                     ],

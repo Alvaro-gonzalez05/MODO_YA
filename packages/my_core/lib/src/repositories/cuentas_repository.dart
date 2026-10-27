@@ -61,11 +61,10 @@ class CuentasRepository {
         );
       });
 
-  /// Crea un local. El usuario (email) y la contrasena los genera el servidor
-  /// con el nombre: pizzeria.don.luis@modoya.app.
-  ///
-  /// [email] solo lo usan las pruebas, para crear cuentas que despues puedan
-  /// identificar y borrar.
+  /// Crea un local. Con [email] (el real del local) entra con ese y puede
+  /// recuperar la contraseña solo; sin email, el servidor genera un usuario con
+  /// el nombre: pizzeria.don.luis@modoya.app. La contraseña siempre la genera
+  /// el servidor.
   Future<AltaCuenta> crearComercio({
     String? email,
     required String nombre,
@@ -88,7 +87,8 @@ class CuentasRepository {
         'lng': lng,
       });
 
-  /// Crea un rider: rider.juan.perez@modoya.app.
+  /// Crea un rider, con su [email] real o, si no tiene, con un usuario
+  /// generado: rider.juan.perez@modoya.app.
   ///
   /// Con [solicitudId] es la aprobación de lo que pidió un local: el rider
   /// queda vinculado a ese local en el mismo paso.

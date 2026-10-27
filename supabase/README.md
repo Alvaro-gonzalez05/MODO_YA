@@ -128,15 +128,18 @@ envíos viejos tienen que seguir diciendo desde dónde salieron.
 
 ### Usuarios de locales y riders
 
-La administración no carga emails: `admin-crear-usuario` genera el usuario con
-el nombre y una contraseña al azar que se muestra una sola vez:
+La administración carga el **email real** del local o del rider: entra con ese
+y, si se olvida la contraseña, la recupera solo por mail. La contraseña siempre
+la genera `admin-crear-usuario` al azar y se muestra una sola vez.
+
+Si no tiene email, o ya lo usa como cliente (una cuenta no puede ser cliente y
+local a la vez), se deja vacío y la función genera el usuario con el nombre:
 
 - Local "Pizzería Don Luis" → `pizzeria.don.luis@modoya.app`
 - Rider "Juan Pérez" → `rider.juan.perez@modoya.app`
 - Si ya existe, se agrega un número: `pizzeria.don.luis.2@modoya.app`
 
-Así el dueño o el rider conserva su email personal para registrarse como cliente
-si quiere. El dominio (`MODOYA_DOMINIO_CUENTAS`, por defecto `modoya.app`) tiene
+El dominio (`MODOYA_DOMINIO_CUENTAS`, por defecto `modoya.app`) tiene
 que ser **nuestro**: desde que Supabase manda mails, un "recuperar contraseña"
 para uno de estos usuarios sale de verdad. Hasta 0074 era `modoya.com`, que es
 de otra empresa con correo real. Hoy esas casillas no existen (el reenvío de

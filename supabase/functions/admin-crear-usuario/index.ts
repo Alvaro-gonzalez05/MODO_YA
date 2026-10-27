@@ -215,7 +215,12 @@ Deno.serve(async (req) => {
     }
     const yaExiste = /already|registered|exists/i.test(r.error?.message ?? '');
     if (!yaExiste) return error(500, 'auth', r.error?.message ?? 'No se pudo crear el usuario');
-    if (emailPropio) return error(409, 'email_existente', 'Ya hay una cuenta con ese email');
+    // Pasa seguido: el dueño del local ya se registró como cliente con su
+    // email, y una cuenta no puede ser cliente y local a la vez.
+    if (emailPropio) {
+      return error(409, 'email_existente',
+        'Ya hay una cuenta con ese email (puede que la use como cliente). Usá otro email o dejalo vacío y se le genera un usuario.');
+    }
   }
   if (!creado?.user) return error(409, 'email_existente', 'No se pudo generar un usuario libre para ese nombre');
 
