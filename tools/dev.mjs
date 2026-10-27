@@ -81,6 +81,9 @@ function sincronizar() {
 
 let compilando = false;
 let pendiente = false;
+// Qué archivo pidió la compilación. Cada compilación recarga el navegador, y
+// sin esto no hay forma de saber por qué la página "se recarga sola".
+let motivo = 'arranque';
 
 function compilar() {
   if (compilando) { pendiente = true; return; }
@@ -89,7 +92,7 @@ function compilar() {
   limpiarTemporales();
   sincronizar();
   const inicio = Date.now();
-  console.log(`\n>> Compilando ${app}...`);
+  console.log(`\n>> Compilando ${app} (${motivo})...`);
   const f = spawn(flutterCmd, ['build', 'web', '--release', '--dart-define-from-file=../../env/dev.json'], {
     cwd: join(copia, 'apps', app),
     shell: true,
@@ -161,6 +164,7 @@ const alCambiar = (archivo) => {
   if (!archivo || /(^|[\\/])(\.dart_tool|build)([\\/]|$)/.test(archivo)) return;
   if (!/\.(dart|yaml|json|png|jpg|mp3|wav|html|ttf)$/.test(archivo)) return;
   clearTimeout(espera);
+  motivo = `cambió ${archivo}`;
   // Espera a que dejen de cambiar archivos (se guardan varios juntos).
   espera = setTimeout(compilar, 1500);
 };
