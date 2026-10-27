@@ -360,8 +360,14 @@ class Pedido {
     this.metodoPago,
     this.cobrado = false,
     this.envioCubierto = 0,
+    this.pagadoEn,
     this.items = const [],
   });
+
+  /// Lo que tiene el local para aceptar o rechazar un pedido pagado. Pasado
+  /// ese tiempo la base lo rechaza sola, con devolución y penalidad (0076:
+  /// `vencer_pedidos_sin_aceptar`). Si cambia allá, cambia acá.
+  static const minutosParaResponder = 15;
 
   final String id;
   final String codigo;
@@ -390,7 +396,15 @@ class Pedido {
   /// (para el resto, `pagos` no se puede leer y viene en false).
   final bool cobrado;
   final DateTime creadoEn;
+
+  /// Cuándo entró el pago. Es lo que cuenta para el vencimiento.
+  final DateTime? pagadoEn;
   final List<PedidoItem> items;
+
+  /// Hasta cuándo tiene el local para responder, mientras el pedido espera.
+  DateTime? get respondeAntesDe => estado == EstadoPedido.pagado
+      ? (pagadoEn ?? creadoEn).add(const Duration(minutes: minutosParaResponder))
+      : null;
 
   int get cantidadProductos => items.fold(0, (s, i) => s + i.cantidad);
 
@@ -431,6 +445,7 @@ class Pedido {
         cobrado: f['pago_estado'] == 'acreditado',
         envioCubierto: Fila.entero(f, 'envio_cubierto'),
         creadoEn: Fila.fecha(f, 'creado_en'),
+        pagadoEn: Fila.fechaOpcional(f, 'pagado_en'),
         items: items,
       );
 
@@ -455,6 +470,7 @@ class Pedido {
         cobrado: cobrado,
         envioCubierto: envioCubierto,
         creadoEn: creadoEn,
+        pagadoEn: pagadoEn,
         items: nuevos,
       );
 }

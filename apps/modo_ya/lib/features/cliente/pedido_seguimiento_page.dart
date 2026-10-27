@@ -160,10 +160,10 @@ class _ContenidoState extends ConsumerState<_Contenido> {
 
     final (titulo, bajada) = switch (e) {
       EstadoPedido.pendientePago => ('Falta pagarlo', 'Terminá el pago y el local lo empieza a preparar.'),
-      // Los 15 minutos son los de vencer_pedidos_sin_aceptar() (0076).
       EstadoPedido.pagado => (
           'Enviado al local',
-          'Esperando que ${pedido.comercioNombre} lo acepte. Si no responde en 15 minutos, te devolvemos todo.'
+          'Esperando que ${pedido.comercioNombre} lo acepte. Si no responde en '
+              '${Pedido.minutosParaResponder} minutos, te devolvemos todo.'
         ),
       EstadoPedido.aceptado => ('Pedido aceptado', '${pedido.comercioNombre} ya lo tiene.'),
       EstadoPedido.enPreparacion => ('En preparación', 'Lo están preparando.'),

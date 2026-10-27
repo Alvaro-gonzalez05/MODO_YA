@@ -221,6 +221,23 @@ class _TarjetaPedido extends ConsumerWidget {
               MyBadge(pedido.estado.label, tone: tonoPedido(pedido.estado), dot: esNuevo),
             ],
           ),
+          // Sin esto el local se enteraba del vencimiento (0076) recién al
+          // ver la penalidad en la liquidación.
+          if (pedido.respondeAntesDe case final limite?) ...[
+            const SizedBox(height: MySpacing.xs),
+            Row(
+              children: [
+                Icon(Symbols.timer, size: 16, color: MyColors.error),
+                const SizedBox(width: MySpacing.xxs),
+                Expanded(
+                  child: Text(
+                    'Respondé antes de las ${Formato.hora(limite)}: si no, se rechaza solo y se cobra la penalidad.',
+                    style: MyType.bodySm.copyWith(color: MyColors.error),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: MySpacing.sm),
           Text(pedido.clienteNombre ?? 'Cliente', style: MyType.headlineSm),
           Text(

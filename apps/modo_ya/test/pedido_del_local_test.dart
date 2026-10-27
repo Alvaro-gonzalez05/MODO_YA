@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
@@ -17,14 +18,23 @@ import 'package:modo_ya/features/comercio/pedidos_local_page.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = false;
+  // La hora límite del pedido nuevo se escribe con el formato de es_AR.
+  initializeDateFormatting('es_AR');
 
   Widget app(Widget pantalla) =>
       MaterialApp(theme: MyTheme.claro, home: Scaffold(body: pantalla));
 
-  Pedido pedido({required int costoEnvio, int envioCubierto = 0}) => Pedido(
+  Pedido pedido({
+    required int costoEnvio,
+    int envioCubierto = 0,
+    EstadoPedido estado = EstadoPedido.pagado,
+    DateTime? pagadoEn,
+  }) =>
+      Pedido(
         id: 'p1',
         codigo: 'MY-0001',
-        estado: EstadoPedido.pagado,
+        estado: estado,
+        pagadoEn: pagadoEn,
         comercioId: 'c1',
         comercioNombre: 'El Local',
         entrega: const Direccion(calle: 'San Martín 100'),
@@ -78,6 +88,27 @@ void main() {
       final p = pedido(costoEnvio: 0, envioCubierto: 4200);
       expect(p.envioReal, 4200);
       expect(p.envioLoPoneElLocal, isTrue);
+    });
+  });
+
+  // El vencimiento de 0076: si el local no responde en 15 minutos, la base
+  // rechaza el pedido y le cobra la penalidad. Antes nada se lo decía.
+  group('Cuánto tiene el local para responder', () {
+    test('cuenta desde que entró el pago, no desde que se armó el carrito', () {
+      final p = pedido(costoEnvio: 4200, pagadoEn: DateTime(2026, 10, 21, 20, 40));
+      expect(p.respondeAntesDe, DateTime(2026, 10, 21, 20, 55));
+    });
+
+    test('un pedido ya aceptado no vence', () {
+      final p = pedido(costoEnvio: 4200, estado: EstadoPedido.aceptado, pagadoEn: DateTime(2026, 10, 21, 20, 40));
+      expect(p.respondeAntesDe, isNull);
+    });
+
+    testWidgets('la tarjeta del pedido nuevo dice hasta qué hora', (tester) async {
+      await mostrar(tester, pedido(costoEnvio: 4200, pagadoEn: DateTime(2026, 10, 21, 20, 40)));
+
+      expect(find.textContaining('Respondé antes de las 20:55'), findsOneWidget);
+      expect(find.textContaining('se cobra la penalidad'), findsOneWidget);
     });
   });
 }
