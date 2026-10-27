@@ -1,6 +1,7 @@
 -- Doble pedido del mismo local (0056): que el segundo pedido se le ofrezca al
--- rider que ya va para ese local, que no pase de dos, que no se sumen pedidos
--- de otro local, y que entregar uno no lo libere si le queda el otro.
+-- rider que ya va para ese local, que no pase de dos, y que entregar uno no lo
+-- libere si le queda el otro. Desde 0077 el que lleva uno también recibe
+-- pedidos de otro local (casos 4 y 5); antes esperaban a un rider libre.
 
 create temporary table _r (paso text, resultado text);
 
@@ -85,13 +86,17 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub',u_uno)::text, true);
   e3 := public.responder_oferta(of.id, true);
 
-  -- ---- Otro local: Uno lleva uno de Local Doble, no se le suma ---------------
+  -- ---- Otro local: Uno lleva uno de Local Doble y le llega igual (0077) ------
   perform set_config('request.jwt.claims', json_build_object('sub',u_com2)::text, true);
   e4 := public.confirmar_envio((public.crear_envio('Av. San Martin 900', -35.4790, -69.5850,
                                 'Pedro Gil', '+54 260 456-7788', 'cliente')).id);
-  insert into _r values ('4. un pedido de otro local no se suma',
-    case when not exists (select 1 from public.ofertas where envio_id = e4.id)
-         then 'OK  nadie libre, espera' else 'MAL  se lo ofrecio a alguien ocupado' end);
+  select * into of from public.ofertas where envio_id = e4.id and respuesta is null;
+  select nombre into quien from public.repartidores where id = of.repartidor_id;
+  insert into _r values ('4. un pedido de otro local le llega al que lleva uno',
+    case when quien = 'Rider Uno' then 'OK  ' || quien else 'MAL  ' || coalesce(quien,'nadie') end);
+  -- Lo rechaza: si no, la oferta abierta lo deja afuera del caso 5.
+  perform set_config('request.jwt.claims', json_build_object('sub',u_uno)::text, true);
+  perform public.responder_oferta(of.id, false);
 
   -- ---- Si ya lo retiro, ya se fue: no se suma ---------------------------------
   perform set_config('request.jwt.claims', json_build_object('sub',u_uno)::text, true);
@@ -102,9 +107,12 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub',u_com)::text, true);
   e4 :=public.confirmar_envio((public.crear_envio('Av. San Martin 950', -35.4795, -69.5850,
                                 'Pedro Gil', '+54 260 456-7788', 'cliente')).id);
-  insert into _r values ('5. si ya retiro el primero no se le suma',
-    case when not exists (select 1 from public.ofertas where envio_id = e4.id)
-         then 'OK  no se le ofrece' else 'MAL' end);
+  -- Ya no va "primero por ir al local" (lo retiró), pero como lleva uno solo
+  -- puede recibirlo igual, y es el único que no tiene dos.
+  select * into of from public.ofertas where envio_id = e4.id and respuesta is null;
+  select nombre into quien from public.repartidores where id = of.repartidor_id;
+  insert into _r values ('5. con el primero ya retirado tambien puede recibir otro',
+    case when quien = 'Rider Uno' then 'OK  ' || quien else 'MAL  ' || coalesce(quien,'nadie') end);
 
   -- ---- Entregar uno no lo libera si le queda el otro --------------------------
   perform set_config('request.jwt.claims', json_build_object('sub',u_dos)::text, true);
