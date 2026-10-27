@@ -12,8 +12,10 @@ import 'package:my_ui/my_ui.dart';
 /// mirar — el que actúa sobre el pago es el cron `procesar-avisos-mp` (0068), y
 /// lo que hizo con cada aviso queda en la nota.
 ///
-/// Va como panel sobre la pantalla de cobros y no como sección del menú: se
-/// mira cuando un cobro no cerró y se quiere saber qué dijo Mercado Pago.
+/// Va como panel sobre Liquidaciones y no como sección del menú: se mira de
+/// vez en cuando, cuando un pago no cerró como se esperaba y se quiere saber
+/// qué dijo Mercado Pago. Antes colgaba de la pantalla de cobros, que salió
+/// porque el cobro ya no se registra a mano.
 Future<void> mostrarAvisosDeMercadoPago(BuildContext context) =>
     mostrarHojaLateral(context, titulo: 'Avisos de Mercado Pago', builder: (_) => const _Avisos());
 

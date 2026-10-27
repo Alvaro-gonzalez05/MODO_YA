@@ -168,9 +168,10 @@ campanas (publicidad y MODO YA Plus), horarios (incluso turnos que cruzan
 medianoche), pausa manual, cadeteria (pedir rider para pedidos por telefono) con
 seguimiento.
 
-**Administracion:** resumen con mapa en vivo, alta de locales y riders, cobros,
-liquidaciones por local y por rider, promociones de todos los locales,
-suspension, envios en curso, tarifas y carteles.
+**Administracion:** resumen con mapa en vivo, alta de locales y riders,
+liquidaciones por local y por rider (con los avisos de Mercado Pago),
+promociones de todos los locales, suspension, envios en curso, tarifas,
+carteles, notificaciones y reclamos.
 
 **Rider:** conectarse con ubicacion, ofertas con cuenta regresiva, recorrido
 retiro/entrega con confirmacion por codigo, cuanto tiene que cobrar en la

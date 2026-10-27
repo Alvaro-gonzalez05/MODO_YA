@@ -40,29 +40,6 @@ class PedidosRepository {
         },
       );
 
-  /// Pedidos cuyo cobro todavia hay que registrar a mano.
-  ///
-  /// Desde que en la app se paga **solo con tarjeta** (0058) el cobro entra
-  /// solo, y `pago_estado = 'pendiente'` dejo de significar "falta cobrar":
-  /// significa "el cliente esta cargando la tarjeta ahora mismo". Por eso se
-  /// saca `pendiente_pago` del filtro. Sin eso, cada pedido nuevo aparecia
-  /// como cobro pendiente, y marcarlo cobrado en efectivo le hacia salir al
-  /// rider a cobrar en la puerta algo que el cliente quiza ya pago.
-  ///
-  /// Lo que queda son los de antes de 0058 que nunca se registraron, y
-  /// cualquiera cuyo pago quedo colgado en `pendiente` con el pedido ya en la
-  /// cocina. Lo normal es que no haya ninguno.
-  Stream<List<Pedido>> watchPendientesDePago() => enVivo(
-        canal: 'pedidos-cobro',
-        tablas: const ['pedidos', 'pagos'],
-        leer: () async => _conItems(_lista(await _db
-            .from('v_pedidos')
-            .select()
-            .eq('pago_estado', 'pendiente')
-            .not('estado', 'in', '(cancelado,rechazado,pendiente_pago)')
-            .order('creado_en', ascending: true))),
-      );
-
   Stream<Pedido?> watchPorId(String id) => enVivo(
         canal: 'pedido-$id',
         // Tambien envios: cuando avanza el envio, cambia lo que ve el cliente.
@@ -138,9 +115,4 @@ class PedidosRepository {
 
   Future<void> cancelar(String id, String motivo) =>
       intentar(() => _db.rpc('cancelar_pedido', params: {'p_pedido': id, 'p_motivo': motivo}));
-
-  /// Solo administracion: registra que entro la plata del pedido.
-  Future<void> marcarPagado(String id, MetodoPago metodo) => intentar(
-        () => _db.rpc('marcar_pedido_pagado', params: {'p_pedido': id, 'p_metodo': metodo.wire}),
-      );
 }

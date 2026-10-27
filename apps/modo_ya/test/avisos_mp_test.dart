@@ -13,7 +13,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-import 'package:modo_ya/features/admin/pedidos_pago_page.dart';
+import 'package:modo_ya/features/admin/liquidaciones_page.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -42,12 +42,14 @@ void main() {
 
     await tester.pumpWidget(ProviderScope(
       overrides: [
-        pedidosPendientesDePagoProvider.overrideWith((ref) => Stream.value(const [])),
+        pendientesComerciosProvider.overrideWith((ref, _) => Stream.value(const [])),
+        pendientesRidersProvider.overrideWith((ref, _) => Stream.value(const [])),
+        historialLiquidacionesProvider.overrideWith((ref) => Stream.value(const [])),
         avisosMercadoPagoProvider.overrideWith((ref) => Stream.value(avisos)),
       ],
       child: MaterialApp(
         theme: MyTheme.claro,
-        home: const Scaffold(body: PedidosPagoPage()),
+        home: const Scaffold(body: LiquidacionesPage()),
       ),
     ));
     await tester.pumpAndSettle();
@@ -56,7 +58,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('se llega desde la pantalla de cobros', (tester) async {
+  // Antes colgaba de la pantalla de cobros, que salió con el pago en efectivo:
+  // si se va con ella, el buzón vuelve a quedar sin pantalla.
+  testWidgets('se llega desde Liquidaciones', (tester) async {
     await abrir(tester, [aviso]);
 
     expect(find.text('order.failed'), findsOneWidget);

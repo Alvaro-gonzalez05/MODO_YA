@@ -44,7 +44,6 @@ class _Resumen extends StatelessWidget {
     final comercios = datos.comercios;
     final riders = datos.riders;
     final activos = datos.enviosActivos;
-    final porCobrar = datos.pedidosPorCobrar;
     final preinscriptos = datos.preinscripciones
         .where((p) => p.estado == EstadoPreinscripcion.pendiente)
         .toList();
@@ -59,6 +58,7 @@ class _Resumen extends StatelessWidget {
 
     final kpis = MyGrilla(
       anchoMinimo: context.esMovil ? 150 : 230,
+      maxColumnas: 3,
       children: [
         MyKpi(
           rotulo: 'Envíos en la calle',
@@ -82,20 +82,11 @@ class _Resumen extends StatelessWidget {
           detalle: '$enViaje en viaje · $libres libres',
           progreso: aprobados == 0 ? 0 : conectados.length / aprobados,
         ),
-        MyKpi(
-          rotulo: 'Pedidos por cobrar',
-          valor: '${porCobrar.length}',
-          icono: Symbols.payments,
-          detalle: porCobrar.isEmpty ? 'Nada pendiente' : 'Tocá para registrar lo cobrado',
-          destacado: porCobrar.isNotEmpty,
-          onTap: () => context.go('/admin/pedidos'),
-        ),
       ],
     );
 
     final mapa = _TarjetaMapa(riders: conectados, envios: activos);
     final atencion = _RequiereAtencion(
-      porCobrar: porCobrar.length,
       buscandoSinLibres: libres == 0 ? buscando : 0,
       sinUbicacion: comercios.where((c) => c.aprobacion.puedeOperar && !c.direccion.tieneCoordenadas).toList(),
       pendientes: comercios.where((c) => c.aprobacion == EstadoAprobacion.pendiente).length +
@@ -209,7 +200,6 @@ class _Referencia extends StatelessWidget {
 
 class _RequiereAtencion extends StatelessWidget {
   const _RequiereAtencion({
-    required this.porCobrar,
     required this.buscandoSinLibres,
     required this.sinUbicacion,
     required this.pendientes,
@@ -217,7 +207,6 @@ class _RequiereAtencion extends StatelessWidget {
     required this.ridersWeb,
   });
 
-  final int porCobrar;
   final int buscandoSinLibres;
   final List<Comercio> sinUbicacion;
   final int pendientes;
@@ -239,14 +228,6 @@ class _RequiereAtencion extends StatelessWidget {
           detalle: 'Conviene avisarle a algún rider que se conecte.',
           accion: 'Ver envíos',
           onTap: () => context.go('/admin/envios'),
-        ),
-      if (porCobrar > 0)
-        _Alerta(
-          icono: Symbols.payments,
-          titulo: porCobrar == 1 ? 'Un pedido sin cobrar' : '$porCobrar pedidos sin cobrar',
-          detalle: 'Ya los recibió el local: falta registrar la plata.',
-          accion: 'Revisar',
-          onTap: () => context.go('/admin/pedidos'),
         ),
       for (final c in sinUbicacion)
         _Alerta(

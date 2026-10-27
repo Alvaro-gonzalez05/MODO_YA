@@ -4,9 +4,9 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
-import 'hoja_de_liquidacion.dart';
-
 import '../../comun/formulario_emergente.dart';
+import 'avisos_mp.dart';
+import 'hoja_de_liquidacion.dart';
 
 /// Liquidaciones: qué le queda a cada local y a cada rider en un período.
 ///
@@ -44,6 +44,17 @@ class _LiquidacionesPageState extends ConsumerState<LiquidacionesPage> {
       rotulo: 'Dinero',
       titulo: 'Liquidaciones',
       bajada: 'Lo que hay que pagarle a cada local y a cada rider',
+      acciones: [
+        // Vivía en la pantalla de cobros, que salió con el pago en efectivo.
+        // Acá es donde se mira la plata: si un local dice que un pedido no le
+        // entró en la liquidación, lo primero es qué dijo Mercado Pago.
+        MyBoton(
+          label: 'Avisos de Mercado Pago',
+          icon: Symbols.inbox,
+          tipo: MyBotonTipo.secundario,
+          onPressed: () => mostrarAvisosDeMercadoPago(context),
+        ),
+      ],
       children: [
         MyFiltros<RangoDePeriodo>(
           opciones: [for (final r in RangoDePeriodo.values) (r, r.rotulo, -1)],

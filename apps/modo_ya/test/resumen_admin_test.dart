@@ -1,10 +1,10 @@
 // El resumen de la administración, sin base.
 //
-// Existe por un error concreto: el panel leía sus cinco consultas con
+// Existe por un error concreto: el panel leía sus consultas con
 // `.value ?? const []`, así que una consulta caída se veía igual que una sin
 // datos — ceros y un cartel verde diciendo "Todo en orden". Estas pruebas
 // fijan que un error se vea como error y que el "Todo en orden" solo salga
-// cuando las cinco consultas contestaron.
+// cuando todas las consultas contestaron.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,20 +24,18 @@ void main() {
   Widget app(Widget pantalla) =>
       MaterialApp(theme: MyTheme.claro, home: Scaffold(body: pantalla));
 
-  // Las cinco consultas del panel, vacias salvo las que se pisen. Sin tipo de
+  // Las consultas del panel, vacias salvo las que se pisen. Sin tipo de
   // retorno a proposito: `Override` no sale del paquete publico de Riverpod.
   consultas({
     Stream<List<Comercio>>? comercios,
     Stream<List<Repartidor>>? riders,
     Stream<List<Envio>>? envios,
-    Stream<List<Pedido>>? porCobrar,
     Stream<List<Preinscripcion>>? preinscripciones,
   }) =>
       [
         todosLosComerciosProvider.overrideWith((ref) => comercios ?? Stream.value(const [])),
         todosLosRepartidoresProvider.overrideWith((ref) => riders ?? Stream.value(const [])),
         enviosActivosProvider.overrideWith((ref) => envios ?? Stream.value(const [])),
-        pedidosPendientesDePagoProvider.overrideWith((ref) => porCobrar ?? Stream.value(const [])),
         preinscripcionesProvider.overrideWith((ref) => preinscripciones ?? Stream.value(const [])),
       ];
 
@@ -60,12 +58,11 @@ void main() {
       expect(find.text('ENVÍOS EN LA CALLE'), findsNothing);
     });
 
-    testWidgets('alcanza con que falle una de las cinco', (tester) async {
+    testWidgets('alcanza con que falle una', (tester) async {
       for (final override in [
         consultas(comercios: Stream.error(const ErrorModoYa('x'))),
         consultas(riders: Stream.error(const ErrorModoYa('x'))),
         consultas(envios: Stream.error(const ErrorModoYa('x'))),
-        consultas(porCobrar: Stream.error(const ErrorModoYa('x'))),
         consultas(preinscripciones: Stream.error(const ErrorModoYa('x'))),
       ]) {
         await tester.pumpWidget(ProviderScope(
@@ -79,7 +76,7 @@ void main() {
     });
   });
 
-  group('Cuando las cinco contestan', () {
+  group('Cuando todas contestan', () {
     testWidgets('sin nada pendiente dice que esta todo en orden', (tester) async {
       await tester.pumpWidget(ProviderScope(
         overrides: consultas(),

@@ -14,8 +14,13 @@ export '../../comun/estados_ui.dart';
 /// Contenedor del panel de administración.
 ///
 /// En la PC: barra lateral navy y barra superior con el estado de la operación
-/// y el menú del usuario. En el celular: dock con Resumen, Pedidos, Locales,
-/// Riders y "Más" (Envíos, Tarifas, Carteles, contraseña y cerrar sesión).
+/// y el menú del usuario. En el celular: dock con Resumen, Liquidaciones,
+/// Locales, Riders y "Más" (Envíos, Tarifas, Carteles, Notificaciones,
+/// Reclamos, contraseña y cerrar sesión).
+///
+/// No hay sección de cobros: desde 0058 en la app se paga solo con tarjeta y
+/// el cobro lo acredita Mercado Pago, sin que nadie lo registre a mano. Lo que
+/// queda de esa época, los avisos de Mercado Pago, se mira desde Liquidaciones.
 class AdminShell extends ConsumerWidget {
   const AdminShell({super.key, required this.navigationShell, required this.enRaiz});
 
@@ -27,7 +32,6 @@ class AdminShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sesion = ref.watch(sesionProvider);
-    final porCobrar = ref.watch(pedidosPendientesDePagoProvider).value?.length ?? 0;
     final riders = ref.watch(todosLosRepartidoresProvider).value ?? const <Repartidor>[];
     final conectados = riders.where((r) => r.conectado).length;
     // Un reclamo sin resolver o un documento sin revisar es gente esperando una
@@ -37,9 +41,10 @@ class AdminShell extends ConsumerWidget {
 
     return MyAppShell(
       seccion: 'Admin',
+      // El orden tiene que ser el mismo que el de las ramas en router.dart:
+      // el índice de cada destino es el de su rama.
       destinos: [
         const MyDestino(icon: Symbols.space_dashboard, label: 'Resumen'),
-        MyDestino(icon: Symbols.receipt_long, label: 'Cobros', contador: porCobrar),
         const MyDestino(icon: Symbols.account_balance_wallet, label: 'Liquidaciones'),
         const MyDestino(icon: Symbols.storefront, label: 'Locales'),
         MyDestino(icon: Symbols.sports_motorsports, label: 'Riders', contador: documentos),

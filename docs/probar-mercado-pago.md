@@ -56,7 +56,7 @@ Lo que tiene que pasar:
 | La app del cliente | "¡Pedido confirmado!" y el seguimiento |
 | La app del local | El pedido entra y suena |
 | Mercado Pago → Actividad | El cobro aprobado |
-| MODO YA → Administración → Cobros → Avisos | Un aviso `order.processed`, firma verificada, con la nota "ya estaba resuelto" |
+| MODO YA → Administración → Liquidaciones → Avisos de Mercado Pago | Un aviso `order.processed`, firma verificada, con la nota "ya estaba resuelto" |
 
 ## 3. La devolución
 
