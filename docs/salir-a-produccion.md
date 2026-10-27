@@ -120,6 +120,13 @@ casi no gastan. Si el uso crece, Geoapify avisa por mail antes del tope.
    instaladores que ya están en la calle siguen con el mapa viejo hasta
    actualizar.
 
+Para cambiar el dibujo, con la clave que ya está cargada:
+`configurar_mapas.ps1 -Estilo osm-bright-smooth` (los estilos están en la
+[documentación de Geoapify](https://apidocs.geoapify.com/docs/maps/map-tiles/)).
+Escribe también el mapa del modo oscuro (`-EstiloOscuro`, por defecto
+`dark-matter`), y los dos se piden en alta resolución en las pantallas que la
+aprovechan, al mismo costo.
+
 Para volver al mapa público (solo desarrollo): `configurar_mapas.ps1 -Volver`.
 
 **La ruta** ya no la pide la app sino la Edge Function `ruta`, así que se

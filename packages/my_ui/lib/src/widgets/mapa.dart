@@ -25,11 +25,23 @@ abstract final class MyMapa {
   /// Plaza San Martin, Malargue.
   static const centroMalargue = LatLng(-35.4756, -69.5847);
 
-  static Widget _capaBase() => TileLayer(
-        urlTemplate: Entorno.mapaBaldosas,
-        userAgentPackageName: 'com.modoya.app',
-        maxZoom: 19,
-      );
+  static Widget _capaBase(BuildContext context) {
+    // El oscuro solo si hay uno configurado: un mapa claro en la app oscura se
+    // ve raro, pero uno que no carga es peor.
+    final url = MyColors.esOscuro && Entorno.mapaBaldosasOscuro.isNotEmpty
+        ? Entorno.mapaBaldosasOscuro
+        : Entorno.mapaBaldosas;
+    return TileLayer(
+      urlTemplate: url,
+      userAgentPackageName: 'com.modoya.app',
+      maxZoom: 19,
+      // Con `{r}` en la URL el proveedor manda la baldosa al doble de
+      // resolución (@2x) en las pantallas que la aprovechan: se ve nítida y
+      // cuesta lo mismo. Sin `{r}`, flutter_map la simula pidiendo cuatro
+      // veces más baldosas, así que ahí no se activa.
+      retinaMode: url.contains('{r}') && RetinaMode.isHighDensity(context),
+    );
+  }
 
   static Widget _atribucion() => const SimpleAttributionWidget(
         source: Text(Entorno.mapaAtribucion),
@@ -170,7 +182,7 @@ class _SelectorPuntoState extends State<_SelectorPunto> {
               ),
               onPositionChanged: (camara, _) => _centro = camara.center,
             ),
-            children: [MyMapa._capaBase(), MyMapa._atribucion()],
+            children: [MyMapa._capaBase(context), MyMapa._atribucion()],
           ),
           // El pin queda fijo en el centro y se mueve el mapa por debajo: es
           // mucho mas preciso con el dedo que arrastrar un marcador.
@@ -482,7 +494,7 @@ class _MyMapaVistaState extends State<MyMapaVista> with SingleTickerProviderStat
               mapController: _control,
               options: _opciones,
               children: [
-                MyMapa._capaBase(),
+                MyMapa._capaBase(context),
                 if (ruta != null && ruta.length >= 2)
                   PolylineLayer(
                     polylines: [

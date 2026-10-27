@@ -38,6 +38,10 @@ abstract final class Entorno {
     defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   );
 
+  /// Las baldosas del modo oscuro. Vacío: el mismo mapa en los dos modos. Con
+  /// Geoapify lo escribe `configurar_mapas.ps1` (estilo dark-matter).
+  static const mapaBaldosasOscuro = String.fromEnvironment('MY_MAPA_BALDOSAS_OSCURO');
+
   /// Lo que hay que reconocer al pie del mapa. Cambia con el proveedor.
   static const mapaAtribucion = String.fromEnvironment(
     'MY_MAPA_ATRIBUCION',
