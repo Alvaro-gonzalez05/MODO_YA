@@ -81,6 +81,7 @@ van en una migración nueva.
 | `0071_solo_se_reparte_en_la_ciudad.sql` | **arreglo**: no se puede guardar una dirección, ubicar un local ni cotizar un envío fuera de la zona de reparto |
 | `0072_lo_que_quedo_abierto_de_los_pagos.sql` | **arreglo**: el alta de Plus no se cobra dos veces, un pago en revisión se consulta aunque no llegue el aviso, y una devolución parcial no anula el pago |
 | `0073_eliminar_la_cuenta.sql` | el cliente elimina su cuenta: se borran el usuario y sus datos, y los pedidos quedan anónimos para las liquidaciones |
+| `0074_cuentas_de_locales_en_modoya_app.sql` | **arreglo**: los usuarios de locales y riders pasan de `@modoya.com` (de otra empresa, con correo real) a `@modoya.app` |
 
 ## Decisiones de diseño
 
@@ -130,15 +131,20 @@ envíos viejos tienen que seguir diciendo desde dónde salieron.
 La administración no carga emails: `admin-crear-usuario` genera el usuario con
 el nombre y una contraseña al azar que se muestra una sola vez:
 
-- Local "Pizzería Don Luis" → `pizzeria.don.luis@modoya.com`
-- Rider "Juan Pérez" → `rider.juan.perez@modoya.com`
-- Si ya existe, se agrega un número: `pizzeria.don.luis.2@modoya.com`
+- Local "Pizzería Don Luis" → `pizzeria.don.luis@modoya.app`
+- Rider "Juan Pérez" → `rider.juan.perez@modoya.app`
+- Si ya existe, se agrega un número: `pizzeria.don.luis.2@modoya.app`
 
 Así el dueño o el rider conserva su email personal para registrarse como cliente
-si quiere. El dominio (`MODOYA_DOMINIO_CUENTAS`, por defecto `modoya.com`) es
-solo un identificador: **a esos usuarios no se les manda correo**, por eso la
+si quiere. El dominio (`MODOYA_DOMINIO_CUENTAS`, por defecto `modoya.app`) tiene
+que ser **nuestro**: desde que Supabase manda mails, un "recuperar contraseña"
+para uno de estos usuarios sale de verdad. Hasta 0074 era `modoya.com`, que es
+de otra empresa con correo real. Hoy esas casillas no existen (el reenvío de
+Namecheap no tiene ninguna), así que el mail no le llega a nadie: por eso la
 misma función tiene la acción `restablecer_password` (el panel la muestra como
-"Nueva contraseña" en la ficha del local o del rider).
+"Nueva contraseña" en la ficha del local o del rider). Si un local quiere
+recuperarla solo, se le arma un reenvío en Namecheap de su usuario a su mail
+real.
 
 Al crearse cualquier usuario, el trigger `alta_usuario` le arma el perfil. **El
 rol sale únicamente de `raw_app_meta_data`**, que solo puede escribir el

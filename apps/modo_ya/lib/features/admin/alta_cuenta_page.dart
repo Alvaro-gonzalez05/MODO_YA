@@ -49,7 +49,7 @@ class _AltaCuentaPageState extends ConsumerState<AltaCuentaPage> {
     acentos.forEach((k, v) => s = s.replaceAll(k, v));
     s = s.replaceAll(RegExp(r'[^a-z0-9]+'), '.').replaceAll(RegExp(r'^\.+|\.+$'), '');
     if (s.isEmpty) s = widget.esLocal ? 'nombre.del.local' : 'nombre.apellido';
-    return '${widget.esLocal ? '' : 'rider.'}$s@modoya.com';
+    return '${widget.esLocal ? '' : 'rider.'}$s@modoya.app';
   }
 
   Future<void> _crear() async {

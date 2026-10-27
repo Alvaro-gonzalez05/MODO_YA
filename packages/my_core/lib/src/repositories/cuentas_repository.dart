@@ -62,7 +62,7 @@ class CuentasRepository {
       });
 
   /// Crea un local. El usuario (email) y la contrasena los genera el servidor
-  /// con el nombre: pizzeria.don.luis@modoya.com.
+  /// con el nombre: pizzeria.don.luis@modoya.app.
   ///
   /// [email] solo lo usan las pruebas, para crear cuentas que despues puedan
   /// identificar y borrar.
@@ -88,7 +88,7 @@ class CuentasRepository {
         'lng': lng,
       });
 
-  /// Crea un rider: rider.juan.perez@modoya.com.
+  /// Crea un rider: rider.juan.perez@modoya.app.
   ///
   /// Con [solicitudId] es la aprobación de lo que pidió un local: el rider
   /// queda vinculado a ese local en el mismo paso.

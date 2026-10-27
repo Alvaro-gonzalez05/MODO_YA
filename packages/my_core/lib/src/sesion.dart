@@ -61,8 +61,22 @@ class AuthRepository {
   GoTrueClient get _auth => Backend.db.auth;
 
   Future<void> entrar(String email, String password) => intentar(
-        () => _auth.signInWithPassword(email: email.trim(), password: password),
+        () => _auth.signInWithPassword(email: usuarioActual(email), password: password),
       );
+
+  /// Los usuarios de locales y riders eran `@modoya.com` hasta 0074, y alguno
+  /// lo puede tener anotado así. Se acepta y se traduce al de ahora.
+  static String usuarioActual(String email) {
+    final e = email.trim();
+    return e.toLowerCase().endsWith('@modoya.com') ? '${e.substring(0, e.length - 11)}@modoya.app' : e;
+  }
+
+  /// Si es un usuario generado por la administración (local o rider): no tiene
+  /// casilla, así que el mail de recuperar la contraseña no le llegaría.
+  static bool esUsuarioGenerado(String email) {
+    final e = usuarioActual(email).toLowerCase();
+    return e.endsWith('@modoya.app');
+  }
 
   /// Registro de un cliente. Devuelve `true` si ya quedo con sesion iniciada y
   /// `false` si el proyecto exige confirmar el email primero.

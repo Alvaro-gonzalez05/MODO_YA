@@ -49,6 +49,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           'Si tenés un local o sos rider, pedile una nueva a la administración.',
     );
     if (email == null || email.trim().isEmpty || !mounted) return;
+    if (AuthRepository.esUsuarioGenerado(email)) {
+      // Ese usuario no tiene casilla: el mail no le llegaría a nadie.
+      mostrarError(context, 'Ese usuario es de un local o un rider: pedile una contraseña nueva a la administración.');
+      return;
+    }
     try {
       await ref.read(authRepositoryProvider).recuperarPassword(email);
       if (!mounted) return;

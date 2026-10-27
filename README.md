@@ -43,8 +43,8 @@ Todas las versiones: [Releases](https://github.com/Alvaro-gonzalez05/MODO_YA/rel
 | Tipo | Como se crea |
 |---|---|
 | Cliente | Se registra solo desde la app |
-| Local | Lo da de alta la administración desde la app: usuario `nombre.del.local@modoya.com` y contraseña generados |
-| Rider | Igual: `rider.nombre.apellido@modoya.com` |
+| Local | Lo da de alta la administración desde la app: usuario `nombre.del.local@modoya.app` y contraseña generados |
+| Rider | Igual: `rider.nombre.apellido@modoya.app` |
 | Administración | Se crea a mano |
 
 Los usuarios generados no reciben correo: si alguien se olvida la contraseña,

@@ -5,7 +5,7 @@
 //
 // Acciones (campo `accion` del cuerpo):
 //   * crear (por defecto): crea la cuenta. Si no viene email se genera uno
-//     con el nombre (pizzeria.don.luis@modoya.com, rider.juan.perez@modoya.com)
+//     con el nombre (pizzeria.don.luis@modoya.app, rider.juan.perez@modoya.app)
 //     y la contrasena siempre sale al azar. Asi el dueno del local o el rider
 //     conserva su email personal para registrarse como cliente si quiere.
 //   * restablecer_password: genera una contrasena temporal nueva para un local
@@ -66,8 +66,12 @@ interface Restablecer {
   repartidor_id?: string;
 }
 
-/** Dominio de los usuarios generados. Solo es un identificador: no se le manda correo. */
-const DOMINIO = Deno.env.get('MODOYA_DOMINIO_CUENTAS') ?? 'modoya.com';
+/** Dominio de los usuarios generados.
+ *
+ * Tiene que ser **nuestro**: desde que Supabase manda mails (Resend), un
+ * "recuperar contraseña" pedido para uno de estos usuarios sale de verdad.
+ * Antes era `modoya.com`, que es de otra empresa con correo real (0074). */
+const DOMINIO = Deno.env.get('MODOYA_DOMINIO_CUENTAS') ?? 'modoya.app';
 
 /** "Pizzería Don Luis" -> "pizzeria.don.luis". */
 function slug(texto: string): string {
