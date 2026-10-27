@@ -82,21 +82,45 @@ Hoy salen de servidores públicos (OpenStreetMap para las baldosas, OSRM para el
 camino del rider) que **no permiten uso productivo**: con tráfico real pueden
 bloquear la app sin aviso.
 
-**Las baldosas** se eligen en `env/publico.json`, sin tocar código:
-
-```json
-"MY_MAPA_BALDOSAS": "https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=CLAVE",
-"MY_MAPA_ATRIBUCION": "© MapTiler © OpenStreetMap"
-```
+**Elegido: Geoapify** (revisado el 27/10/2026). Es el único con plan gratis
+que permite uso comercial, sin tarjeta, y da baldosas **y** rutas con la misma
+cuenta:
 
 | Proveedor | Costo | Nota |
 |---|---|---|
-| [MapTiler](https://www.maptiler.com/cloud/pricing/) Flex | USD 25/mes | 500.000 baldosas por mes. El plan gratis es solo para uso no comercial |
-| [Geoapify](https://www.geoapify.com/pricing) | Gratis, o USD 59/mes | El gratis permite uso comercial limitado, con atribución. Da baldosas **y** rutas con la misma clave |
-| Baldosas propias (Protomaps, `.pmtiles`) | Gratis | Un archivo con Malargüe en un hosting estático. Es lo más barato a largo plazo, pero hay que cambiar el dibujo del mapa a vectorial |
+| [Geoapify](https://www.geoapify.com/pricing) | Gratis hasta 3.000 créditos por día; después USD 59/mes (10.000 por día) | Una baldosa = 0,25 créditos (12.000 baldosas por día); una ruta = 1 crédito. Exige "Powered by Geoapify" y OpenStreetMap al pie del mapa |
+| [MapTiler](https://www.maptiler.com/cloud/pricing/) Flex | USD 30/mes | 500.000 pedidos por mes. El gratis es solo para uso no comercial y se corta al pasarse |
+| Baldosas propias (Protomaps, `.pmtiles`) | Gratis | Un archivo con Malargüe en un hosting estático. Lo más barato a largo plazo, pero hay que pasar el mapa a vectorial |
 
-La clave de las baldosas viaja en la app (como la de Mercado Pago): en el panel
-del proveedor hay que restringirla al paquete de la app y al dominio.
+En el celular las baldosas quedan guardadas en el teléfono (flutter_map 8.2+
+las cachea solo), así que el rider o el local que miran siempre la misma zona
+casi no gastan. Si el uso crece, Geoapify avisa por mail antes del tope.
+
+**Pasos** (con la cuenta de MODO YA, modoya.codea@gmail.com):
+
+1. Crear la cuenta en [myprojects.geoapify.com](https://myprojects.geoapify.com),
+   un proyecto "MODO YA" y **dos claves**: una para el mapa y otra para las
+   rutas. La del mapa viaja dentro de la app y cualquiera la puede ver; la de
+   las rutas queda en el servidor. Si alguien abusa de la del mapa, se cambia
+   esa sola.
+2. La del mapa, con el script (la pide tapada, prueba una baldosa de Malargüe
+   y recién ahí escribe `env/publico.json` y `env/dev.json`):
+
+   ```powershell
+   .\supabase\scripts\configurar_mapas.ps1
+   ```
+
+3. La de las rutas, como secreto (anda al instante, sin sacar versión):
+
+   ```powershell
+   .\supabase\scripts\guardar_secreto.ps1 RUTAS_GEOAPIFY_KEY
+   ```
+
+4. Sacar una versión nueva: las baldosas se fijan al compilar, así que los
+   instaladores que ya están en la calle siguen con el mapa viejo hasta
+   actualizar.
+
+Para volver al mapa público (solo desarrollo): `configurar_mapas.ps1 -Volver`.
 
 **La ruta** ya no la pide la app sino la Edge Function `ruta`, así que se
 cambia sin sacar versión, cargando un secreto:
