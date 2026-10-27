@@ -179,9 +179,12 @@ class _AdminTarifasPageState extends ConsumerState<AdminTarifasPage> {
                   Text('MODO YA ${Formato.pesos(t.comisionModoYa)}', style: MyType.labelLg.copyWith(color: Colors.white70)),
                   if (t.precioKmAdicional > 0)
                     Text('+ ${Formato.pesos(t.precioKmAdicional)} por km extra', style: MyType.labelLg.copyWith(color: Colors.white70)),
+                  // "Al local: 18%" se leía como lo que le queda al local. Se
+                  // dicen las dos cosas para que no haya forma de leerlo al revés.
                   if (t.comisionPedidoPct > 0 || t.costoCobroPct > 0)
                     Text(
-                      'Al local: ${Formato.porcentaje(t.comisionPedidoPct + t.costoCobroPct)} de cada pedido',
+                      'Se le descuenta al local el ${Formato.porcentaje(t.comisionPedidoPct + t.costoCobroPct)} '
+                      'de cada pedido (le queda el ${Formato.porcentaje(100 - t.comisionPedidoPct - t.costoCobroPct)})',
                       style: MyType.labelLg.copyWith(color: Colors.white70),
                     ),
                 ],

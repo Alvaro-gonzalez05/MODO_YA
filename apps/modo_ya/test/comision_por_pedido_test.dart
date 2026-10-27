@@ -98,7 +98,7 @@ void main() {
 
     expect(find.text('10%'), findsOneWidget);
     expect(find.text('8%'), findsOneWidget);
-    expect(find.text('Al local: 18% de cada pedido'), findsOneWidget);
+    expect(find.text('Se le descuenta al local el 18% de cada pedido (le queda el 82%)'), findsOneWidget);
 
     Finder boton(String campo, String tooltip) => find.descendant(
           of: find.ancestor(of: find.text(campo), matching: find.byType(MyCard)),
