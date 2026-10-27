@@ -35,6 +35,8 @@ class TarifasRepository {
           'p_segundos_para_aceptar': t.segundosParaAceptar,
           'p_precio_suscripcion_mensual': t.precioSuscripcionMensual,
           'p_precio_plus_mensual': t.precioPlusMensual,
+          'p_comision_pedido_pct': t.comisionPedidoPct,
+          'p_costo_cobro_pct': t.costoCobroPct,
         });
       });
 }

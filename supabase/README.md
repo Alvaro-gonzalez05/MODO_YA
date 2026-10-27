@@ -82,6 +82,7 @@ van en una migración nueva.
 | `0072_lo_que_quedo_abierto_de_los_pagos.sql` | **arreglo**: el alta de Plus no se cobra dos veces, un pago en revisión se consulta aunque no llegue el aviso, y una devolución parcial no anula el pago |
 | `0073_eliminar_la_cuenta.sql` | el cliente elimina su cuenta: se borran el usuario y sus datos, y los pedidos quedan anónimos para las liquidaciones |
 | `0074_cuentas_de_locales_en_modoya_app.sql` | **arreglo**: los usuarios de locales y riders pasan de `@modoya.com` (de otra empresa, con correo real) a `@modoya.app` |
+| `0075_comision_por_pedido.sql` | comisión de MODO YA y costo de Mercado Pago como porcentaje de cada pedido, descontados al local en la liquidación. **Arreglo**: cambiar las tarifas ya no borraba la penalidad por rechazo |
 
 ## Decisiones de diseño
 
@@ -355,8 +356,9 @@ cuando el rider se baja, y que la plata quede por devolver cuando se cancela.
 La plata la cobra MODO YA (tarjeta en la app) o la junta el rider (efectivo).
 Después hay que repartirla:
 
-- **Local** = lo que vendió en productos − mensualidad − publicidad − ajustes
-  (`cargos_comercio`). El envío no entra: ese dinero es de MODO YA.
+- **Local** = lo que vendió en productos − comisión por pedido − cobro con
+  tarjeta − mensualidad − publicidad − ajustes (`cargos_comercio`). El envío no
+  entra: ese dinero es de MODO YA.
 - **Rider** = la ganancia de los envíos que entregó − el efectivo que cobró en
   la puerta y todavía no rindió.
 
@@ -388,6 +390,29 @@ explicar.
 que A no vea nada de B (detalle, resumen, cargos, la tabla por RLS y la
 liquidación cerrada) y que A sí vea todo lo suyo. Cerrar de más también es un
 bug: un rider que no ve su liquidación es el problema que esto vino a resolver.
+
+### Comisión por pedido (0075)
+
+Además de la mensualidad, MODO YA se queda con un porcentaje de los productos
+de cada pedido, y le pasa al local lo que cobra Mercado Pago por las tarjetas
+(el cobro lo hace MODO YA, así que la comisión de MP sale de su cuenta). Los dos
+porcentajes viven en el tarifario (`comision_pedido_pct`, `costo_cobro_pct`;
+arrancan en 10% y 8%) y se cambian desde **Tarifas y reglas**.
+
+Cada pedido **congela** los porcentajes al crearse (trigger
+`pedidos_congela_comision`), igual que el envío congela su precio: subir la
+comisión no le cambia la cuenta a un pedido que ya existía. Si cambia el
+subtotal, se recalculan los montos con el porcentaje que ya tenía.
+
+Entran a la liquidación los pedidos **entregados** (un rechazado se devuelve
+entero y no deja nada). En la hoja aparecen agrupados, no pedido por pedido:
+"10% de $20.000 en 3 pedidos". Las cuatro funciones de la liquidación del local
+(resumen, cargos, cierre y hoja cerrada) los suman igual, así que el detalle
+siempre da el saldo del encabezado. `tests/comision_por_pedido.sql`.
+
+> Los tests de liquidación que existían (`liquidaciones`, `mi_liquidacion`,
+> `campanias`, `envio_regalado_con_plus`) verifican montos exactos: ponen los
+> porcentajes en cero mientras corren y los restauran al final.
 
 ## Campañas y MODO YA Plus
 
@@ -842,6 +867,12 @@ pedido en curso no se puede; después se borran el usuario, las direcciones, las
 tarjetas, Plus y el dispositivo, y los pedidos quedan sin nombre, teléfono ni
 dirección. También que un local no pueda darse de baja solo y que la
 administración pueda dar de baja por email.
+
+**`tests/comision_por_pedido.sql`** — la comisión por pedido (0075): el
+pedido congela el porcentaje y un tarifario nuevo no lo cambia; un rechazado no
+cobra comisión; el resumen, los cargos y la hoja cerrada dan lo mismo; el
+detalle se lee ("10% de $20.000 en 1 pedido"); cambiar las tarifas conserva la
+penalidad por rechazo; y el local no puede tocar su comisión.
 
 **`tests/alta_de_plus_y_pagos_sin_aviso.sql`** — lo que quedó de los pagos
 (0072): el alta de Plus no se cobra dos veces y, aprobada tarde, se activa

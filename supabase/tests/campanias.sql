@@ -7,6 +7,7 @@ create temporary table _r (paso text, resultado text);
 
 do $$
 declare
+  pct_comision numeric; pct_cobro numeric;
   u_com uuid := gen_random_uuid();
   u_cli uuid := gen_random_uuid();   -- con Plus
   u_cli2 uuid := gen_random_uuid();  -- sin Plus
@@ -19,6 +20,15 @@ declare
   rend record;
   envio_base integer;
 begin
+
+  -- La comisión por pedido y el costo del cobro (0075) tienen su propia prueba
+  -- (comision_por_pedido.sql). Acá se apagan mientras dura esta, para que los
+  -- números que mide sigan siendo los suyos, y se vuelven a poner al final.
+  select comision_pedido_pct, costo_cobro_pct into pct_comision, pct_cobro
+    from public.tarifarios where vigente_hasta is null and servicio = 'delivery' limit 1;
+  update public.tarifarios set comision_pedido_pct = 0, costo_cobro_pct = 0
+   where vigente_hasta is null and servicio = 'delivery';
+
   select id into ciudad from public.ciudades where nombre = 'Malargue';
 
   insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
@@ -182,6 +192,8 @@ update public.pedidos set estado = 'aceptado' where id in (ped.id, ped2.id);
   delete from public.clientes where id in (cli, cli2);
   delete from public.comercios where id = com;
   delete from auth.users where id in (u_com, u_cli, u_cli2, u_adm);
+  update public.tarifarios set comision_pedido_pct = pct_comision, costo_cobro_pct = pct_cobro
+   where vigente_hasta is null and servicio = 'delivery';
 end $$;
 
 select paso, resultado from _r order by paso;

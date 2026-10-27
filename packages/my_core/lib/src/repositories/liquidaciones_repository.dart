@@ -156,6 +156,8 @@ class RenglonDeCargo {
   /// Cómo se lee el concepto en la hoja.
   String get rotulo => switch (concepto) {
         'mensualidad' => 'Mensualidad del plan',
+        'comision' => 'Comisión por pedido',
+        'costo_cobro' => 'Cobro con tarjeta',
         'publicidad' => 'Publicidad',
         'campania' => 'Campaña',
         'abandono' => 'Se bajó del envío',

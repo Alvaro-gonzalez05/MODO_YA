@@ -18,6 +18,12 @@ abstract final class Formato {
   static String km(double valor) =>
       '${valor.toStringAsFixed(1).replaceAll('.', ',')} km';
 
+  /// `10%`, `8,5%`. Sin decimales cuando el porcentaje es redondo.
+  static String porcentaje(num valor) {
+    final redondo = valor == valor.roundToDouble();
+    return '${redondo ? valor.round() : valor.toStringAsFixed(1).replaceAll('.', ',')}%';
+  }
+
   /// `12 min`
   static String minutos(int valor) => '$valor min';
 

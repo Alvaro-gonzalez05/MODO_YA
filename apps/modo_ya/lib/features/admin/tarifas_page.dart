@@ -25,13 +25,15 @@ class _AdminTarifasPageState extends ConsumerState<AdminTarifasPage> {
       t.precioKmAdicional != g.precioKmAdicional ||
       t.radioBusquedaKm != g.radioBusquedaKm ||
       t.segundosParaAceptar != g.segundosParaAceptar ||
-      t.precioPlusMensual != g.precioPlusMensual;
+      t.precioPlusMensual != g.precioPlusMensual ||
+      t.comisionPedidoPct != g.comisionPedidoPct ||
+      t.costoCobroPct != g.costoCobroPct;
 
   Future<void> _guardar(Tarifario t) async {
     final ok = await confirmar(
       context,
       titulo: 'Aplicar nuevas tarifas',
-      mensaje: 'Los envíos que se creen desde ahora se cobran con estos valores. Los que ya existen no cambian.',
+      mensaje: 'Los envíos y pedidos que se creen desde ahora se cobran con estos valores. Los que ya existen no cambian.',
       aceptar: 'Aplicar',
     );
     if (!ok) return;
@@ -67,16 +69,16 @@ class _AdminTarifasPageState extends ConsumerState<AdminTarifasPage> {
             valor: t.gananciaRepartidorBase,
             pesos: true,
             paso: 250,
-            onChanged: (v) => setState(() => _borrador = t.copyWith(gananciaRepartidorBase: v)),
+            onChanged: (v) => setState(() => _borrador = t.copyWith(gananciaRepartidorBase: v.toInt())),
           ),
           _CampoNumero(
             icon: Symbols.percent,
-            titulo: 'Comisión MODO YA',
-            detalle: 'Por cada servicio',
+            titulo: 'Comisión MODO YA por envío',
+            detalle: 'Se suma a lo del rider en cada envío',
             valor: t.comisionModoYa,
             pesos: true,
             paso: 50,
-            onChanged: (v) => setState(() => _borrador = t.copyWith(comisionModoYa: v)),
+            onChanged: (v) => setState(() => _borrador = t.copyWith(comisionModoYa: v.toInt())),
           ),
           _CampoNumero(
             icon: Symbols.add_road,
@@ -85,7 +87,7 @@ class _AdminTarifasPageState extends ConsumerState<AdminTarifasPage> {
             valor: t.precioKmAdicional,
             pesos: true,
             paso: 100,
-            onChanged: (v) => setState(() => _borrador = t.copyWith(precioKmAdicional: v)),
+            onChanged: (v) => setState(() => _borrador = t.copyWith(precioKmAdicional: v.toInt())),
           ),
           _CampoNumero(
             icon: Symbols.workspace_premium,
@@ -94,7 +96,30 @@ class _AdminTarifasPageState extends ConsumerState<AdminTarifasPage> {
             valor: t.precioPlusMensual,
             pesos: true,
             paso: 250,
-            onChanged: (v) => setState(() => _borrador = t.copyWith(precioPlusMensual: v)),
+            onChanged: (v) => setState(() => _borrador = t.copyWith(precioPlusMensual: v.toInt())),
+          ),
+        ];
+
+        final pedidos = [
+          _CampoNumero(
+            icon: Symbols.storefront,
+            titulo: 'Comisión por pedido',
+            detalle: 'Sobre los productos de cada pedido. Se le descuenta al local en la liquidación, aparte de la mensualidad',
+            valor: t.comisionPedidoPct,
+            porcentaje: true,
+            paso: 0.5,
+            maximo: 100,
+            onChanged: (v) => setState(() => _borrador = t.copyWith(comisionPedidoPct: v.toDouble())),
+          ),
+          _CampoNumero(
+            icon: Symbols.credit_card,
+            titulo: 'Cobro con tarjeta',
+            detalle: 'Lo que se queda Mercado Pago. También se le descuenta al local, porque el cobro lo hace MODO YA',
+            valor: t.costoCobroPct,
+            porcentaje: true,
+            paso: 0.5,
+            maximo: 100,
+            onChanged: (v) => setState(() => _borrador = t.copyWith(costoCobroPct: v.toDouble())),
           ),
         ];
 
@@ -127,7 +152,7 @@ class _AdminTarifasPageState extends ConsumerState<AdminTarifasPage> {
             unidad: 's',
             paso: 5,
             minimo: 10,
-            onChanged: (v) => setState(() => _borrador = t.copyWith(segundosParaAceptar: v)),
+            onChanged: (v) => setState(() => _borrador = t.copyWith(segundosParaAceptar: v.toInt())),
           ),
         ];
 
@@ -154,6 +179,11 @@ class _AdminTarifasPageState extends ConsumerState<AdminTarifasPage> {
                   Text('MODO YA ${Formato.pesos(t.comisionModoYa)}', style: MyType.labelLg.copyWith(color: Colors.white70)),
                   if (t.precioKmAdicional > 0)
                     Text('+ ${Formato.pesos(t.precioKmAdicional)} por km extra', style: MyType.labelLg.copyWith(color: Colors.white70)),
+                  if (t.comisionPedidoPct > 0 || t.costoCobroPct > 0)
+                    Text(
+                      'Al local: ${Formato.porcentaje(t.comisionPedidoPct + t.costoCobroPct)} de cada pedido',
+                      style: MyType.labelLg.copyWith(color: Colors.white70),
+                    ),
                 ],
               ),
             ],
@@ -206,16 +236,27 @@ class _AdminTarifasPageState extends ConsumerState<AdminTarifasPage> {
               ),
             const SizedBox(height: MySpacing.xl),
             if (context.esMovil) ...[
-              grupo('Dinero', dinero),
+              grupo('Envíos', dinero),
+              const SizedBox(height: MySpacing.md),
+              grupo('Pedidos de los locales', pedidos),
               const SizedBox(height: MySpacing.md),
               grupo('Reglas de asignación', reglas),
             ] else
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: grupo('Dinero', dinero)),
+                  Expanded(child: grupo('Envíos', dinero)),
                   const SizedBox(width: MySpacing.lg),
-                  Expanded(child: grupo('Reglas de asignación', reglas)),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        grupo('Pedidos de los locales', pedidos),
+                        const SizedBox(height: MySpacing.md),
+                        grupo('Reglas de asignación', reglas),
+                      ],
+                    ),
+                  ),
                 ],
               ),
           ],
@@ -234,23 +275,32 @@ class _CampoNumero extends StatelessWidget {
     required this.paso,
     required this.onChanged,
     this.pesos = false,
+    this.porcentaje = false,
     this.unidad,
     this.minimo = 0,
+    this.maximo,
   });
 
   final IconData icon;
   final String titulo;
   final String detalle;
-  final int valor;
-  final int paso;
-  final int minimo;
+  final num valor;
+  final num paso;
+  final num minimo;
+  final num? maximo;
   final bool pesos;
+  final bool porcentaje;
   final String? unidad;
-  final ValueChanged<int> onChanged;
+  final ValueChanged<num> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final texto = pesos ? Formato.pesos(valor) : '$valor${unidad == null ? '' : ' $unidad'}';
+    final texto = pesos
+        ? Formato.pesos(valor)
+        : porcentaje
+            ? Formato.porcentaje(valor)
+            : '$valor${unidad == null ? '' : ' $unidad'}';
+    final tope = maximo;
 
     final stepper = Container(
       decoration: BoxDecoration(
@@ -271,7 +321,7 @@ class _CampoNumero extends StatelessWidget {
             child: Text(texto, style: MyType.headlineSm.copyWith(color: MyColors.tertiary), textAlign: TextAlign.center),
           ),
           IconButton(
-            onPressed: () => onChanged(valor + paso),
+            onPressed: tope != null && valor + paso > tope ? null : () => onChanged(valor + paso),
             icon: const Icon(Symbols.add),
             color: MyColors.primary,
             tooltip: 'Subir',

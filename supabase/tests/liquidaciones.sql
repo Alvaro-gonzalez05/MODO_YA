@@ -8,6 +8,7 @@ create temporary table _r (paso text, resultado text);
 
 do $$
 declare
+  pct_comision numeric; pct_cobro numeric;
   u_adm uuid := gen_random_uuid();
   u_com uuid := gen_random_uuid();
   u_rep uuid := gen_random_uuid();
@@ -22,6 +23,15 @@ declare
   desde date := public.hoy() - 7;
   hasta date := public.hoy();
 begin
+
+  -- La comisión por pedido y el costo del cobro (0075) tienen su propia prueba
+  -- (comision_por_pedido.sql). Acá se apagan mientras dura esta, para que los
+  -- números que mide sigan siendo los suyos, y se vuelven a poner al final.
+  select comision_pedido_pct, costo_cobro_pct into pct_comision, pct_cobro
+    from public.tarifarios where vigente_hasta is null and servicio = 'delivery' limit 1;
+  update public.tarifarios set comision_pedido_pct = 0, costo_cobro_pct = 0
+   where vigente_hasta is null and servicio = 'delivery';
+
   select id into ciudad from public.ciudades where nombre = 'Malargue';
   select id into tar from public.tarifarios where vigente_hasta is null limit 1;
 
@@ -157,6 +167,8 @@ begin
   delete from public.repartidores where id = rep;
   delete from public.comercios where id = com;
   delete from auth.users where id in (u_adm, u_com, u_rep, u_cli);
+  update public.tarifarios set comision_pedido_pct = pct_comision, costo_cobro_pct = pct_cobro
+   where vigente_hasta is null and servicio = 'delivery';
 end $$;
 
 select paso, resultado from _r order by paso;

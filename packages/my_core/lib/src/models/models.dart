@@ -77,6 +77,8 @@ class Tarifario {
     this.ciudadId,
     this.precioSuscripcionMensual,
     this.precioPlusMensual = 2500,
+    this.comisionPedidoPct = 0,
+    this.costoCobroPct = 0,
   });
 
   final String? id;
@@ -94,6 +96,14 @@ class Tarifario {
   /// Lo que paga el cliente por MODO YA Plus, cada mes.
   final int precioPlusMensual;
 
+  /// Porcentaje de los productos de cada pedido que se queda MODO YA. Se le
+  /// descuenta al local en la liquidación, aparte de la mensualidad.
+  final double comisionPedidoPct;
+
+  /// Lo que cobra Mercado Pago por las tarjetas, como porcentaje de los
+  /// productos. También se le descuenta al local: el cobro lo hace MODO YA.
+  final double costoCobroPct;
+
   int get precioBase => gananciaRepartidorBase + comisionModoYa;
 
   factory Tarifario.fromRow(Map<String, dynamic> f) => Tarifario(
@@ -107,6 +117,8 @@ class Tarifario {
         segundosParaAceptar: Fila.entero(f, 'segundos_para_aceptar'),
         precioSuscripcionMensual: Fila.enteroOpcional(f, 'precio_suscripcion_mensual'),
         precioPlusMensual: Fila.entero(f, 'precio_plus_mensual', 2500),
+        comisionPedidoPct: Fila.decimal(f, 'comision_pedido_pct'),
+        costoCobroPct: Fila.decimal(f, 'costo_cobro_pct'),
       );
 
   Tarifario copyWith({
@@ -117,6 +129,8 @@ class Tarifario {
     double? radioBusquedaKm,
     int? segundosParaAceptar,
     int? precioPlusMensual,
+    double? comisionPedidoPct,
+    double? costoCobroPct,
   }) =>
       Tarifario(
         id: id,
@@ -129,6 +143,8 @@ class Tarifario {
         segundosParaAceptar: segundosParaAceptar ?? this.segundosParaAceptar,
         precioSuscripcionMensual: precioSuscripcionMensual,
         precioPlusMensual: precioPlusMensual ?? this.precioPlusMensual,
+        comisionPedidoPct: comisionPedidoPct ?? this.comisionPedidoPct,
+        costoCobroPct: costoCobroPct ?? this.costoCobroPct,
       );
 }
 

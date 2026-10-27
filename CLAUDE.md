@@ -38,7 +38,7 @@ usuario. "El botón de PDF estaba escondido", no "fix: button visibility".
 Postgres en Supabase con RLS en todo. La lógica de negocio vive en funciones
 `security definer`, no en la app. Las vistas usan `security_invoker`.
 
-Las migraciones están numeradas (`0001_…` a `0074_…`) y se aplican con:
+Las migraciones están numeradas (`0001_…` a `0075_…`) y se aplican con:
 
 ```bash
 powershell -NoProfile -Command "& './supabase/scripts/sql.ps1' -Archivo 'ruta/al/archivo.sql'"
