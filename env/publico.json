@@ -3,5 +3,7 @@
   "MY_SUPABASE_URL": "https://wqahdncdqnzrusrmdyui.supabase.co",
   "MY_SUPABASE_KEY": "sb_publishable_kAgKdriyxNzmYPwfYhGZNw_katA01GI",
   "MY_MP_PUBLIC_KEY": "APP_USR-c8460752-389d-4ad9-a3a2-f699548455b9",
-  "MY_CORREO_ACTIVO": true
+  "MY_CORREO_ACTIVO": true,
+  "MY_MAPA_BALDOSAS": "https://maps.geoapify.com/v1/tile/osm-carto/{z}/{x}/{y}.png?apiKey=12b7cd7e47d54c4c805e8524e444c38f",
+  "MY_MAPA_ATRIBUCION": "Powered by Geoapify | © OpenStreetMap"
 }
