@@ -84,6 +84,7 @@ van en una migración nueva.
 | `0074_cuentas_de_locales_en_modoya_app.sql` | **arreglo**: los usuarios de locales y riders pasan de `@modoya.com` (de otra empresa, con correo real) a `@modoya.app` |
 | `0075_comision_por_pedido.sql` | comisión de MODO YA y costo de Mercado Pago como porcentaje de cada pedido, descontados al local en la liquidación. **Arreglo**: cambiar las tarifas ya no borraba la penalidad por rechazo |
 | `0076_pedido_que_el_local_no_acepta.sql` | **arreglo**: un pedido pagado que el local no acepta ni rechaza en 15 minutos se rechaza solo, con devolución y la misma penalidad (cron `vencer-pedidos-sin-aceptar`). Antes quedaba trabado para siempre |
+| `0078_el_rider_que_cerro_la_app.sql` | **arreglo**: el rider que cerró la app sin desconectarse dejaba de figurar conectado nunca. Las ofertas van solo a quien mandó su posición en los últimos 10 minutos, y a los 30 sin señales (sin envío en curso) se lo desconecta (cron `desconectar-riders-sin-senal`) |
 | `0077_el_rider_encadena_y_la_busqueda_no_se_rinde.sql` | el rider que lleva un envío recibe ofertas de otros locales (después de los libres); la búsqueda de rider de un pedido o un mandado ya no se corta a las 3 horas |
 
 ## Decisiones de diseño
@@ -910,6 +911,10 @@ sin pagar no se tocan; una segunda pasada no cobra dos veces; el botón de
 rechazar deja el mismo cargo. Usa la penalidad real del tarifario: el
 vencimiento pasa por toda la base, y un pedido trabado de verdad no puede
 llevarse una penalidad de prueba.
+
+**`tests/rider_sin_senal.sql`** — el rider sin señales (0078): al conectado con
+la posición de hace dos horas no le llega la oferta y se desconecta solo; al que
+lleva un envío no se lo saca del viaje.
 
 **`tests/rider_encadena.sql`** — el reparto (0077): el rider con un envío
 recibe ofertas de otro local pero después de los libres, el que va al mismo

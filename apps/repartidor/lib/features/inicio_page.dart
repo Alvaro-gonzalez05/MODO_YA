@@ -140,6 +140,17 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
       });
     }
 
+    // Y al revés: si la base lo desconectó (0078: media hora sin señales), se
+    // deja de mandar la ubicación. La app promete que solo se comparte
+    // mientras está conectado. Se mira el paso de conectado a desconectado y
+    // no el estado: al conectarse, la base tarda un instante en avisarlo y en
+    // ese rato el rider todavía figura desconectado.
+    ref.listen(repartidorActualProvider, (antes, ahora) {
+      if (antes?.value?.conectado == true && ahora.value?.conectado == false && ubic.activo) {
+        ubic.parar();
+      }
+    });
+
     // Vale también para el que reabre la app ya conectado: la primera lectura
     // dice si sigue teniendo el permiso.
     ref.listen(ubicacionRiderProvider, (antes, ahora) {
