@@ -46,8 +46,7 @@ void main() {
       );
 
   Future<void> mostrar(WidgetTester tester, Pedido p) async {
-    // El tablero del local son tres columnas: en los 800x600 de prueba no
-    // entran y lo que se mide se pierde entre avisos de desborde.
+    // En una pantalla de compu, para ver el tablero por columnas.
     tester.view.physicalSize = const Size(1600, 1200);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -59,9 +58,16 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Las cuentas del pedido están en el detalle: la tarjeta del tablero es corta.
+  Future<void> abrirDetalle(WidgetTester tester, Pedido p) async {
+    await mostrar(tester, p);
+    await tester.tap(find.text(p.codigo));
+    await tester.pumpAndSettle();
+  }
+
   group('El costo del envío que ve el local', () {
     testWidgets('un pedido normal: lo cobra MODO YA', (tester) async {
-      await mostrar(tester, pedido(costoEnvio: 4200));
+      await abrirDetalle(tester, pedido(costoEnvio: 4200));
 
       expect(find.text('El envío (\$4.200) lo cobra MODO YA.'), findsOneWidget);
     });
@@ -69,7 +75,7 @@ void main() {
     testWidgets('con Plus muestra el importe real y de quién es', (tester) async {
       // Lo que guarda `crear_pedido`: el cliente paga 0 y el importe va a
       // `envio_cubierto`, que se le descuenta al local.
-      await mostrar(tester, pedido(costoEnvio: 0, envioCubierto: 4200));
+      await abrirDetalle(tester, pedido(costoEnvio: 0, envioCubierto: 4200));
 
       expect(find.textContaining('\$4.200'), findsWidgets);
       expect(find.textContaining('lo ponés vos con tu campaña Plus'), findsOneWidget);

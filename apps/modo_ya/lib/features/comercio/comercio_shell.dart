@@ -7,6 +7,7 @@ import 'package:my_ui/my_ui.dart';
 
 import '../../comun/menu_usuario.dart';
 import '../../comun/notificaciones.dart';
+import 'widgets/pedido.dart';
 
 /// Contenedor de las pantallas del local: barra lateral en la PC, dock en el
 /// celular. Avisa de los pedidos nuevos esté donde esté: el timbre suena en
@@ -36,7 +37,9 @@ class ComercioShell extends ConsumerWidget {
         context,
         'Nuevo pedido ${recienLlegados.first.codigo} · ${Formato.pesos(recienLlegados.first.total)}',
         accion: 'Ver',
-        onAccion: () => navigationShell.goBranch(1),
+        // El pedido en una hoja encima de lo que esté mirando, no la pestaña
+        // Pedidos: para aceptarlo no hace falta perder lo que estaba haciendo.
+        onAccion: () => mostrarDetallePedido(context, recienLlegados.first),
       );
     });
 
