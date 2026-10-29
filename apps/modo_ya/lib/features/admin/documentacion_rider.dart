@@ -5,6 +5,8 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'encoger.dart';
+
 /// La carpeta de un rider dentro de su ficha: qué se le pide por su vehículo,
 /// qué subió, y aprobarlo o rechazarlo.
 ///
@@ -35,13 +37,21 @@ class DocumentacionDelRider extends ConsumerWidget {
               Row(
                 children: [
                   const Expanded(child: MyOverline('Documentación')),
-                  MyBadge(
-                    c.completa ? 'Completa' : c.titular,
-                    tone: c.completa
-                        ? MyBadgeTone.success
-                        : c.esperaRevision
-                            ? MyBadgeTone.ember
-                            : MyBadgeTone.danger,
+                  const SizedBox(width: MySpacing.xs),
+                  // El titular puede ser una frase entera: en la ficha angosta
+                  // del celular se achica en vez de desbordar.
+                  Flexible(
+                    flex: 3,
+                    child: Encoger(
+                      child: MyBadge(
+                        c.completa ? 'Completa' : c.titular,
+                        tone: c.completa
+                            ? MyBadgeTone.success
+                            : c.esperaRevision
+                                ? MyBadgeTone.ember
+                                : MyBadgeTone.danger,
+                      ),
+                    ),
                   ),
                 ],
               ),

@@ -6,6 +6,11 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import 'admin_shell.dart';
+import 'comercios_page.dart';
+import 'encoger.dart';
+import 'envios_page.dart';
+import 'preinscripciones.dart';
+import 'repartidores_page.dart';
 
 /// Resumen de la operación: indicadores, mapa en vivo, lo que requiere
 /// atención y los envíos en la calle.
@@ -44,7 +49,6 @@ class _Resumen extends StatelessWidget {
     final comercios = datos.comercios;
     final riders = datos.riders;
     final activos = datos.enviosActivos;
-    final porCobrar = datos.pedidosPorCobrar;
     final preinscriptos = datos.preinscripciones
         .where((p) => p.estado == EstadoPreinscripcion.pendiente)
         .toList();
@@ -59,6 +63,7 @@ class _Resumen extends StatelessWidget {
 
     final kpis = MyGrilla(
       anchoMinimo: context.esMovil ? 150 : 230,
+      maxColumnas: 3,
       children: [
         MyKpi(
           rotulo: 'Envíos en la calle',
@@ -82,24 +87,15 @@ class _Resumen extends StatelessWidget {
           detalle: '$enViaje en viaje · $libres libres',
           progreso: aprobados == 0 ? 0 : conectados.length / aprobados,
         ),
-        MyKpi(
-          rotulo: 'Pedidos por cobrar',
-          valor: '${porCobrar.length}',
-          icono: Symbols.payments,
-          detalle: porCobrar.isEmpty ? 'Nada pendiente' : 'Tocá para registrar lo cobrado',
-          destacado: porCobrar.isNotEmpty,
-          onTap: () => context.go('/admin/pedidos'),
-        ),
       ],
     );
 
     final mapa = _TarjetaMapa(riders: conectados, envios: activos);
     final atencion = _RequiereAtencion(
-      porCobrar: porCobrar.length,
       buscandoSinLibres: libres == 0 ? buscando : 0,
       sinUbicacion: comercios.where((c) => c.aprobacion.puedeOperar && !c.direccion.tieneCoordenadas).toList(),
-      pendientes: comercios.where((c) => c.aprobacion == EstadoAprobacion.pendiente).length +
-          riders.where((r) => r.aprobacion == EstadoAprobacion.pendiente).length,
+      localesPendientes: comercios.where((c) => c.aprobacion == EstadoAprobacion.pendiente).toList(),
+      ridersPendientes: riders.where((r) => r.aprobacion == EstadoAprobacion.pendiente).toList(),
       localesWeb: preinscriptos.where((p) => p.tipo == TipoPreinscripcion.local).length,
       ridersWeb: preinscriptos.where((p) => p.tipo == TipoPreinscripcion.rider).length,
     );
@@ -160,7 +156,9 @@ class _TarjetaMapa extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('Mapa en vivo', style: MyType.headlineSm),
+              Flexible(
+                child: Text('Mapa en vivo', style: MyType.headlineSm, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
               const SizedBox(width: MySpacing.xs),
               const MyBadge('En vivo', tone: MyBadgeTone.ember, dot: true),
             ],
@@ -207,20 +205,24 @@ class _Referencia extends StatelessWidget {
   }
 }
 
+/// Lo que espera una decisión. Cada aviso abre lo suyo **en el lugar** cuando
+/// es una sola cosa (la ficha de ese local, de ese rider, las
+/// pre-inscripciones): antes todos llevaban a otra sección y había que volver a
+/// buscar de qué se hablaba. Cuando son varios, sí lleva a la lista.
 class _RequiereAtencion extends StatelessWidget {
   const _RequiereAtencion({
-    required this.porCobrar,
     required this.buscandoSinLibres,
     required this.sinUbicacion,
-    required this.pendientes,
+    required this.localesPendientes,
+    required this.ridersPendientes,
     required this.localesWeb,
     required this.ridersWeb,
   });
 
-  final int porCobrar;
   final int buscandoSinLibres;
   final List<Comercio> sinUbicacion;
-  final int pendientes;
+  final List<Comercio> localesPendientes;
+  final List<Repartidor> ridersPendientes;
 
   /// Pre-inscripciones de la página web que nadie contactó todavía.
   final int localesWeb;
@@ -228,6 +230,12 @@ class _RequiereAtencion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    void verPreinscripciones(TipoPreinscripcion tipo) => mostrarHojaLateral(
+          context,
+          titulo: 'Pre-inscripciones',
+          builder: (_) => PreinscripcionesWeb(tipo: tipo),
+        );
+
     final items = <Widget>[
       if (buscandoSinLibres > 0)
         _Alerta(
@@ -240,29 +248,37 @@ class _RequiereAtencion extends StatelessWidget {
           accion: 'Ver envíos',
           onTap: () => context.go('/admin/envios'),
         ),
-      if (porCobrar > 0)
-        _Alerta(
-          icono: Symbols.payments,
-          titulo: porCobrar == 1 ? 'Un pedido sin cobrar' : '$porCobrar pedidos sin cobrar',
-          detalle: 'Ya los recibió el local: falta registrar la plata.',
-          accion: 'Revisar',
-          onTap: () => context.go('/admin/pedidos'),
-        ),
       for (final c in sinUbicacion)
         _Alerta(
           icono: Symbols.location_off,
           titulo: '${c.nombre} no tiene ubicación',
           detalle: 'Sin ubicación no puede pedir riders.',
           accion: 'Ver local',
-          onTap: () => context.go('/admin/locales'),
+          onTap: () => mostrarFichaLocal(context, c.id),
         ),
-      if (pendientes > 0)
+      if (localesPendientes.isNotEmpty)
         _Alerta(
           icono: Symbols.pending_actions,
-          titulo: pendientes == 1 ? 'Una cuenta en revisión' : '$pendientes cuentas en revisión',
-          detalle: 'Esperan que las apruebes.',
+          titulo: localesPendientes.length == 1
+              ? '${localesPendientes.single.nombre} espera que lo apruebes'
+              : '${localesPendientes.length} locales esperan que los apruebes',
+          detalle: 'Mirá sus datos y decidí si puede vender.',
           accion: 'Revisar',
-          onTap: () => context.go('/admin/locales'),
+          onTap: () => localesPendientes.length == 1
+              ? mostrarFichaLocal(context, localesPendientes.single.id)
+              : context.go('/admin/locales'),
+        ),
+      if (ridersPendientes.isNotEmpty)
+        _Alerta(
+          icono: Symbols.pending_actions,
+          titulo: ridersPendientes.length == 1
+              ? '${ridersPendientes.single.nombre} espera que lo apruebes'
+              : '${ridersPendientes.length} riders esperan que los apruebes',
+          detalle: 'Mirá su documentación y decidí si puede repartir.',
+          accion: 'Revisar',
+          onTap: () => ridersPendientes.length == 1
+              ? mostrarFichaRider(context, ridersPendientes.single.id)
+              : context.go('/admin/riders'),
         ),
       if (localesWeb > 0)
         _Alerta(
@@ -270,7 +286,7 @@ class _RequiereAtencion extends StatelessWidget {
           titulo: localesWeb == 1 ? 'Un local se anotó en la web' : '$localesWeb locales se anotaron en la web',
           detalle: 'Esperan que los contactes por WhatsApp.',
           accion: 'Ver',
-          onTap: () => context.go('/admin/locales'),
+          onTap: () => verPreinscripciones(TipoPreinscripcion.local),
         ),
       if (ridersWeb > 0)
         _Alerta(
@@ -278,7 +294,7 @@ class _RequiereAtencion extends StatelessWidget {
           titulo: ridersWeb == 1 ? 'Un rider se anotó en la web' : '$ridersWeb riders se anotaron en la web',
           detalle: 'Esperan que los contactes por WhatsApp.',
           accion: 'Ver',
-          onTap: () => context.go('/admin/riders'),
+          onTap: () => verPreinscripciones(TipoPreinscripcion.rider),
         ),
     ];
 
@@ -345,36 +361,62 @@ class _Alerta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final boton = MyBoton(
+      label: accion,
+      onPressed: onTap,
+      tipo: urgente ? MyBotonTipo.principal : MyBotonTipo.oscuro,
+    );
+    final caja = MyIconoCaja(
+      icono,
+      fondo: urgente ? MyColors.surfaceContainerLowest : MyColors.primary,
+      color: urgente ? MyColors.error : MyColors.onPrimary,
+    );
+    final textos = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(titulo, style: MyType.labelLg, maxLines: 2, overflow: TextOverflow.ellipsis),
+        Text(detalle, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+      ],
+    );
+
     return Container(
       padding: const EdgeInsets.all(MySpacing.md),
       decoration: BoxDecoration(
         color: urgente ? MyColors.errorContainer.withValues(alpha: 0.55) : MyColors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(MyRadius.lg),
       ),
-      child: Row(
-        children: [
-          MyIconoCaja(
-            icono,
-            fondo: urgente ? MyColors.surfaceContainerLowest : MyColors.primary,
-            color: urgente ? MyColors.error : MyColors.onPrimary,
-          ),
-          const SizedBox(width: MySpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      // Se decide por el ancho del aviso y no por el de la pantalla: en la
+      // compu va en una columna angosta al lado del mapa, y con el botón al
+      // costado al título le quedaban dos palabras por renglón.
+      child: MyResponsivo(
+        builder: (context, _, ancho) {
+          if (ancho < 380) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(titulo, style: MyType.labelLg),
-                Text(detalle, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    caja,
+                    const SizedBox(width: MySpacing.sm),
+                    Expanded(child: textos),
+                  ],
+                ),
+                const SizedBox(height: MySpacing.sm),
+                Align(alignment: Alignment.centerRight, child: boton),
               ],
-            ),
-          ),
-          const SizedBox(width: MySpacing.xs),
-          MyBoton(
-            label: accion,
-            onPressed: onTap,
-            tipo: urgente ? MyBotonTipo.principal : MyBotonTipo.oscuro,
-          ),
-        ],
+            );
+          }
+          return Row(
+            children: [
+              caja,
+              const SizedBox(width: MySpacing.sm),
+              Expanded(child: textos),
+              const SizedBox(width: MySpacing.xs),
+              boton,
+            ],
+          );
+        },
       ),
     );
   }
@@ -397,37 +439,57 @@ class _EnviosEnCurso extends StatelessWidget {
       );
     }
 
-    if (context.esMovil) {
+    // La tabla tiene siete columnas: en una tableta, con la barra lateral, a
+    // cada una le tocan 80 px y no se lee nada. Hasta la compu van tarjetas,
+    // de a dos cuando entran.
+    if (!context.esEscritorio) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text('Envíos en curso', style: MyType.headlineMd),
           const SizedBox(height: MySpacing.sm),
-          for (final e in envios) ...[
-            MyCard(
-              padding: const EdgeInsets.all(MySpacing.md),
-              onTap: () => context.go('/admin/envios'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+          MyGrilla(
+            anchoMinimo: 300,
+            maxColumnas: 2,
+            espacio: MySpacing.sm,
+            children: [
+              for (final e in envios)
+                MyCard(
+                  padding: const EdgeInsets.all(MySpacing.md),
+                  onTap: () => mostrarFichaEnvio(context, e.id),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(e.codigo, style: MyType.labelLg.copyWith(color: MyColors.tertiary)),
-                      const Spacer(),
-                      MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              e.codigo,
+                              style: MyType.labelLg.copyWith(color: MyColors.tertiary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: MySpacing.xs),
+                          Flexible(
+                            flex: 3,
+                            child: Encoger(child: MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: MySpacing.xs),
+                      Text(e.nombreRetiro, style: MyType.headlineSm, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(
+                        '${e.destino.calle} · ${e.repartidorNombre ?? 'sin rider'}',
+                        style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
-                  const SizedBox(height: MySpacing.xs),
-                  Text(e.comercioNombre, style: MyType.headlineSm),
-                  Text(
-                    '${e.destino.calle} · ${e.repartidorNombre ?? 'sin rider'}',
-                    style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: MySpacing.sm),
-          ],
+                ),
+            ],
+          ),
         ],
       );
     }
@@ -442,16 +504,16 @@ class _EnviosEnCurso extends StatelessWidget {
         MyColumna('Rider', flex: 2),
         MyColumna('Destino', flex: 2),
         MyColumna('Total', alDerecha: true),
-        MyColumna('Estado', flex: 2, alDerecha: true),
+        MyColumna('Estado', flex: 3, alDerecha: true),
       ],
       filas: [
         for (final e in envios)
           MyFila(
-            onTap: () => context.go('/admin/envios'),
+            onTap: () => mostrarFichaEnvio(context, e.id),
             celdas: [
               Text(e.codigo, style: MyType.labelLg.copyWith(color: MyColors.tertiary)),
               Text(Formato.hora(e.creadoEn), style: MyType.bodyMd),
-              Text(e.comercioNombre, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(e.nombreRetiro, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
               Text(
                 e.repartidorNombre ?? 'Buscando…',
                 style: MyType.bodyMd.copyWith(color: e.repartidorNombre == null ? MyColors.secondary : null),
@@ -460,7 +522,7 @@ class _EnviosEnCurso extends StatelessWidget {
               ),
               Text(e.destino.calle, style: MyType.bodyMd, maxLines: 1, overflow: TextOverflow.ellipsis),
               Text(Formato.pesos(e.total), style: MyType.labelLg),
-              MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true),
+              Encoger(child: MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true)),
             ],
           ),
       ],

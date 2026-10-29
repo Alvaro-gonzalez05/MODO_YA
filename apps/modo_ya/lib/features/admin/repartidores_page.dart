@@ -7,11 +7,23 @@ import 'package:my_ui/my_ui.dart';
 
 import '../../comun/credenciales.dart';
 import 'admin_shell.dart';
+import 'encoger.dart';
 import 'documentacion_rider.dart';
 import 'preinscripciones.dart';
 import 'solicitudes_rider.dart';
 
 enum _Filtro { todos, conectados, enServicio, documentacion, suspendidos }
+
+/// La ficha de un rider encima de lo que se esté mirando: panel a la derecha en
+/// la compu, hoja desde abajo en el celular.
+///
+/// Es pública porque el Resumen la abre en el lugar cuando un rider espera
+/// aprobación: antes mandaba a Riders y había que volver a buscarlo.
+Future<void> mostrarFichaRider(BuildContext context, String riderId) => mostrarHojaLateral(
+      context,
+      titulo: 'Rider',
+      builder: (_) => _FichaRider(riderId: riderId),
+    );
 
 /// Riders: quién está conectado, ficha con su última ubicación, alta,
 /// suspensión y contraseña nueva.
@@ -46,7 +58,7 @@ class _AdminRepartidoresPageState extends ConsumerState<AdminRepartidoresPage> {
     if (context.esEscritorio) {
       setState(() => _seleccionado = r.id);
     } else {
-      mostrarPanelComoHoja(context, (_) => _FichaRider(riderId: r.id));
+      mostrarFichaRider(context, r.id);
     }
   }
 
@@ -153,7 +165,7 @@ class _AdminRepartidoresPageState extends ConsumerState<AdminRepartidoresPage> {
                         MyCeldaDoble(r.nombre, bajada: r.vehiculo.label, inicio: _AvatarRider(rider: r)),
                         if (!compacta) Text(r.telefono, style: MyType.bodyMd),
                         Text('${r.viajesCompletados}', style: MyType.labelLg),
-                        _EstadoRider(rider: r),
+                        Encoger(child: _EstadoRider(rider: r)),
                       ],
                     ),
                 ],
@@ -313,9 +325,11 @@ class _FichaRider extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: MySpacing.md),
-        DatosDeAcceso(repartidorId: r.id, nombre: r.nombre, telefono: r.telefono),
-        const SizedBox(height: MySpacing.md),
+        const SizedBox(height: MySpacing.lg),
+        // Agrupado por tema, como la ficha del local: la decisión sobre la
+        // cuenta queda al final, separada, después de la documentación en la
+        // que se basa.
+        const _Titulo('Contacto'),
         MyDato('Teléfono', r.telefono, icono: Symbols.call),
         if (ubicacion != null && ubicacion.tieneCoordenadas) ...[
           MyDato(
@@ -336,11 +350,24 @@ class _FichaRider extends ConsumerWidget {
             ],
           ),
         ],
-        const SizedBox(height: MySpacing.md),
+        const SizedBox(height: MySpacing.lg),
         // Acá se decide si el rider puede trabajar, así que la documentación
         // tiene que estar a la vista: antes se aprobaba a ciegas.
         DocumentacionDelRider(rider: r),
         const SizedBox(height: MySpacing.lg),
+        const _Titulo('Acceso'),
+        DatosDeAcceso(repartidorId: r.id, nombre: r.nombre, telefono: r.telefono),
+        const SizedBox(height: MySpacing.lg),
+        const _Titulo('Cuenta'),
+        Text(
+          switch (r.aprobacion) {
+            EstadoAprobacion.pendiente => 'Espera que lo apruebes para empezar a recibir envíos.',
+            _ when r.aprobacion.puedeOperar => 'Puede conectarse y recibir envíos.',
+            _ => 'No puede conectarse ni recibir envíos.',
+          },
+          style: MyType.bodySm.copyWith(color: MyColors.secondary),
+        ),
+        const SizedBox(height: MySpacing.sm),
         if (r.aprobacion.puedeOperar)
           MyBoton(
             label: 'Suspender cuenta',
@@ -373,6 +400,21 @@ class _FichaRider extends ConsumerWidget {
             ],
           ),
       ],
+    );
+  }
+}
+
+/// Rótulo de un grupo de la ficha.
+class _Titulo extends StatelessWidget {
+  const _Titulo(this.texto);
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: MySpacing.xs),
+      child: Text(texto, style: MyType.headlineSm),
     );
   }
 }

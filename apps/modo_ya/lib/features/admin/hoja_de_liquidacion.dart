@@ -15,17 +15,27 @@ import '../../comun/formulario_emergente.dart';
 /// La hoja en sí (`MyHojaDeRider`) y su PDF viven en `my_ui`: son los mismos
 /// que ve el rider en su app y el local en su pantalla. Acá solo se elige a
 /// quién mirar y se agrega lo único que la administración puede hacer y los
-/// demás no: cargarle algo.
+/// demás no: cargarle algo y cerrarla.
+///
+/// [acciones] recibe el contexto de la hoja y no el de la lista: cerrar la
+/// liquidación tiene que poder cerrar también la hoja, que ya no tiene nada
+/// que mostrar.
 Future<void> mostrarHojaDeRider(
   BuildContext context,
   PendienteRider p,
   DateTime desde,
-  DateTime hasta,
-) {
+  DateTime hasta, {
+  List<Widget> Function(BuildContext hoja)? acciones,
+}) {
   return mostrarHojaLateral(
     context,
     titulo: 'Liquidación',
-    builder: (_) => _HojaDeRider(pendiente: p, desde: desde, hasta: hasta),
+    builder: (hoja) => _HojaDeRider(
+      pendiente: p,
+      desde: desde,
+      hasta: hasta,
+      acciones: acciones?.call(hoja) ?? const [],
+    ),
   );
 }
 
@@ -34,21 +44,28 @@ Future<void> mostrarHojaDeComercio(
   BuildContext context,
   PendienteComercio p,
   DateTime desde,
-  DateTime hasta,
-) {
+  DateTime hasta, {
+  List<Widget> Function(BuildContext hoja)? acciones,
+}) {
   return mostrarHojaLateral(
     context,
     titulo: 'Liquidación',
-    builder: (_) => MyHojaDeComercio(resumen: p, desde: desde, hasta: hasta),
+    builder: (hoja) => MyHojaDeComercio(
+      resumen: p,
+      desde: desde,
+      hasta: hasta,
+      acciones: acciones?.call(hoja) ?? const [],
+    ),
   );
 }
 
 class _HojaDeRider extends ConsumerWidget {
-  const _HojaDeRider({required this.pendiente, required this.desde, required this.hasta});
+  const _HojaDeRider({required this.pendiente, required this.desde, required this.hasta, this.acciones = const []});
 
   final PendienteRider pendiente;
   final DateTime desde;
   final DateTime hasta;
+  final List<Widget> acciones;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -64,6 +81,7 @@ class _HojaDeRider extends ConsumerWidget {
           tipo: MyBotonTipo.texto,
           onPressed: () => cargarARider(context, ref, p.repartidorId, p.rider),
         ),
+        ...acciones,
       ],
     );
   }

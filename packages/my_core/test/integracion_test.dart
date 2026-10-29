@@ -6,7 +6,6 @@
 //   el local arma su menu con foto y opciones
 //   el rider se conecta y comparte ubicacion
 //   un cliente guarda su direccion, cotiza y hace un pedido
-//   la administracion confirma el pago
 //   el local lo acepta, lo prepara y lo marca listo
 //   el rider recibe la oferta, la acepta, retira y entrega con el codigo
 //   el cliente ve el codigo y el pedido termina entregado
@@ -368,18 +367,6 @@ void main() {
     await esperar(() async => vistos, (v) => v.contains(41), que: 'el cambio por Realtime');
     await comercios.actualizar(sLocal.comercioId!, demoraEstimadaMin: 30);
     await sub.cancel();
-  }, timeout: largo);
-
-  // ---------------------------------------------------------------------------
-  test('11 admin: ve el pedido por cobrar y registra el cobro', () async {
-    await entrarComo(_adminEmail, _adminPass);
-    final pendientes = await pedidos.watchPendientesDePago().first;
-    final p = pendientes.firstWhere((x) => x.id == pedidoId);
-    expect(p.items, isNotEmpty);
-    expect(p.cobrado, isFalse);
-    await pedidos.marcarPagado(pedidoId, MetodoPago.tarjeta);
-    final despues = await pedidos.watchPendientesDePago().first;
-    expect(despues.map((x) => x.id), isNot(contains(pedidoId)));
   }, timeout: largo);
 
   test('12 local: acepta, prepara y lo marca listo (sale a buscar rider)', () async {
