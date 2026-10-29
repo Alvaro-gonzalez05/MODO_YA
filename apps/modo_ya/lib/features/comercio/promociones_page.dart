@@ -6,6 +6,7 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import '../../comun/formulario_emergente.dart';
+import 'widgets/formulario.dart';
 
 /// Promociones del local: descuentos sobre su propio menú.
 ///
@@ -18,6 +19,11 @@ class PromocionesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final promos = ref.watch(promocionesDelComercioProvider);
+    // El formulario necesita el menú (para elegir secciones y productos). Se
+    // mira desde acá para que ya esté cargado al tocar "Nueva promo": leído
+    // recién ahí, sin nadie escuchándolo, podía no terminar nunca.
+    final comercioId = ref.watch(sesionProvider).comercioId;
+    if (comercioId != null) ref.watch(menuDeComercioProvider(comercioId));
 
     return MyPagina(
       volver: () => context.go('/local/menu'),
@@ -102,10 +108,14 @@ class _TarjetaPromocion extends ConsumerWidget {
     }
 
     return MyCard(
+      // Tocarla abre la promo para editarla en el lugar, como cualquier otra
+      // lista del local.
+      onTap: () => editarPromocion(context, ref, editar: p),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _Sello(porcentaje: p.porcentaje, encendido: p.vigente),
               const SizedBox(width: MySpacing.md),
@@ -113,7 +123,7 @@ class _TarjetaPromocion extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(p.nombre, style: MyType.headlineSm),
+                    Text(p.nombre, style: MyType.headlineSm, maxLines: 2, overflow: TextOverflow.ellipsis),
                     Text(
                       '${p.detalle} · ${p.cuando}',
                       style: MyType.bodyMd.copyWith(color: MyColors.secondary),
@@ -123,22 +133,22 @@ class _TarjetaPromocion extends ConsumerWidget {
                         'Hasta el ${Formato.fechaCorta(p.hasta!)}',
                         style: MyType.bodySm.copyWith(color: MyColors.secondary),
                       ),
+                    const SizedBox(height: MySpacing.xs),
+                    MyBadge(
+                      p.vigente
+                          ? 'Rigiendo ahora'
+                          : !p.activa
+                              ? 'Pausada'
+                              : 'No rige hoy',
+                      tone: p.vigente
+                          ? MyBadgeTone.success
+                          : !p.activa
+                              ? MyBadgeTone.neutral
+                              : MyBadgeTone.info,
+                      dot: true,
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(width: MySpacing.sm),
-              MyBadge(
-                p.vigente
-                    ? 'Rigiendo ahora'
-                    : !p.activa
-                        ? 'Pausada'
-                        : 'No rige hoy',
-                tone: p.vigente
-                    ? MyBadgeTone.success
-                    : !p.activa
-                        ? MyBadgeTone.neutral
-                        : MyBadgeTone.info,
-                dot: true,
               ),
             ],
           ),
@@ -191,18 +201,24 @@ class _Sello extends StatelessWidget {
         borderRadius: BorderRadius.circular(MyRadius.card),
         border: Border.all(color: encendido ? MyColors.primary : MyColors.outlineVariant),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$porcentaje%',
-            style: MyType.headlineMd.copyWith(color: encendido ? MyColors.onPrimary : MyColors.secondary),
-          ),
-          Text(
-            'OFF',
-            style: MyType.labelMd.copyWith(color: encendido ? MyColors.onPrimary : MyColors.secondary),
-          ),
-        ],
+      padding: const EdgeInsets.all(MySpacing.xxs),
+      // Se achica si no entra: con la letra agrandada del celular, "20%" y
+      // "OFF" se pasaban del cuadrado.
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$porcentaje%',
+              style: MyType.headlineMd.copyWith(color: encendido ? MyColors.onPrimary : MyColors.secondary),
+            ),
+            Text(
+              'OFF',
+              style: MyType.labelMd.copyWith(color: encendido ? MyColors.onPrimary : MyColors.secondary),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -219,66 +235,175 @@ Future<void> editarPromocion(BuildContext context, WidgetRef ref, {Promocion? ed
       editar == null ? null : await ref.read(promocionesRepositoryProvider).alcanceDe(editar.id);
   if (!context.mounted) return;
 
-  final nombre = TextEditingController(text: editar?.nombre ?? '');
-  final porcentaje = TextEditingController(text: editar?.porcentaje.toString() ?? '');
-  final form = GlobalKey<FormState>();
-
-  var alcance = editar?.alcance ?? AlcancePromocion.todo;
-  var dias = {...(editar?.dias ?? const <int>[])};
-  final secciones = {...?alcanceGuardado?.secciones};
-  final productos = {...?alcanceGuardado?.productos};
-  DateTime? hasta = editar?.hasta;
-
   await mostrarFormularioEmergente(
     context,
     titulo: editar == null ? 'Nueva promoción' : 'Editar promoción',
-    builder: (h) => StatefulBuilder(
-      builder: (h, refrescar) => Form(
-        key: form,
+    builder: (_) => _FormularioPromocion(
+      comercioId: comercioId,
+      menu: menu,
+      editar: editar,
+      secciones: {...?alcanceGuardado?.secciones},
+      productos: {...?alcanceGuardado?.productos},
+    ),
+  );
+}
+
+/// El formulario, por bloques: qué descuento, sobre qué y cuándo.
+///
+/// Es un widget con estado para que los controladores vivan hasta que la hoja
+/// termine de cerrarse (liberados al volver de `mostrarFormularioEmergente`,
+/// el campo se seguía dibujando con el controlador ya liberado).
+class _FormularioPromocion extends ConsumerStatefulWidget {
+  const _FormularioPromocion({
+    required this.comercioId,
+    required this.menu,
+    required this.secciones,
+    required this.productos,
+    this.editar,
+  });
+
+  final String comercioId;
+  final Menu menu;
+  final Promocion? editar;
+  final Set<String> secciones;
+  final Set<String> productos;
+
+  @override
+  ConsumerState<_FormularioPromocion> createState() => _FormularioPromocionState();
+}
+
+class _FormularioPromocionState extends ConsumerState<_FormularioPromocion> {
+  final _form = GlobalKey<FormState>();
+  late final _nombre = TextEditingController(text: widget.editar?.nombre ?? '');
+  late var _porcentaje = widget.editar?.porcentaje ?? 20;
+  late var _alcance = widget.editar?.alcance ?? AlcancePromocion.todo;
+  late final _dias = {...(widget.editar?.dias ?? const <int>[])};
+  late final _secciones = {...widget.secciones};
+  late final _productos = {...widget.productos};
+  late DateTime? _hasta = widget.editar?.hasta;
+
+  /// Se piensa la semana desde el lunes.
+  static const _orden = [1, 2, 3, 4, 5, 6, 0];
+  static const _cortos = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+  @override
+  void dispose() {
+    _nombre.dispose();
+    super.dispose();
+  }
+
+  Future<void> _elegirFin() async {
+    final hoy = DateTime.now();
+    final elegida = await showDatePicker(
+      context: context,
+      initialDate: _hasta ?? hoy.add(const Duration(days: 7)),
+      firstDate: hoy,
+      lastDate: hoy.add(const Duration(days: 365)),
+    );
+    if (elegida != null) setState(() => _hasta = elegida);
+  }
+
+  Future<void> _guardar() async {
+    if (!_form.currentState!.validate()) return;
+    if (_alcance == AlcancePromocion.secciones && _secciones.isEmpty) {
+      mostrarError(context, 'Elegí al menos un menú.');
+      return;
+    }
+    if (_alcance == AlcancePromocion.productos && _productos.isEmpty) {
+      mostrarError(context, 'Elegí al menos un producto.');
+      return;
+    }
+    try {
+      await ref.read(promocionesRepositoryProvider).guardar(
+            comercioId: widget.comercioId,
+            id: widget.editar?.id,
+            nombre: _nombre.text,
+            porcentaje: _porcentaje,
+            alcance: _alcance,
+            dias: _dias.toList()..sort(),
+            desde: widget.editar?.desde,
+            hasta: _hasta,
+            // Editar una promo pausada no la vuelve a prender: antes `guardar`
+            // la mandaba siempre activa.
+            activa: widget.editar?.activa ?? true,
+            secciones: _secciones.toList(),
+            productos: _productos.toList(),
+          );
+      ref.invalidate(menuDeComercioProvider(widget.comercioId));
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) mostrarError(context, e);
+    }
+  }
+
+  Widget _titulo(String texto, {String? bajada}) => Padding(
+        padding: const EdgeInsets.only(bottom: MySpacing.xs),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            MyCampo(
-              controller: nombre,
-              label: 'Cómo se llama',
-              hint: 'Martes de pizza',
-              icon: Symbols.sell,
-              validar: (v) => v.trim().isEmpty ? 'Ponele un nombre' : null,
-            ),
-            MyCampo(
-              controller: porcentaje,
-              label: 'Cuánto descontás (%)',
-              hint: '20',
-              icon: Symbols.percent,
-              soloNumeros: true,
-              validar: (v) {
-                final n = int.tryParse(v) ?? 0;
-                return n < 1 || n > 90 ? 'Entre 1% y 90%' : null;
-              },
-            ),
-            const SizedBox(height: MySpacing.sm),
-            Text('¿Sobre qué?', style: MyType.labelLg),
-            const SizedBox(height: MySpacing.xs),
-            Wrap(
-              spacing: MySpacing.xs,
-              runSpacing: MySpacing.xs,
-              children: [
-                for (final a in AlcancePromocion.values)
-                  MyChip(
-                    a.rotulo,
-                    selected: alcance == a,
-                    onTap: () => refrescar(() => alcance = a),
-                  ),
-              ],
-            ),
-            if (alcance == AlcancePromocion.secciones) ...[
-              const SizedBox(height: MySpacing.sm),
-              Text(
-                'Elegí los menús con descuento',
-                style: MyType.bodySm.copyWith(color: MyColors.secondary),
+            Text(texto, style: MyType.headlineSm),
+            if (bajada != null) Text(bajada, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+          ],
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final menu = widget.menu;
+    const separacion = SizedBox(height: MySpacing.lg);
+
+    return Form(
+      key: _form,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _titulo('El descuento'),
+          MyCampo(
+            controller: _nombre,
+            label: 'Cómo se llama',
+            hint: 'Ej: Martes de pizza',
+            icon: Symbols.sell,
+            validar: (v) => v.trim().isEmpty ? 'Ponele un nombre' : null,
+          ),
+          const MyOverline('Cuánto descontás'),
+          const SizedBox(height: MySpacing.xs),
+          Row(
+            children: [
+              Contador(
+                valor: _porcentaje,
+                minimo: 1,
+                maximo: 90,
+                paso: 5,
+                formato: (n) => '$n%',
+                onChanged: (n) => setState(() => _porcentaje = n),
               ),
-              const SizedBox(height: MySpacing.xs),
+              const SizedBox(width: MySpacing.sm),
+              Expanded(
+                child: Text(
+                  'Un producto de \$10.000 queda en ${Formato.pesos(10000 * (100 - _porcentaje) ~/ 100)}',
+                  style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                ),
+              ),
+            ],
+          ),
+          separacion,
+          _titulo('Sobre qué'),
+          Wrap(
+            spacing: MySpacing.xs,
+            runSpacing: MySpacing.xs,
+            children: [
+              for (final a in AlcancePromocion.values)
+                MyChip(a.rotulo, selected: _alcance == a, onTap: () => setState(() => _alcance = a)),
+            ],
+          ),
+          if (_alcance == AlcancePromocion.secciones) ...[
+            const SizedBox(height: MySpacing.sm),
+            Text('Elegí los menús con descuento', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+            const SizedBox(height: MySpacing.xs),
+            if (menu.secciones.isEmpty)
+              Text('Todavía no tenés secciones en el menú.', style: MyType.bodySm.copyWith(color: MyColors.error))
+            else
               Wrap(
                 spacing: MySpacing.xs,
                 runSpacing: MySpacing.xs,
@@ -286,129 +411,78 @@ Future<void> editarPromocion(BuildContext context, WidgetRef ref, {Promocion? ed
                   for (final s in menu.secciones)
                     MyChip(
                       s.nombre,
-                      selected: secciones.contains(s.id),
-                      onTap: () => refrescar(
-                        () => secciones.contains(s.id) ? secciones.remove(s.id) : secciones.add(s.id),
-                      ),
+                      selected: _secciones.contains(s.id),
+                      onTap: () => setState(() => _secciones.contains(s.id) ? _secciones.remove(s.id) : _secciones.add(s.id)),
                     ),
                 ],
               ),
-            ],
-            if (alcance == AlcancePromocion.productos) ...[
-              const SizedBox(height: MySpacing.sm),
-              Text(
-                'Elegí los productos con descuento',
-                style: MyType.bodySm.copyWith(color: MyColors.secondary),
-              ),
-              const SizedBox(height: MySpacing.xs),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 220),
-                child: SingleChildScrollView(
-                  child: Wrap(
-                    spacing: MySpacing.xs,
-                    runSpacing: MySpacing.xs,
-                    children: [
-                      for (final p in menu.productos)
-                        MyChip(
-                          p.nombre,
-                          selected: productos.contains(p.id),
-                          onTap: () => refrescar(
-                            () => productos.contains(p.id) ? productos.remove(p.id) : productos.add(p.id),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: MySpacing.md),
-            Text('¿Qué días?', style: MyType.labelLg),
+          ],
+          if (_alcance == AlcancePromocion.productos) ...[
+            const SizedBox(height: MySpacing.sm),
             Text(
-              dias.isEmpty ? 'Todos los días' : 'Solo los días marcados',
+              _productos.isEmpty ? 'Elegí los productos con descuento' : '${_productos.length} elegidos',
               style: MyType.bodySm.copyWith(color: MyColors.secondary),
             ),
             const SizedBox(height: MySpacing.xs),
-            Wrap(
-              spacing: MySpacing.xs,
-              runSpacing: MySpacing.xs,
-              children: [
-                for (var d = 0; d < 7; d++)
-                  MyChip(
-                    const ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][d],
-                    selected: dias.contains(d),
-                    onTap: () => refrescar(() => dias.contains(d) ? dias.remove(d) : dias.add(d)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: MySpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    hasta == null ? 'Sin fecha de fin' : 'Hasta el ${Formato.fechaCorta(hasta!)}',
-                    style: MyType.bodyMd,
-                  ),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 220),
+              child: SingleChildScrollView(
+                child: Wrap(
+                  spacing: MySpacing.xs,
+                  runSpacing: MySpacing.xs,
+                  children: [
+                    for (final p in menu.productos)
+                      MyChip(
+                        p.nombre,
+                        selected: _productos.contains(p.id),
+                        onTap: () => setState(() => _productos.contains(p.id) ? _productos.remove(p.id) : _productos.add(p.id)),
+                      ),
+                  ],
                 ),
-                MyBoton(
-                  label: hasta == null ? 'Poner fin' : 'Quitar',
-                  icon: Symbols.event,
-                  tipo: MyBotonTipo.secundario,
-                  onPressed: () async {
-                    if (hasta != null) {
-                      refrescar(() => hasta = null);
-                      return;
-                    }
-                    final hoy = DateTime.now();
-                    final elegida = await showDatePicker(
-                      context: h,
-                      initialDate: hoy.add(const Duration(days: 7)),
-                      firstDate: hoy,
-                      lastDate: hoy.add(const Duration(days: 365)),
-                    );
-                    if (elegida != null) refrescar(() => hasta = elegida);
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: MySpacing.md),
-            MyBotonAccion(
-              label: editar == null ? 'Activar la promo' : 'Guardar',
-              icon: Symbols.sell,
-              onPressed: () async {
-                if (!form.currentState!.validate()) return;
-                if (alcance == AlcancePromocion.secciones && secciones.isEmpty) {
-                  mostrarAviso(h, 'Elegí al menos un menú.');
-                  return;
-                }
-                if (alcance == AlcancePromocion.productos && productos.isEmpty) {
-                  mostrarAviso(h, 'Elegí al menos un producto.');
-                  return;
-                }
-                try {
-                  await ref.read(promocionesRepositoryProvider).guardar(
-                        comercioId: comercioId,
-                        id: editar?.id,
-                        nombre: nombre.text,
-                        porcentaje: int.parse(porcentaje.text),
-                        alcance: alcance,
-                        dias: dias.toList()..sort(),
-                        hasta: hasta,
-                        secciones: secciones.toList(),
-                        productos: productos.toList(),
-                      );
-                  ref.invalidate(menuDeComercioProvider(comercioId));
-                  if (h.mounted) Navigator.pop(h);
-                } catch (e) {
-                  if (h.mounted) mostrarError(h, e);
-                }
-              },
+              ),
             ),
           ],
-        ),
+          separacion,
+          _titulo('Cuándo', bajada: _dias.isEmpty ? 'Todos los días' : 'Solo los días marcados'),
+          Wrap(
+            spacing: MySpacing.xs,
+            runSpacing: MySpacing.xs,
+            children: [
+              MyChip('Todos', selected: _dias.isEmpty, onTap: () => setState(_dias.clear)),
+              for (final d in _orden)
+                MyChip(
+                  _cortos[d],
+                  selected: _dias.contains(d),
+                  onTap: () => setState(() => _dias.contains(d) ? _dias.remove(d) : _dias.add(d)),
+                ),
+            ],
+          ),
+          const SizedBox(height: MySpacing.md),
+          Row(
+            children: [
+              Icon(Symbols.event, size: 20, color: MyColors.secondary),
+              const SizedBox(width: MySpacing.xs),
+              Expanded(
+                child: Text(
+                  _hasta == null ? 'Sin fecha de fin' : 'Hasta el ${Formato.fechaCorta(_hasta!)}',
+                  style: MyType.bodyMd,
+                ),
+              ),
+              MyBoton(
+                label: _hasta == null ? 'Poner fin' : 'Quitar',
+                tipo: MyBotonTipo.secundario,
+                onPressed: _hasta == null ? _elegirFin : () => setState(() => _hasta = null),
+              ),
+            ],
+          ),
+          const SizedBox(height: MySpacing.xl),
+          MyBotonAccion(
+            label: widget.editar == null ? 'Activar la promo' : 'Guardar cambios',
+            icon: Symbols.sell,
+            onPressed: _guardar,
+          ),
+        ],
       ),
-    ),
-  );
-
-  nombre.dispose();
-  porcentaje.dispose();
+    );
+  }
 }
