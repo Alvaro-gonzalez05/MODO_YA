@@ -8,8 +8,8 @@ import '../../comun/reclamos.dart';
 
 enum _Filtro { pendientes, abiertos, enRevision, cerrados, todos }
 
-/// Reclamos: lo que entra de clientes, locales y riders. Se toma, se responde
-/// y se cierra. Antes esto no existía en ninguna pantalla y la tabla, el
+/// Reclamos: lo que entra de clientes, locales y riders. Tocar uno abre su
+/// ficha encima de la lista, y ahí se toma, se responde y se cierra. Antes esto no existía en ninguna pantalla y la tabla, el
 /// trigger y `admin_resolver_reclamo` estaban desde 0004 sin usar.
 class AdminReclamosPage extends ConsumerStatefulWidget {
   const AdminReclamosPage({super.key});
@@ -93,7 +93,7 @@ class _AdminReclamosPageState extends ConsumerState<AdminReclamosPage> {
                   )
                 else
                   for (final r in lista) ...[
-                    _Reclamo(reclamo: r),
+                    _TarjetaReclamo(reclamo: r, onTap: () => mostrarFichaReclamo(context, r.id)),
                     const SizedBox(height: MySpacing.sm),
                   ],
               ],
@@ -105,29 +105,98 @@ class _AdminReclamosPageState extends ConsumerState<AdminReclamosPage> {
   }
 }
 
-class _Reclamo extends ConsumerStatefulWidget {
-  const _Reclamo({required this.reclamo});
+/// "un cliente", "un local"…: para la frase de quién lo abrió.
+String _quien(RolUsuario rol) => switch (rol) {
+      RolUsuario.cliente => 'un cliente',
+      RolUsuario.comercio => 'un local',
+      RolUsuario.repartidor => 'un rider',
+      RolUsuario.admin => 'la administración',
+    };
+
+/// El reclamo en la lista: quién, sobre qué y en qué está. Lo que se hace con
+/// él está en la ficha: con tres botones adentro de cada tarjeta, en el
+/// celular la lista era una pared de botones y no se distinguía un reclamo
+/// del siguiente.
+class _TarjetaReclamo extends StatelessWidget {
+  const _TarjetaReclamo({required this.reclamo, required this.onTap});
 
   final Reclamo reclamo;
+  final VoidCallback onTap;
 
   @override
-  ConsumerState<_Reclamo> createState() => _ReclamoState();
+  Widget build(BuildContext context) {
+    final r = reclamo;
+    final sobre = r.sobreQue;
+
+    return MyCard(
+      padding: const EdgeInsets.all(MySpacing.md),
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          MyAvatar(nombre: r.abiertoPorNombre ?? '?', size: 40),
+          const SizedBox(width: MySpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(r.motivo, style: MyType.headlineSm, maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(
+                  [
+                    '${r.abiertoPorNombre ?? 'Alguien'} (${_quien(r.rolOrigen)})',
+                    if (sobre != null) 'sobre $sobre',
+                    Formato.haceCuanto(r.creadoEn),
+                  ].join(' · '),
+                  style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (r.detalle != null) ...[
+                  const SizedBox(height: MySpacing.xxs),
+                  Text('«${r.detalle}»', style: MyType.bodySm, maxLines: 2, overflow: TextOverflow.ellipsis),
+                ],
+                const SizedBox(height: MySpacing.xs),
+                MyBadge(r.estado.label, tone: tonoReclamo(r.estado), dot: !r.estado.esCerrado),
+              ],
+            ),
+          ),
+          const SizedBox(width: MySpacing.xs),
+          Icon(Symbols.chevron_right, color: MyColors.secondary),
+        ],
+      ),
+    );
+  }
 }
 
-class _ReclamoState extends ConsumerState<_Reclamo> {
-  var _trabajando = false;
+/// La ficha de un reclamo encima de la lista, con todo lo que se puede hacer.
+///
+/// Lee el reclamo de la lista en vivo y no de una copia: así, después de
+/// tomarlo o cerrarlo, la ficha muestra el estado nuevo sin cerrarse.
+Future<void> mostrarFichaReclamo(BuildContext context, String reclamoId) => mostrarHojaLateral(
+      context,
+      titulo: 'Reclamo',
+      builder: (_) => _FichaReclamo(reclamoId: reclamoId),
+    );
 
-  Reclamo get r => widget.reclamo;
+class _FichaReclamo extends ConsumerStatefulWidget {
+  const _FichaReclamo({required this.reclamoId});
+
+  final String reclamoId;
+
+  @override
+  ConsumerState<_FichaReclamo> createState() => _FichaReclamoState();
+}
+
+class _FichaReclamoState extends ConsumerState<_FichaReclamo> {
+  var _trabajando = false;
 
   /// `admin_resolver_reclamo` escribe `resolucion` siempre, así que mover un
   /// reclamo sin texto le borraría al que reclamó la respuesta que ya leyó.
   /// Por eso cuando no hay texto nuevo se reenvía el que estaba.
-  Future<void> _mover(EstadoReclamo estado, {String? resolucion}) async {
+  Future<void> _mover(Reclamo r, EstadoReclamo estado, {String? resolucion}) async {
     setState(() => _trabajando = true);
     try {
-      await ref
-          .read(reclamosRepositoryProvider)
-          .resolver(r.id, estado, resolucion: resolucion ?? r.resolucion);
+      await ref.read(reclamosRepositoryProvider).resolver(r.id, estado, resolucion: resolucion ?? r.resolucion);
       ref.invalidate(reclamosProvider);
     } catch (e) {
       if (mounted) mostrarError(context, e);
@@ -138,7 +207,7 @@ class _ReclamoState extends ConsumerState<_Reclamo> {
 
   /// Cerrar un reclamo pide siempre un texto: es lo único que el que reclamó
   /// va a leer, y sin eso le queda un "Resuelto" sin explicación.
-  Future<void> _cerrar(EstadoReclamo estado) async {
+  Future<void> _cerrar(Reclamo r, EstadoReclamo estado) async {
     final resuelto = estado == EstadoReclamo.resuelto;
     final texto = await pedirTexto(
       context,
@@ -150,94 +219,81 @@ class _ReclamoState extends ConsumerState<_Reclamo> {
       inicial: r.resolucion,
     );
     if (texto == null) return;
-    await _mover(estado, resolucion: texto);
+    await _mover(r, estado, resolucion: texto);
   }
 
   @override
   Widget build(BuildContext context) {
-    final rol = switch (r.rolOrigen) {
-      RolUsuario.cliente => 'un cliente',
-      RolUsuario.comercio => 'un local',
-      RolUsuario.repartidor => 'un rider',
-      RolUsuario.admin => 'la administración',
-    };
+    final r = ref.watch(reclamosProvider).value?.where((x) => x.id == widget.reclamoId).firstOrNull;
+    if (r == null) {
+      return const MyEmptyState(
+        icon: Symbols.search_off,
+        title: 'Este reclamo ya no está',
+        message: 'Puede que lo hayan borrado.',
+      );
+    }
     final sobre = r.sobreQue;
 
-    return MyCard(
-      padding: const EdgeInsets.all(MySpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              MyAvatar(nombre: r.abiertoPorNombre ?? '?', size: 40),
-              const SizedBox(width: MySpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(r.motivo, style: MyType.headlineSm),
-                    Text(
-                      [
-                        '${r.abiertoPorNombre ?? 'Alguien'} ($rol)',
-                        if (sobre != null) 'sobre $sobre',
-                        Formato.haceCuanto(r.creadoEn),
-                      ].join(' · '),
-                      style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                    ),
-                  ],
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            MyAvatar(nombre: r.abiertoPorNombre ?? '?', size: 48),
+            const SizedBox(width: MySpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(r.motivo, style: MyType.headlineMd),
+                  const SizedBox(height: MySpacing.xxs),
+                  MyBadge(r.estado.label, tone: tonoReclamo(r.estado), dot: !r.estado.esCerrado),
+                ],
               ),
-              const SizedBox(width: MySpacing.xs),
-              MyBadge(r.estado.label, tone: tonoReclamo(r.estado), dot: !r.estado.esCerrado),
-            ],
+            ),
+          ],
+        ),
+        const SizedBox(height: MySpacing.md),
+        MyDato('Lo abrió', '${r.abiertoPorNombre ?? 'Alguien'} (${_quien(r.rolOrigen)})', icono: Symbols.person),
+        if (sobre != null) MyDato('Sobre', sobre, icono: Symbols.receipt_long),
+        MyDato('Cuándo', Formato.fechaHora(r.creadoEn), icono: Symbols.schedule),
+        if (r.detalle != null) MyDato('Lo que escribió', r.detalle!, icono: Symbols.chat),
+        if (r.resolucion != null) MyDato('Lo que le contestamos', r.resolucion!, icono: Symbols.reply),
+        const SizedBox(height: MySpacing.lg),
+        if (r.estado.esCerrado)
+          MyBoton(
+            label: 'Volver a abrir',
+            icon: Symbols.undo,
+            tipo: MyBotonTipo.secundario,
+            onPressed: _trabajando ? null : () => _mover(r, EstadoReclamo.abierto),
+          )
+        else ...[
+          // De lo que más se hace a lo que menos: el principal queda primero,
+          // a mano también en el celular.
+          MyBoton(
+            label: 'Responder y cerrar',
+            icon: Symbols.check,
+            onPressed: _trabajando ? null : () => _cerrar(r, EstadoReclamo.resuelto),
           ),
-          if (r.detalle != null) ...[
-            const SizedBox(height: MySpacing.sm),
-            Text('«${r.detalle}»', style: MyType.bodyMd),
+          if (r.estado == EstadoReclamo.abierto) ...[
+            const SizedBox(height: MySpacing.xs),
+            MyBoton(
+              label: 'Lo estoy viendo',
+              icon: Symbols.visibility,
+              tipo: MyBotonTipo.secundario,
+              onPressed: _trabajando ? null : () => _mover(r, EstadoReclamo.enRevision),
+            ),
           ],
-          if (r.resolucion != null) ...[
-            const SizedBox(height: MySpacing.sm),
-            MyDato('Lo que le contestamos', r.resolucion!, icono: Symbols.reply),
-          ],
-          const SizedBox(height: MySpacing.sm),
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: MySpacing.xs,
-            runSpacing: MySpacing.xs,
-            children: [
-              if (r.estado.esCerrado)
-                MyBoton(
-                  label: 'Volver a abrir',
-                  icon: Symbols.undo,
-                  tipo: MyBotonTipo.texto,
-                  onPressed: _trabajando ? null : () => _mover(EstadoReclamo.abierto),
-                )
-              else ...[
-                MyBoton(
-                  label: 'Desestimar',
-                  icon: Symbols.block,
-                  tipo: MyBotonTipo.texto,
-                  onPressed: _trabajando ? null : () => _cerrar(EstadoReclamo.desestimado),
-                ),
-                if (r.estado == EstadoReclamo.abierto)
-                  MyBoton(
-                    label: 'Lo estoy viendo',
-                    icon: Symbols.visibility,
-                    tipo: MyBotonTipo.secundario,
-                    onPressed: _trabajando ? null : () => _mover(EstadoReclamo.enRevision),
-                  ),
-                MyBoton(
-                  label: 'Responder y cerrar',
-                  icon: Symbols.check,
-                  onPressed: _trabajando ? null : () => _cerrar(EstadoReclamo.resuelto),
-                ),
-              ],
-            ],
+          const SizedBox(height: MySpacing.xs),
+          MyBoton(
+            label: 'Desestimar',
+            icon: Symbols.block,
+            tipo: MyBotonTipo.texto,
+            onPressed: _trabajando ? null : () => _cerrar(r, EstadoReclamo.desestimado),
           ),
         ],
-      ),
+      ],
     );
   }
 }
