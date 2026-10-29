@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import 'widgets/formulario.dart';
 
 /// Crear envío (A5) y cotización (A6).
 ///
@@ -167,25 +168,43 @@ class _CrearEnvioPageState extends ConsumerState<CrearEnvioPage> {
         children: [
           Text('Quién recibe', style: MyType.headlineSm),
           const SizedBox(height: MySpacing.md),
-          MyCampo(controller: _nombre, label: 'Nombre', icon: Symbols.person),
-          MyCampo(controller: _telefono, label: 'Teléfono', icon: Symbols.call, keyboard: TextInputType.phone),
+          MyCampo(controller: _nombre, label: 'Nombre', hint: 'Ej: Laura Gómez', icon: Symbols.person),
+          MyCampo(
+            controller: _telefono,
+            label: 'Teléfono',
+            hint: 'Ej: 260 4555-1290',
+            icon: Symbols.call,
+            keyboard: TextInputType.phone,
+            // El rider lo llama si no encuentra la casa: un número cortado no
+            // sirve de nada.
+            validar: (t) => t.replaceAll(RegExp(r'\D'), '').length < 6 ? 'Revisá el número' : null,
+          ),
           MyCampo(
             controller: _indicaciones,
             label: 'Indicaciones (opcional)',
-            hint: 'Tocar timbre, no golpear',
+            hint: 'Ej: Tocar timbre, no golpear',
             icon: Symbols.sticky_note_2,
             obligatorio: false,
             lineas: 2,
           ),
-          const MyOverline('Quién paga el envío'),
-          const SizedBox(height: MySpacing.xs),
-          Wrap(
-            spacing: MySpacing.xs,
-            runSpacing: MySpacing.xs,
-            children: [
-              MyChip('El cliente', selected: _paga == QuienPaga.cliente, onTap: () => setState(() => _paga = QuienPaga.cliente)),
-              MyChip('Lo pago yo', selected: _paga == QuienPaga.comercio, onTap: () => setState(() => _paga = QuienPaga.comercio)),
+        ],
+      ),
+    );
+
+    final pago = MyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Quién paga el envío', style: MyType.headlineSm),
+          const SizedBox(height: MySpacing.md),
+          SegmentedButton<QuienPaga>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: QuienPaga.cliente, label: Text('El cliente')),
+              ButtonSegment(value: QuienPaga.comercio, label: Text('Lo pago yo')),
             ],
+            selected: {_paga},
+            onSelectionChanged: (s) => setState(() => _paga = s.first),
           ),
         ],
       ),
@@ -246,7 +265,19 @@ class _CrearEnvioPageState extends ConsumerState<CrearEnvioPage> {
     const espacio = SizedBox(height: MySpacing.md);
     return Form(
       key: _form,
-      child: MyPagina(
+      child: ConBarraDeGuardado(
+        boton: boton,
+        // En el celular la cotización queda arriba, lejos del botón: el total
+        // se repite al lado para confirmar sabiendo cuánto sale.
+        resumen: c == null
+            ? null
+            : Row(
+                children: [
+                  Expanded(child: Text('Total del envío', style: MyType.labelLg)),
+                  Text(Formato.pesos(c.total), style: MyType.headlineSm.copyWith(color: MyColors.tertiary)),
+                ],
+              ),
+        pagina: MyPagina(
         volver: () => context.canPop() ? context.pop() : context.go('/local/envios'),
         rotulo: 'Cadetería',
         titulo: 'Pedir un rider',
@@ -254,14 +285,17 @@ class _CrearEnvioPageState extends ConsumerState<CrearEnvioPage> {
         anchoMaximo: 1180,
         conDock: false,
         children: context.esMovil
-            ? [recorrido, espacio, destino, espacio, recibe, espacio, cotizacion, const SizedBox(height: MySpacing.lg), boton]
+            ? [recorrido, espacio, destino, espacio, recibe, espacio, pago, espacio, cotizacion]
             : [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       flex: 3,
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [destino, espacio, recibe]),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [destino, espacio, recibe, espacio, pago],
+                      ),
                     ),
                     const SizedBox(width: MySpacing.lg),
                     Expanded(
@@ -274,6 +308,7 @@ class _CrearEnvioPageState extends ConsumerState<CrearEnvioPage> {
                   ],
                 ),
               ],
+        ),
       ),
     );
   }
