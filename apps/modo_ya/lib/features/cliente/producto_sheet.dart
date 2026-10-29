@@ -66,6 +66,14 @@ class _ProductoSheetState extends State<ProductoSheet> {
     return null;
   }
 
+  /// El grupo de "varias" ya tiene todas las que se pueden elegir.
+  bool _lleno(int grupo) {
+    final o = widget.producto.opciones[grupo];
+    return o.tipo == TipoOpcion.multiple &&
+        o.maxSelecciones != null &&
+        _elegidas[grupo]!.length >= o.maxSelecciones!;
+  }
+
   void _tocar(int grupo, OpcionItem item) {
     final o = widget.producto.opciones[grupo];
     final lista = _elegidas[grupo]!;
@@ -104,85 +112,86 @@ class _ProductoSheetState extends State<ProductoSheet> {
                 if (p.descripcion != null)
                   Text(p.descripcion!, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
                 const SizedBox(height: MySpacing.xs),
-                Text(Formato.pesos(p.precio), style: MyType.headlineMd.copyWith(color: MyColors.tertiary)),
+                // El mismo precio que en la tarjeta del menú: si allá se ve la
+                // promoción y acá no, parece que se perdió el descuento.
+                MyPrecio(
+                  precio: Formato.pesos(p.precio),
+                  precioLista: p.enPromocion ? Formato.pesos(p.precioLista!) : null,
+                  descuento: p.descuento,
+                  estilo: MyType.headlineMd.copyWith(color: MyColors.tertiary),
+                ),
                 for (var g = 0; g < p.opciones.length; g++) ...[
                   const SizedBox(height: MySpacing.lg),
-                  Row(
-                    children: [
-                      Expanded(child: Text(p.opciones[g].nombre, style: MyType.headlineSm)),
-                      MyBadge(
-                        p.opciones[g].obligatoria ? 'Obligatorio' : 'Opcional',
-                        tone: p.opciones[g].obligatoria ? MyBadgeTone.ember : MyBadgeTone.info,
-                      ),
-                    ],
-                  ),
-                  Text(p.opciones[g].tipo.label, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                  _EncabezadoGrupo(opcion: p.opciones[g], elegidas: _elegidas[g]!.length),
                   const SizedBox(height: MySpacing.xs),
                   for (final item in p.opciones[g].items.where((i) => i.disponible))
                     _FilaOpcion(
                       item: item,
                       unica: p.opciones[g].tipo == TipoOpcion.unica,
                       elegida: _elegidas[g]!.contains(item),
+                      // Con el tope lleno, las que faltan se ven apagadas:
+                      // antes se tocaban y no pasaba nada.
+                      habilitada: _elegidas[g]!.contains(item) || !_lleno(g),
                       onTap: () => _tocar(g, item),
                     ),
                 ],
                 const SizedBox(height: MySpacing.lg),
+                Text('Aclaraciones', style: MyType.headlineSm),
+                Text('Opcional. Las lee el local antes de prepararlo.', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                const SizedBox(height: MySpacing.xs),
                 TextField(
                   controller: _nota,
+                  maxLines: 2,
+                  minLines: 1,
+                  textCapitalization: TextCapitalization.sentences,
                   decoration: const InputDecoration(
-                    hintText: 'Aclaraciones (ej: sin cebolla)',
+                    hintText: 'Ej.: sin cebolla, bien cocida',
                     prefixIcon: Icon(Symbols.edit_note, size: 20),
                   ),
                 ),
               ],
             ),
           ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(MySpacing.screenEdge),
-              child: Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: MyColors.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(MyRadius.full),
+          // El botón queda fijo abajo: con muchas opciones había que bajar
+          // hasta el final para encontrar cómo agregarlo.
+          DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: MyColors.outlineVariant)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(MySpacing.screenEdge),
+                child: Row(
+                  children: [
+                    MyStepper(
+                      valor: _cantidad,
+                      maximo: 50,
+                      onChanged: (c) => setState(() => _cantidad = c),
                     ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: _cantidad > 1 ? () => setState(() => _cantidad--) : null,
-                          icon: const Icon(Symbols.remove),
-                        ),
-                        Text('$_cantidad', style: MyType.headlineSm),
-                        IconButton(
-                          onPressed: _cantidad < 50 ? () => setState(() => _cantidad++) : null,
-                          icon: Icon(Symbols.add, color: MyColors.onSurface),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: MySpacing.sm),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: faltante != null
-                          ? null
-                          : () => Navigator.pop(
-                                context,
-                                ItemCarrito(
-                                  producto: p,
-                                  cantidad: _cantidad,
-                                  elegidas: _todas,
-                                  nota: _nota.text.trim().isEmpty ? null : _nota.text.trim(),
+                    const SizedBox(width: MySpacing.sm),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: faltante != null
+                            ? null
+                            : () => Navigator.pop(
+                                  context,
+                                  ItemCarrito(
+                                    producto: p,
+                                    cantidad: _cantidad,
+                                    elegidas: _todas,
+                                    nota: _nota.text.trim().isEmpty ? null : _nota.text.trim(),
+                                  ),
                                 ),
-                              ),
-                      child: Text(
-                        faltante != null ? 'Elegí $faltante' : 'Agregar ${Formato.pesos(_unitario * _cantidad)}',
-                        overflow: TextOverflow.ellipsis,
+                        child: Text(
+                          faltante != null ? 'Elegí $faltante' : 'Agregar ${Formato.pesos(_unitario * _cantidad)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -199,35 +208,87 @@ class _ProductoSheetState extends State<ProductoSheet> {
   }
 }
 
+/// Título de un grupo de opciones con su regla ("Elegí una", "Hasta 3") y si
+/// ya está resuelto.
+class _EncabezadoGrupo extends StatelessWidget {
+  const _EncabezadoGrupo({required this.opcion, required this.elegidas});
+
+  final OpcionProducto opcion;
+  final int elegidas;
+
+  @override
+  Widget build(BuildContext context) {
+    final o = opcion;
+    final tope = o.maxSelecciones;
+    final regla = o.tipo == TipoOpcion.multiple && tope != null
+        ? 'Elegí hasta $tope · $elegidas de $tope'
+        : o.tipo.label;
+    final listo = o.obligatoria && elegidas > 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text(o.nombre, style: MyType.headlineSm)),
+            const SizedBox(width: MySpacing.xs),
+            // Pasa a verde cuando se eligió: así se ve de un vistazo qué
+            // grupo falta y por qué el botón todavía no deja agregar.
+            if (o.obligatoria)
+              MyBadge(
+                listo ? 'Listo' : 'Obligatorio',
+                tone: listo ? MyBadgeTone.success : MyBadgeTone.ember,
+                icon: listo ? Symbols.check : null,
+              )
+            else
+              const MyBadge('Opcional', tone: MyBadgeTone.info),
+          ],
+        ),
+        Text(regla, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+      ],
+    );
+  }
+}
+
 class _FilaOpcion extends StatelessWidget {
-  const _FilaOpcion({required this.item, required this.unica, required this.elegida, required this.onTap});
+  const _FilaOpcion({
+    required this.item,
+    required this.unica,
+    required this.elegida,
+    required this.onTap,
+    this.habilitada = true,
+  });
 
   final OpcionItem item;
   final bool unica;
   final bool elegida;
+  final bool habilitada;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(MyRadius.md),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: MySpacing.xs),
-        child: Row(
-          children: [
-            Icon(
-              unica
-                  ? (elegida ? Symbols.radio_button_checked : Symbols.radio_button_unchecked)
-                  : (elegida ? Symbols.check_box : Symbols.check_box_outline_blank),
-              color: elegida ? MyColors.primary : MyColors.outline,
-              fill: elegida ? 1 : 0,
-            ),
-            const SizedBox(width: MySpacing.sm),
-            Expanded(child: Text(item.nombre, style: MyType.bodyLg)),
-            if (item.precioExtra > 0)
-              Text('+ ${Formato.pesos(item.precioExtra)}', style: MyType.labelLg.copyWith(color: MyColors.secondary)),
-          ],
+    return Opacity(
+      opacity: habilitada ? 1 : 0.45,
+      child: InkWell(
+        onTap: habilitada ? onTap : null,
+        borderRadius: BorderRadius.circular(MyRadius.md),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: MySpacing.xs),
+          child: Row(
+            children: [
+              Icon(
+                unica
+                    ? (elegida ? Symbols.radio_button_checked : Symbols.radio_button_unchecked)
+                    : (elegida ? Symbols.check_box : Symbols.check_box_outline_blank),
+                color: elegida ? MyColors.primary : MyColors.outline,
+                fill: elegida ? 1 : 0,
+              ),
+              const SizedBox(width: MySpacing.sm),
+              Expanded(child: Text(item.nombre, style: MyType.bodyLg)),
+              if (item.precioExtra > 0)
+                Text('+ ${Formato.pesos(item.precioExtra)}', style: MyType.labelLg.copyWith(color: MyColors.secondary)),
+            ],
+          ),
         ),
       ),
     );
