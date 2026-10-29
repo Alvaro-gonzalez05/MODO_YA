@@ -9,6 +9,7 @@ import '../../comun/notificaciones.dart';
 import 'carrito.dart';
 import 'comidas.dart';
 import 'cuenta_cliente_page.dart';
+import 'direcciones_page.dart';
 import 'iconos_rubro.dart';
 
 /// Home del cliente (D1): dirección, comidas y locales.
@@ -37,13 +38,19 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
     final carrito = ref.watch(carritoProvider);
     final q = _texto.trim().toLowerCase();
     final nombre = sesion.nombre.trim().split(' ').first;
+    final hayDirecciones = ref.watch(direccionesProvider).value?.isNotEmpty ?? false;
+
+    // Con direcciones guardadas se elige en el lugar; sin ninguna, hay que ir
+    // a cargar la primera (marcar el pin en el mapa).
+    void cambiarDireccion() =>
+        hayDirecciones ? mostrarElegirDireccion(context) : context.go('/cliente/direcciones');
 
     final direccionCard = MyCard(
       padding: const EdgeInsets.all(MySpacing.sm),
-      onTap: () => context.go('/cliente/direcciones'),
+      onTap: cambiarDireccion,
       child: Row(
         children: [
-          const MyIconoCaja(Symbols.location_on, tamano: 40, circular: true),
+          MyIconoCaja(direccion == null ? Symbols.location_on : iconoDeAlias(direccion.alias), tamano: 40, circular: true),
           const SizedBox(width: MySpacing.sm),
           Expanded(
             child: Column(
@@ -53,6 +60,8 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
                 Text(
                   direccion == null ? 'Para ver cuánto sale el envío' : '${direccion.alias} · Malargüe',
                   style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -82,7 +91,7 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
             child: MyPastillaZona(
               zona: direccion?.calle ?? 'Agregá tu dirección',
               maxAncho: 150,
-              onTap: () => context.go('/cliente/direcciones'),
+              onTap: cambiarDireccion,
             ),
           ),
         ),
@@ -158,33 +167,36 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
         const SizedBox(height: MySpacing.lg),
         const MySectionHeader(title: '¿Qué comemos?'),
         const SizedBox(height: MySpacing.sm),
-        SizedBox(
-          height: 104,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
-            children: [
+        Builder(builder: (context) {
+          final botones = [
+            MyApareceEn(
+              child: _BotonComida(
+                nombre: 'Todo',
+                icono: Symbols.apps,
+                activo: _comida == null,
+                onTap: () => setState(() => _comida = null),
+              ),
+            ),
+            for (final (i, c) in comidas.indexed)
               MyApareceEn(
+                retraso: Duration(milliseconds: 35 * (i + 1)),
                 child: _BotonComida(
-                  nombre: 'Todo',
-                  icono: Symbols.apps,
-                  activo: _comida == null,
-                  onTap: () => setState(() => _comida = null),
+                  nombre: c.nombre,
+                  imagen: c.asset,
+                  activo: _comida == c,
+                  onTap: () => setState(() => _comida = _comida == c ? null : c),
                 ),
               ),
-              for (final (i, c) in comidas.indexed)
-                MyApareceEn(
-                  retraso: Duration(milliseconds: 35 * (i + 1)),
-                  child: _BotonComida(
-                    nombre: c.nombre,
-                    imagen: c.asset,
-                    activo: _comida == c,
-                    onTap: () => setState(() => _comida = _comida == c ? null : c),
-                  ),
-                ),
-            ],
-          ),
-        ),
+          ];
+          // En la compu van todas a la vista: en una fila que se desliza, la
+          // rueda del mouse no la mueve y la mitad de las comidas quedaba
+          // escondida a la derecha.
+          if (!context.esMovil) return Wrap(runSpacing: MySpacing.sm, children: botones);
+          return SizedBox(
+            height: 104,
+            child: ListView(scrollDirection: Axis.horizontal, clipBehavior: Clip.none, children: botones),
+          );
+        }),
         // Ofertas del día: los locales que hoy tienen descuento en su menú.
         // Solo cuando se está mirando todo: si filtró o buscó, molesta.
         if (_comida == null && q.isEmpty) ...[
@@ -206,14 +218,18 @@ class _HomeClientePageState extends ConsumerState<HomeClientePage> {
                 const SizedBox(height: MySpacing.sm),
                 SizedBox(
                   height: 178,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    clipBehavior: Clip.none,
-                    itemCount: ofertas.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: MySpacing.sm),
-                    itemBuilder: (_, i) => MyApareceEn(
-                      retraso: Duration(milliseconds: 40 * i.clamp(0, 8)),
-                      child: _TarjetaOferta(comercio: ofertas[i]),
+                  // La fila de ofertas puede ser más ancha que la pantalla:
+                  // en la compu se arrastra con el mouse como con el dedo.
+                  child: MyArrastreConMouse(
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      clipBehavior: Clip.none,
+                      itemCount: ofertas.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: MySpacing.sm),
+                      itemBuilder: (_, i) => MyApareceEn(
+                        retraso: Duration(milliseconds: 40 * i.clamp(0, 8)),
+                        child: _TarjetaOferta(comercio: ofertas[i]),
+                      ),
                     ),
                   ),
                 ),
@@ -535,12 +551,18 @@ class _TarjetaLocal extends ConsumerWidget {
                 fit: StackFit.expand,
                 children: [
                   MyImagen(url: comercio.portadaUrl, alto: 160, radio: MyRadius.card, icono: iconoDeRubro(null)),
+                  // Con borde derecho: sin él el Wrap no tenía ancho y, con
+                  // tres chapitas en un celular, se salían de la foto y se
+                  // pisaban con "Destacado".
                   Positioned(
                     left: MySpacing.sm,
                     top: MySpacing.sm,
+                    right: MySpacing.sm,
                     child: Wrap(
                       spacing: MySpacing.xxs,
+                      runSpacing: MySpacing.xxs,
                       children: [
+                        if (comercio.destacado) const MyBadge('Destacado', tone: MyBadgeTone.ember, icon: Symbols.star),
                         MyBadge(
                           comercio.abierto ? 'Abierto' : 'Cerrado',
                           tone: comercio.abierto ? MyBadgeTone.success : MyBadgeTone.dark,
@@ -558,12 +580,6 @@ class _TarjetaLocal extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  if (comercio.destacado)
-                    Positioned(
-                      right: MySpacing.sm,
-                      top: MySpacing.sm,
-                      child: const MyBadge('Destacado', tone: MyBadgeTone.ember, icon: Symbols.star),
-                    ),
                 ],
               ),
             ),
@@ -594,7 +610,12 @@ class _TarjetaLocal extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(comercio.nombre, style: MyType.headlineSm, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        Text(comercio.rubro, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                        Text(
+                          comercio.rubro,
+                          style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         const SizedBox(height: MySpacing.xxs),
                         Row(
                           children: [

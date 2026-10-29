@@ -53,6 +53,15 @@ class _PedirMandadoPageState extends ConsumerState<PedirMandadoPage> {
     super.dispose();
   }
 
+  /// Lo primero que falta, para decirlo al lado del botón apagado: sin esto
+  /// el botón no hacía nada y no se sabía por qué.
+  String? get _falta {
+    if (_origenCalle.text.trim().isEmpty || _origen == null) return 'Falta de dónde lo retira.';
+    if (_queRetirar.text.trim().isEmpty) return 'Falta qué tiene que retirar.';
+    if (_destinoCalle.text.trim().isEmpty || _destino == null) return 'Falta a dónde lo lleva.';
+    return null;
+  }
+
   bool get _completo =>
       _origen != null &&
       _destino != null &&
@@ -131,36 +140,93 @@ class _PedirMandadoPageState extends ConsumerState<PedirMandadoPage> {
 
   @override
   Widget build(BuildContext context) {
-    return MyPagina(
+    final movil = context.esMovil;
+    final cotizacion = _cotizacion;
+    final precio = MyCard(
+      child: Row(
+        children: [
+          Icon(Symbols.payments, color: MyColors.tertiary),
+          const SizedBox(width: MySpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _cotizando
+                      ? 'Calculando cuánto sale…'
+                      : cotizacion == null
+                          ? 'Marcá los dos puntos en el mapa y te decimos cuánto sale.'
+                          : 'Sale ${Formato.pesos(cotizacion.total)}',
+                  style: MyType.labelLg,
+                ),
+                if (cotizacion != null && !_cotizando)
+                  Text(
+                    '${Formato.km(cotizacion.distanciaKm)} · unos ${cotizacion.minutos} min',
+                    style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                  ),
+                const SizedBox(height: MySpacing.xxs),
+                Text(
+                  'Se lo pagás al rider en efectivo cuando te lo entregue.',
+                  style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final falta = _falta;
+    final boton = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        MyBotonAccion(
+          label: cotizacion == null || movil ? 'Pedir el rider' : 'Pedir el rider · ${Formato.pesos(cotizacion.total)}',
+          icon: Symbols.sports_motorsports,
+          onPressed: _completo ? _pedir : null,
+        ),
+        if (falta != null)
+          Padding(
+            padding: const EdgeInsets.only(top: MySpacing.xs),
+            child: Text(
+              falta,
+              style: MyType.bodySm.copyWith(color: MyColors.secondary),
+              textAlign: TextAlign.center,
+            ),
+          ),
+      ],
+    );
+
+    final pagina = MyPagina(
       volver: () => context.go('/cliente'),
       rotulo: 'Mandados',
       titulo: 'Pedir un rider',
       bajada: 'Para que te retire algo y te lo lleve. El rider no compra ni '
           'adelanta plata: solo lleva y trae.',
       anchoMaximo: 700,
+      conDock: false,
       children: [
         MyCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('¿De dónde lo retira?', style: MyType.headlineSm),
+              const _TituloTramo(numero: 1, texto: '¿De dónde lo retira?'),
               const SizedBox(height: MySpacing.md),
               MyCampo(
                 controller: _origenCalle,
                 label: 'Dirección',
-                hint: 'Av. Roca 420',
+                hint: 'Ej.: Av. Roca 420',
                 icon: Symbols.location_on,
               ),
               _BotonPunto(
                 punto: _origen,
-                label: _origen == null ? 'Marcar en el mapa' : 'Cambiar el punto',
                 onTap: () => _elegirPunto(esOrigen: true),
               ),
               const SizedBox(height: MySpacing.md),
               MyCampo(
                 controller: _queRetirar,
                 label: '¿Qué tiene que retirar?',
-                hint: 'Un sobre a nombre de Marcela',
+                hint: 'Ej.: un sobre a nombre de Marcela',
                 icon: Symbols.inventory_2,
                 lineas: 2,
               ),
@@ -172,24 +238,23 @@ class _PedirMandadoPageState extends ConsumerState<PedirMandadoPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('¿A dónde lo lleva?', style: MyType.headlineSm),
+              const _TituloTramo(numero: 2, texto: '¿A dónde lo lleva?'),
               const SizedBox(height: MySpacing.md),
               MyCampo(
                 controller: _destinoCalle,
                 label: 'Dirección',
-                hint: 'San Martín 500',
+                hint: 'Ej.: San Martín 500',
                 icon: Symbols.home_pin,
               ),
               _BotonPunto(
                 punto: _destino,
-                label: _destino == null ? 'Marcar en el mapa' : 'Cambiar el punto',
                 onTap: () => _elegirPunto(esOrigen: false),
               ),
               const SizedBox(height: MySpacing.md),
               MyCampo(
                 controller: _referencia,
-                label: 'Referencia',
-                hint: 'Portón verde, timbre 2',
+                label: 'Referencia (opcional)',
+                hint: 'Ej.: portón verde, timbre 2',
                 icon: Symbols.info,
                 obligatorio: false,
               ),
@@ -197,72 +262,113 @@ class _PedirMandadoPageState extends ConsumerState<PedirMandadoPage> {
           ),
         ),
         const SizedBox(height: MySpacing.md),
-        MyCard(
-          child: Row(
-            children: [
-              Icon(Symbols.payments, color: MyColors.tertiary),
-              const SizedBox(width: MySpacing.sm),
-              Expanded(
-                child: Text(
-                  _cotizando
-                      ? 'Calculando cuánto sale…'
-                      : _cotizacion == null
-                          ? 'Marcá los dos puntos en el mapa y te digo cuánto sale.'
-                          : 'Sale ${Formato.pesos(_cotizacion!.total)} · '
-                              '${_cotizacion!.distanciaKm} km · '
-                              'unos ${_cotizacion!.minutos} min',
-                  style: MyType.labelLg,
-                ),
+        precio,
+        if (!movil) ...[
+          const SizedBox(height: MySpacing.lg),
+          boton,
+        ],
+        const SizedBox(height: MySpacing.xl),
+      ],
+    );
+
+    if (!movil) return pagina;
+
+    // En el celular el formulario es largo: el botón (y lo que falta para
+    // poder tocarlo) queda fijo abajo, siempre a la vista.
+    return Column(
+      children: [
+        Expanded(child: pagina),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: MyColors.surfaceContainerLowest,
+            border: Border(top: BorderSide(color: MyColors.outlineVariant)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(MySpacing.screenEdge, MySpacing.sm, MySpacing.screenEdge, MySpacing.sm),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (cotizacion != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: MySpacing.xs),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text('En efectivo al rider', style: MyType.bodyMd.copyWith(color: MyColors.secondary))),
+                          Text(Formato.pesos(cotizacion.total), style: MyType.headlineSm.copyWith(color: MyColors.tertiary)),
+                        ],
+                      ),
+                    ),
+                  boton,
+                ],
               ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: MySpacing.xs),
-        Text(
-          'Se lo pagás al rider en efectivo cuando te lo entregue.',
-          style: MyType.bodySm.copyWith(color: MyColors.secondary),
-        ),
-        const SizedBox(height: MySpacing.lg),
-        MyBotonAccion(
-          label: 'Pedir el rider',
-          icon: Symbols.sports_motorsports,
-          onPressed: _completo ? _pedir : null,
-        ),
-        const SizedBox(height: MySpacing.xxl),
       ],
     );
   }
 }
 
-class _BotonPunto extends StatelessWidget {
-  const _BotonPunto({required this.punto, required this.label, required this.onTap});
+/// "1 · ¿De dónde lo retira?": los dos tramos numerados, para que se lea el
+/// orden del viaje.
+class _TituloTramo extends StatelessWidget {
+  const _TituloTramo({required this.numero, required this.texto});
 
-  final LatLng? punto;
-  final String label;
-  final VoidCallback onTap;
+  final int numero;
+  final String texto;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(
-          punto == null ? Symbols.pin_drop : Symbols.check_circle,
-          color: punto == null ? MyColors.outline : MyColors.success,
-          fill: punto == null ? 0 : 1,
-          size: 20,
+        CircleAvatar(
+          radius: 13,
+          backgroundColor: MyColors.primary,
+          child: Text('$numero', style: MyType.labelMd.copyWith(color: MyColors.onPrimary)),
         ),
-        const SizedBox(width: MySpacing.xs),
-        Expanded(
-          child: Text(
-            punto == null ? 'Falta marcarlo en el mapa' : 'Punto marcado',
-            style: MyType.bodySm.copyWith(color: MyColors.secondary),
-          ),
-        ),
-        MyBoton(
-          label: label,
-          icon: Symbols.map,
-          tipo: MyBotonTipo.texto,
-          onPressed: onTap,
+        const SizedBox(width: MySpacing.sm),
+        Expanded(child: Text(texto, style: MyType.headlineSm)),
+      ],
+    );
+  }
+}
+
+/// El punto en el mapa: un botón grande mientras falta y, una vez marcado,
+/// el mapita con el pin para confirmar que quedó donde era.
+///
+/// Antes era una fila con el texto y el botón al lado: a 360 px el texto se
+/// partía en tres renglones y el botón quedaba cortado.
+class _BotonPunto extends StatelessWidget {
+  const _BotonPunto({required this.punto, required this.onTap});
+
+  final LatLng? punto;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = punto;
+    if (p == null) {
+      return OutlinedButton.icon(
+        onPressed: onTap,
+        icon: const Icon(Symbols.map, size: 20),
+        label: const Text('Marcar en el mapa'),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        MyMapaVista(alto: 110, marcadores: [MyMarcador(punto: p, icono: Symbols.location_on)]),
+        const SizedBox(height: MySpacing.xxs),
+        Row(
+          children: [
+            Icon(Symbols.check_circle, color: MyColors.success, fill: 1, size: 18),
+            const SizedBox(width: MySpacing.xs),
+            Expanded(child: Text('Punto marcado', style: MyType.bodySm.copyWith(color: MyColors.secondary))),
+            MyBoton(label: 'Cambiar', icon: Symbols.edit_location, tipo: MyBotonTipo.texto, onPressed: onTap),
+          ],
         ),
       ],
     );

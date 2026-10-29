@@ -123,14 +123,14 @@ class _EnCurso extends ConsumerWidget {
                       const SizedBox(height: MySpacing.sm),
                       Text(
                         Formato.pesos(r.total.abs()),
-                        style: MyType.displayLg.copyWith(color: Colors.white),
+                        style: MyType.displayLg.copyWith(color: MyColors.inverseOnSurface),
                       ),
                       Text(
                         r.total >= 0
                             ? 'Por ${r.envios} ${r.envios == 1 ? "envío" : "envíos"} entregado'
                                 '${r.envios == 1 ? "" : "s"}'
                             : 'Juntaste más efectivo del que ganaste',
-                        style: MyType.bodyMd.copyWith(color: Colors.white70),
+                        style: MyType.bodyMd.copyWith(color: MyColors.inverseOnSurface.withValues(alpha: 0.72)),
                       ),
                     ],
                   ),
@@ -307,14 +307,14 @@ class _Hoy extends ConsumerWidget {
                   const SizedBox(height: MySpacing.sm),
                   Text(
                     Formato.pesos(total.abs()),
-                    style: MyType.displayLg.copyWith(color: Colors.white),
+                    style: MyType.displayLg.copyWith(color: MyColors.inverseOnSurface),
                   ),
                   Text(
                     total < 0
                         ? 'Juntaste más de lo que ganaste'
                         : '$viajes viaje${viajes == 1 ? '' : 's'} entregado'
                             '${viajes == 1 ? '' : 's'}',
-                    style: MyType.bodyMd.copyWith(color: Colors.white70),
+                    style: MyType.bodyMd.copyWith(color: MyColors.inverseOnSurface.withValues(alpha: 0.72)),
                   ),
                   // El desglose solo cuando hay algo que explicar: si el día es
                   // ganancia pura, repetir el mismo número confunde.
@@ -324,7 +324,7 @@ class _Hoy extends ConsumerWidget {
                       'Ganaste ${Formato.pesos(ganancias)}'
                       '${efectivo == 0 ? '' : ' · juntaste ${Formato.pesos(efectivo)} en la puerta'}'
                       '${cargos == 0 ? '' : ' · cargos ${Formato.pesos(cargos)}'}',
-                      style: MyType.bodySm.copyWith(color: Colors.white70),
+                      style: MyType.bodySm.copyWith(color: MyColors.inverseOnSurface.withValues(alpha: 0.72)),
                     ),
                   ],
                 ],

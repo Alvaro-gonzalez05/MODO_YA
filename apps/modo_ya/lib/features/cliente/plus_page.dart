@@ -259,7 +259,7 @@ class _Presentacion extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Envío gratis, todas las veces que pidas',
-                  style: MyType.headlineSm.copyWith(color: Colors.white),
+                  style: MyType.headlineSm.copyWith(color: MyColors.inverseOnSurface),
                 ),
               ),
             ],
@@ -278,7 +278,7 @@ class _Presentacion extends StatelessWidget {
                 children: [
                   Icon(Symbols.check_circle, size: 18, color: MyColors.primary, fill: 1),
                   const SizedBox(width: MySpacing.xs),
-                  Expanded(child: Text(t, style: MyType.bodyMd.copyWith(color: Colors.white70))),
+                  Expanded(child: Text(t, style: MyType.bodyMd.copyWith(color: MyColors.inverseOnSurface.withValues(alpha: 0.72)))),
                 ],
               ),
             ),

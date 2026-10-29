@@ -10,6 +10,7 @@ import '../../comun/eliminar_cuenta.dart';
 import '../../comun/formulario_emergente.dart';
 import '../../comun/menu_usuario.dart';
 import 'carrito.dart';
+import 'direcciones_page.dart';
 
 /// Hoja inferior de "Mi cuenta" (celular): datos del usuario, accesos a lo
 /// que antes era la pantalla completa, tema claro/oscuro y cerrar sesion.
@@ -26,7 +27,7 @@ Future<void> mostrarCuentaCliente(BuildContext context, WidgetRef ref) {
     onEditarUsuario: () => editarMisDatos(context, ref, s),
     extra: principal == null
         ? null
-        : _DireccionActual(direccion: principal, cantidad: direcciones.length, onTap: () => context.go('/cliente/direcciones')),
+        : _DireccionActual(direccion: principal, cantidad: direcciones.length, onTap: () => mostrarElegirDireccion(context)),
     secciones: [
       MySeccionHoja(icon: Symbols.person, label: 'Mis datos', onTap: () => editarMisDatos(context, ref, s)),
       MySeccionHoja(icon: Symbols.home_pin, label: 'Direcciones', contador: 0, onTap: () => context.go('/cliente/direcciones')),
@@ -66,7 +67,7 @@ class _DireccionActual extends StatelessWidget {
           padding: const EdgeInsets.all(MySpacing.sm),
           child: Row(
             children: [
-              MyIconoCaja(Symbols.location_on, tamano: 36, circular: true),
+              MyIconoCaja(iconoDeAlias(direccion.alias), tamano: 36, circular: true),
               const SizedBox(width: MySpacing.sm),
               Expanded(
                 child: Column(
@@ -168,21 +169,37 @@ class CuentaClientePage extends ConsumerWidget {
             Text('Todavía no guardaste ninguna.', style: MyType.bodyMd.copyWith(color: MyColors.secondary))
           else
             for (final d in direcciones)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: MySpacing.xxs),
-                child: Row(
-                  children: [
-                    Icon(
-                      d.id == elegida?.id ? Symbols.radio_button_checked : Symbols.location_on,
-                      size: 20,
-                      color: MyColors.primary,
-                    ),
-                    const SizedBox(width: MySpacing.xs),
-                    Expanded(
-                      child: Text('${d.alias} · ${d.calle}', style: MyType.bodyMd, overflow: TextOverflow.ellipsis),
-                    ),
-                    if (d.predeterminada) const MyBadge('Principal', tone: MyBadgeTone.info),
-                  ],
+              // Tocar una la elige para los pedidos, como en "Mis direcciones":
+              // antes era una lista para mirar y había que ir a otra pantalla.
+              InkWell(
+                borderRadius: BorderRadius.circular(MyRadius.md),
+                onTap: () => ref.read(direccionElegidaProvider.notifier).elegir(d.id),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: MySpacing.xs, horizontal: MySpacing.xxs),
+                  child: Row(
+                    children: [
+                      Icon(iconoDeAlias(d.alias), size: 20, color: MyColors.secondary),
+                      const SizedBox(width: MySpacing.xs),
+                      Expanded(
+                        child: Text(
+                          '${d.alias} · ${d.calle}',
+                          style: d.id == elegida?.id ? MyType.labelLg : MyType.bodyMd,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (d.predeterminada) ...[
+                        const SizedBox(width: MySpacing.xs),
+                        const MyBadge('Principal', tone: MyBadgeTone.info),
+                      ],
+                      const SizedBox(width: MySpacing.xs),
+                      Icon(
+                        d.id == elegida?.id ? Symbols.radio_button_checked : Symbols.radio_button_unchecked,
+                        size: 20,
+                        color: d.id == elegida?.id ? MyColors.primary : MyColors.outline,
+                      ),
+                    ],
+                  ),
                 ),
               ),
         ],
@@ -200,14 +217,14 @@ class CuentaClientePage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('MODO YA Plus', style: MyType.headlineSm.copyWith(color: Colors.white)),
+                Text('MODO YA Plus', style: MyType.headlineSm.copyWith(color: MyColors.inverseOnSurface)),
                 Text(
                   plus == null
                       ? 'Envío gratis en los locales adheridos'
                       : plus.activo
                           ? 'Activo hasta el ${Formato.fechaCorta(plus.hasta!)}'
                           : 'Envío gratis en los locales adheridos por ${Formato.pesos(plus.precio)} al mes',
-                  style: MyType.bodySm.copyWith(color: Colors.white70),
+                  style: MyType.bodySm.copyWith(color: MyColors.inverseOnSurface.withValues(alpha: 0.72)),
                 ),
               ],
             ),

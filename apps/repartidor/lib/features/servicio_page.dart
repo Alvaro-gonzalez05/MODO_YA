@@ -67,6 +67,12 @@ class _Contenido extends ConsumerWidget {
     }
   }
 
+  Future<void> _llamar(BuildContext context, String telefono) async {
+    final numero = telefono.replaceAll(RegExp(r'[^0-9+]'), '');
+    final ok = await launchUrl(Uri(scheme: 'tel', path: numero));
+    if (!ok && context.mounted) mostrarError(context, 'No pudimos abrir el teléfono. Copiá el número.');
+  }
+
   /// La base solo deja bajarse antes de retirar: con el pedido encima ya no es
   /// un problema de asignación y lo resuelve una persona (0061).
   bool get _puedeBajarse =>
@@ -139,15 +145,17 @@ class _Contenido extends ConsumerWidget {
                         MyBadge(envio.codigo, tone: MyBadgeTone.dark),
                         const Spacer(),
                         Text(Formato.pesos(envio.cotizacion.gananciaRepartidor),
-                            style: MyType.headlineMd.copyWith(color: Colors.white)),
+                            style: MyType.headlineMd.copyWith(color: MyColors.inverseOnSurface)),
                       ],
                     ),
+                    const SizedBox(height: MySpacing.md),
+                    _Pasos(estado: envio.estado, esMandado: envio.esMandado),
                     const SizedBox(height: MySpacing.md),
                     Text(
                       vaAlLocal
                           ? 'Andá a ${envio.esMandado ? o.calle : envio.comercioNombre}'
                           : 'Llevalo a ${d.calle}',
-                      style: MyType.headlineLg.copyWith(color: Colors.white),
+                      style: MyType.headlineLg.copyWith(color: MyColors.inverseOnSurface),
                     ),
                     Text(
                       switch (envio.estado) {
@@ -161,7 +169,7 @@ class _Contenido extends ConsumerWidget {
                         EstadoEnvio.enCamino => 'Al llegar, pedile el código de 4 números al cliente.',
                         _ => '',
                       },
-                      style: MyType.bodyLg.copyWith(color: Colors.white70),
+                      style: MyType.bodyLg.copyWith(color: MyColors.inverseOnSurface.withValues(alpha: 0.72)),
                     ),
                   ],
                 ),
@@ -227,7 +235,7 @@ class _Contenido extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const MyOverline('Cliente'),
-                            Text(envio.cliente.nombre, style: MyType.headlineSm),
+                            Text(envio.cliente.nombre, style: MyType.headlineSm, maxLines: 2, overflow: TextOverflow.ellipsis),
                             SelectableText(envio.cliente.telefono, style: MyType.bodyMd),
                             if (envio.cliente.indicaciones != null)
                               Text(envio.cliente.indicaciones!, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
@@ -241,6 +249,17 @@ class _Contenido extends ConsumerWidget {
                           if (context.mounted) mostrarAviso(context, 'Teléfono copiado');
                         },
                         icon: Icon(Symbols.content_copy, color: MyColors.onSurface),
+                      ),
+                      // Llamar de un toque: en la puerta, con el casco puesto,
+                      // copiar el número y pegarlo en el teléfono es demasiado.
+                      IconButton.filled(
+                        tooltip: 'Llamar',
+                        onPressed: () => _llamar(context, envio.cliente.telefono),
+                        style: IconButton.styleFrom(
+                          backgroundColor: MyColors.primary,
+                          foregroundColor: MyColors.onPrimary,
+                        ),
+                        icon: const Icon(Symbols.call, fill: 1),
                       ),
                     ],
                   ),
@@ -469,9 +488,9 @@ class _Finalizado extends StatelessWidget {
               MyHeroCard(
                 child: Column(
                   children: [
-                    const MyOverline('Ganaste', color: Colors.white70),
+                    MyOverline('Ganaste', color: MyColors.inverseOnSurface.withValues(alpha: 0.72)),
                     Text(Formato.pesos(envio.cotizacion.gananciaRepartidor),
-                        style: MyType.displayLg.copyWith(color: Colors.white)),
+                        style: MyType.displayLg.copyWith(color: MyColors.inverseOnSurface)),
                   ],
                 ),
               ),
@@ -481,6 +500,57 @@ class _Finalizado extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// En qué paso del servicio está: cuatro rayitas y el nombre del paso.
+///
+/// Dice cuánto le falta sin tener que leer el texto largo de abajo; con dos
+/// envíos encima, ayuda a no confundir en cuál va.
+class _Pasos extends StatelessWidget {
+  const _Pasos({required this.estado, required this.esMandado});
+
+  final EstadoEnvio estado;
+  final bool esMandado;
+
+  @override
+  Widget build(BuildContext context) {
+    final pasos = [
+      (EstadoEnvio.asignado, esMandado ? 'Ir al retiro' : 'Ir al local'),
+      (EstadoEnvio.enLocal, 'Retirar'),
+      (EstadoEnvio.retirado, 'Salir'),
+      (EstadoEnvio.enCamino, 'Entregar'),
+    ];
+    final actual = pasos.indexWhere((p) => p.$1 == estado).clamp(0, pasos.length - 1);
+    final apagado = MyColors.inverseOnSurface.withValues(alpha: 0.22);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            for (var i = 0; i < pasos.length; i++) ...[
+              if (i > 0) const SizedBox(width: MySpacing.xxs),
+              Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 260),
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: i <= actual ? MyColors.primary : apagado,
+                    borderRadius: BorderRadius.circular(MyRadius.full),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: MySpacing.xs),
+        Text(
+          'Paso ${actual + 1} de ${pasos.length} · ${pasos[actual].$2}',
+          style: MyType.labelMd.copyWith(color: MyColors.primary),
+        ),
+      ],
     );
   }
 }

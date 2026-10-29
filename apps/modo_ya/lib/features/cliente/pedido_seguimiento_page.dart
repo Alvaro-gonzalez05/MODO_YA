@@ -8,6 +8,7 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import '../../comun/reclamos.dart';
+import 'detalle_pedido.dart';
 
 /// Lo que ve el cliente del envío de su pedido, en vivo.
 ///
@@ -24,7 +25,10 @@ import '../../comun/reclamos.dart';
 /// mientras viene alcanza para no perderse ninguna lectura y no tiene sentido
 /// ir más rápido. Antes de que salga del local se relee cada 20 s (no hay nada
 /// que mirar) y cuando el pedido termina no se relee más.
-final _seguimientoProvider = StreamProvider.family<SeguimientoPedido?, String>((ref, id) {
+///
+/// Es público solo para que los tests de la pantalla lo puedan reemplazar: el
+/// de verdad necesita Supabase.
+final seguimientoDelPedidoProvider = StreamProvider.family<SeguimientoPedido?, String>((ref, id) {
   final estado = ref.watch(pedidoProvider(id).select((p) => p.value?.estado));
   if (estado == null || estado == EstadoPedido.carrito) return Stream.value(null);
 
@@ -60,7 +64,7 @@ class PedidoSeguimientoPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pedido = ref.watch(pedidoProvider(pedidoId));
-    final seg = ref.watch(_seguimientoProvider(pedidoId)).value;
+    final seg = ref.watch(seguimientoDelPedidoProvider(pedidoId)).value;
 
     return MyPantallaClara(
       child: MyAsync(
@@ -208,11 +212,28 @@ class _ContenidoState extends ConsumerState<_Contenido> {
           ),
           const SizedBox(height: MySpacing.md),
         ],
-        Row(
+        // Wrap y no Row: a 360 px "Listo, buscando rider" y el código no
+        // entraban juntos y la pastilla desbordaba (su texto no se achica).
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: MySpacing.sm,
+          runSpacing: MySpacing.xs,
           children: [
-            if (!e.esFinal) ...[const MyPulso(size: 8), const SizedBox(width: MySpacing.xxs)],
-            Flexible(child: MyBadge(titulo, tone: e == EstadoPedido.entregado ? MyBadgeTone.success : e.esFinal ? MyBadgeTone.danger : MyBadgeTone.ember)),
-            const Spacer(),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!e.esFinal) ...[const MyPulso(size: 8), const SizedBox(width: MySpacing.xxs)],
+                MyBadge(
+                  titulo,
+                  tone: e == EstadoPedido.entregado
+                      ? MyBadgeTone.success
+                      : e.esFinal
+                          ? MyBadgeTone.danger
+                          : MyBadgeTone.ember,
+                ),
+              ],
+            ),
             Text('Pedido ${pedido.codigo}', style: MyType.labelMd.copyWith(color: MyColors.claroTextoSecundario)),
           ],
         ),
@@ -236,6 +257,9 @@ class _ContenidoState extends ConsumerState<_Contenido> {
         ],
 
         if (s?.codigoEntrega != null && e == EstadoPedido.enCamino) ...[
+          // El código grande y solo en su renglón: es lo que hay que dictar
+          // en la puerta. Al lado del título, a 360 px el título se partía
+          // en dos y el número quedaba apretado contra el borde.
           MyCard(
             color: MyColors.primaryFixed,
             shadows: const [],
@@ -252,13 +276,10 @@ class _ContenidoState extends ConsumerState<_Contenido> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                              child: Text('Código de entrega',
-                                  style: MyType.labelLg.copyWith(color: MyColors.onPrimaryFixed))),
-                          Text(s!.codigoEntrega!, style: MyType.headlineLg.copyWith(color: MyColors.onPrimaryFixed, letterSpacing: 4)),
-                        ],
+                      MyOverline('Código de entrega', color: MyColors.onPrimaryFixedVariant),
+                      SelectableText(
+                        s!.codigoEntrega!.split('').join(' '),
+                        style: MyType.displayLg.copyWith(color: MyColors.onPrimaryFixed, letterSpacing: 4),
                       ),
                       Text('Decile este código al rider cuando te entregue.',
                           style: MyType.bodySm.copyWith(color: MyColors.onPrimaryFixedVariant)),
@@ -286,7 +307,7 @@ class _ContenidoState extends ConsumerState<_Contenido> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(s!.repartidorNombre!, style: MyType.headlineSm),
+                      Text(s!.repartidorNombre!, style: MyType.headlineSm, maxLines: 1, overflow: TextOverflow.ellipsis),
                       Text(s.vehiculo?.label ?? '', style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario)),
                     ],
                   ),
@@ -309,40 +330,10 @@ class _ContenidoState extends ConsumerState<_Contenido> {
               subtitle: Text('${pedido.cantidadProductos} productos · ${Formato.pesos(pedido.total)}',
                   style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario)),
               childrenPadding: const EdgeInsets.fromLTRB(MySpacing.md, 0, MySpacing.md, MySpacing.md),
-              children: [
-                for (final i in pedido.items)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: MySpacing.xs),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${i.cantidad}× ', style: MyType.labelLg),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(i.nombreProducto, style: MyType.bodyMd),
-                              for (final o in i.opciones) Text(o, style: MyType.bodySm.copyWith(color: MyColors.claroTextoSecundario)),
-                            ],
-                          ),
-                        ),
-                        Text(Formato.pesos(i.subtotal), style: MyType.labelMd),
-                      ],
-                    ),
-                  ),
-                const Divider(),
-                _Linea('Productos', Formato.pesos(pedido.subtotal)),
-                // "$0" es cierto pero no se entiende: la pantalla de pago ya
-                // le dice por qué no paga el envío, y acá también tiene que
-                // decirlo.
-                _Linea(
-                  'Envío',
-                  pedido.envioLoPoneElLocal ? 'Gratis con Plus' : Formato.pesos(pedido.costoEnvio),
-                ),
-                _Linea('Total', Formato.pesos(pedido.total), destacado: true),
-                const SizedBox(height: MySpacing.xs),
-                _Linea('Entrega', destino.calle),
-              ],
+              // Un pedido terminado ya no tiene mapa ni pasos que mirar: el
+              // detalle viene abierto.
+              initiallyExpanded: e.esFinal,
+              children: [DetalleDelPedido(pedido: pedido)],
             ),
           ),
         ),
@@ -411,66 +402,59 @@ class _Pasos extends StatelessWidget {
     ];
     bool hecho(EstadoPedido p) => estado.index >= p.index;
 
+    Widget linea(bool encendida) => Expanded(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 260),
+            height: 2,
+            color: encendida ? MyColors.primary : MyColors.claroBorde,
+          ),
+        );
+
+    // Cuatro columnas del mismo ancho, con la línea que las une partida en
+    // dos mitades por paso. Antes cada paso medía lo que su texto y la línea
+    // ocupaba lo que sobraba: a 360 px no sobraba nada.
     return MyCard(
       color: MyColors.claroSuperficieAlt,
       shadows: const [],
-      padding: const EdgeInsets.all(MySpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: MySpacing.xs, vertical: MySpacing.md),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (var i = 0; i < pasos.length; i++) ...[
-            if (i > 0)
-              Expanded(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 260),
-                  height: 2,
-                  color: hecho(pasos[i].$3) ? MyColors.primary : MyColors.claroBorde,
-                ),
+          for (var i = 0; i < pasos.length; i++)
+            Expanded(
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      if (i == 0) const Spacer() else linea(hecho(pasos[i].$3)),
+                      MyPasoCirculo(
+                        activo: hecho(pasos[i].$3),
+                        icon: pasos[i].$2,
+                        size: 32,
+                        iconSize: 16,
+                        colorActivo: MyColors.primary,
+                        colorInactivo: MyColors.claroBorde,
+                        iconoActivo: MyColors.onPrimary,
+                        iconoInactivo: MyColors.claroTextoSecundario,
+                      ),
+                      if (i == pasos.length - 1) const Spacer() else linea(hecho(pasos[i + 1].$3)),
+                    ],
+                  ),
+                  const SizedBox(height: MySpacing.xxs),
+                  Text(
+                    pasos[i].$1,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    style: MyType.labelSm.copyWith(
+                      color: hecho(pasos[i].$3) ? MyColors.claroAcento : MyColors.claroTextoSecundario,
+                    ),
+                  ),
+                ],
               ),
-            Column(
-              children: [
-                MyPasoCirculo(
-                  activo: hecho(pasos[i].$3),
-                  icon: pasos[i].$2,
-                  size: 32,
-                  iconSize: 16,
-                  colorActivo: MyColors.primary,
-                  colorInactivo: MyColors.claroBorde,
-                  iconoActivo: MyColors.onPrimary,
-                  iconoInactivo: MyColors.claroTextoSecundario,
-                ),
-                const SizedBox(height: MySpacing.xxs),
-                Text(pasos[i].$1, style: MyType.labelSm.copyWith(color: hecho(pasos[i].$3) ? MyColors.claroAcento : MyColors.claroTextoSecundario)),
-              ],
             ),
-          ],
         ],
       ),
     );
   }
 }
 
-class _Linea extends StatelessWidget {
-  const _Linea(this.label, this.valor, {this.destacado = false});
-
-  final String label;
-  final String valor;
-  final bool destacado;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: MySpacing.xxs),
-        child: Row(
-          children: [
-            Text(label, style: MyType.bodyMd.copyWith(color: MyColors.claroTextoSecundario)),
-            const SizedBox(width: MySpacing.md),
-            Expanded(
-              child: Text(
-                valor,
-                textAlign: TextAlign.right,
-                style: destacado ? MyType.headlineSm.copyWith(color: MyColors.claroAcento) : MyType.labelLg,
-              ),
-            ),
-          ],
-        ),
-      );
-}
