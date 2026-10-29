@@ -191,12 +191,25 @@ class _EditorCartelState extends ConsumerState<_EditorCartel> {
                 child: Text(
                   widget.total == 1 ? 'Cartel' : 'Cartel ${widget.numero} de ${widget.total}',
                   style: MyType.headlineSm,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: MySpacing.xs),
               _IndicadorGuardado(estado: _estado),
+              // Arriba y como icono: abajo, al lado del interruptor, "Borrar"
+              // quedaba a un dedo de "apagar", que es lo que casi siempre se
+              // quiere.
+              IconButton(
+                tooltip: 'Borrar cartel',
+                onPressed: _borrar,
+                icon: Icon(Symbols.delete, color: MyColors.error),
+              ),
             ],
           ),
-          const SizedBox(height: MySpacing.md),
+          const SizedBox(height: MySpacing.sm),
+          const MyOverline('Así lo ve el cliente'),
+          const SizedBox(height: MySpacing.xs),
           // Vista previa: exactamente el bloque del home del cliente, con lo que
           // se esta escribiendo.
           Opacity(
@@ -216,23 +229,38 @@ class _EditorCartelState extends ConsumerState<_EditorCartel> {
           ),
           MyCampo(
             controller: _subtitulo,
-            label: 'Bajada (amarilla)',
+            label: 'Bajada en amarillo (opcional)',
             hint: 'Delivery rápido, simple y local',
             icon: Symbols.short_text,
             obligatorio: false,
           ),
-          Row(
-            children: [
-              Switch(value: _activo, onChanged: _cambiarActivo),
-              const SizedBox(width: MySpacing.xs),
-              Expanded(
-                child: Text(
-                  _activo ? 'Se muestra en el inicio' : 'Apagado: no se muestra',
-                  style: MyType.labelLg.copyWith(color: _activo ? MyColors.onSurface : MyColors.secondary),
+          Container(
+            padding: const EdgeInsets.fromLTRB(MySpacing.md, MySpacing.xs, MySpacing.xs, MySpacing.xs),
+            decoration: BoxDecoration(
+              color: MyColors.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(MyRadius.lg),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _activo ? 'Se muestra en el inicio' : 'Apagado',
+                        style: MyType.labelLg.copyWith(color: _activo ? MyColors.onSurface : MyColors.secondary),
+                      ),
+                      Text(
+                        _activo ? 'Lo ven todos los clientes al abrir la app.' : 'No se ve, pero queda guardado.',
+                        style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              MyBoton(label: 'Borrar', icon: Symbols.delete, tipo: MyBotonTipo.peligro, onPressed: _borrar),
-            ],
+                const SizedBox(width: MySpacing.xs),
+                Switch(value: _activo, onChanged: _cambiarActivo),
+              ],
+            ),
           ),
         ],
       ),
