@@ -19,6 +19,12 @@ class LocalPage extends ConsumerStatefulWidget {
   ConsumerState<LocalPage> createState() => _LocalPageState();
 }
 
+/// Lo que se va a pagar: productos más el envío, si ya se sabe cuánto sale.
+///
+/// Es orientativo, igual que [Carrito.subtotal]: el número que vale lo calcula
+/// `crear_pedido` en el servidor.
+int _totalConEnvio(Carrito carrito, CotizacionPedido? cot) => carrito.subtotal + (cot?.costoEnvio ?? 0);
+
 class _LocalPageState extends ConsumerState<LocalPage> {
   String? _seccionId;
 
@@ -40,6 +46,8 @@ class _LocalPageState extends ConsumerState<LocalPage> {
     carrito.agregar(comercio, item);
     if (mounted) mostrarAviso(context, '${item.cantidad}× ${p.nombre} agregado');
   }
+
+  void _volver() => context.canPop() ? context.pop() : context.go('/cliente');
 
   @override
   Widget build(BuildContext context) {
@@ -71,10 +79,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                     backgroundColor: MyColors.surface,
                     leading: Padding(
                       padding: const EdgeInsets.all(6),
-                      child: MyCircleIconButton(
-                        icon: Symbols.arrow_back,
-                        onTap: () => context.canPop() ? context.pop() : context.go('/cliente'),
-                      ),
+                      child: MyCircleIconButton(icon: Symbols.arrow_back, onTap: _volver),
                     ),
                     flexibleSpace: FlexibleSpaceBar(
                       background: MyImagen(url: comercio.portadaUrl, radio: 0, icono: Symbols.storefront),
@@ -83,64 +88,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.all(MySpacing.screenEdge),
-                      child: MyCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                _Logo(url: comercio.logoUrl, lado: 52),
-                                const SizedBox(width: MySpacing.sm),
-                                Expanded(child: Text(comercio.nombre, style: MyType.headlineLg)),
-                                MyBadge(
-                                  comercio.abierto ? 'Abierto' : 'Cerrado',
-                                  tone: comercio.abierto ? MyBadgeTone.success : MyBadgeTone.dark,
-                                  dot: true,
-                                ),
-                              ],
-                            ),
-                            Text(comercio.rubro, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
-                            const SizedBox(height: MySpacing.sm),
-                            Wrap(
-                              spacing: MySpacing.xs,
-                              runSpacing: MySpacing.xs,
-                              children: [
-                                if (cot != null) ...[
-                                  MyBadge('${cot.minutosEstimados} min', tone: MyBadgeTone.info, icon: Symbols.schedule),
-                                  MyBadge(Formato.km(cot.distanciaKm), tone: MyBadgeTone.info, icon: Symbols.route),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: MySpacing.sm),
-                            Container(
-                              padding: const EdgeInsets.all(MySpacing.sm),
-                              decoration: BoxDecoration(
-                                color: MyColors.surfaceContainerLow,
-                                borderRadius: BorderRadius.circular(MyRadius.md),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Symbols.sports_motorsports, size: 20, color: MyColors.tertiary),
-                                  const SizedBox(width: MySpacing.xs),
-                                  Text(
-                                    cot == null
-                                        ? 'Agregá tu dirección para ver el envío'
-                                        : 'Envío ${Formato.pesos(cot.costoEnvio)}',
-                                    style: MyType.labelLg,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (!comercio.abierto) ...[
-                              const SizedBox(height: MySpacing.sm),
-                              Text(
-                                'Ahora no está tomando pedidos. Podés mirar el menú.',
-                                style: MyType.bodySm.copyWith(color: MyColors.error),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
+                      child: _FichaDelLocal(comercio: comercio, cot: cot),
                     ),
                   ),
                   ...menuAsync.when(
@@ -156,7 +104,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                   left: MySpacing.screenEdge,
                   right: MySpacing.screenEdge,
                   bottom: MySpacing.lg + MediaQuery.paddingOf(context).bottom,
-                  child: _BarraPedido(carrito: carrito),
+                  child: _BarraPedido(carrito: carrito, cot: cot),
                 ),
             ],
           );
@@ -165,9 +113,11 @@ class _LocalPageState extends ConsumerState<LocalPage> {
     );
   }
 
-  /// PC y tableta: portada, menú en grilla y el pedido en un panel a la derecha.
+  /// PC y tableta: portada y menú en grilla. En la PC el pedido va en un panel
+  /// fijo a la derecha; en la tableta, en la barra flotante como en el celular.
   Widget _ancho(Comercio comercio, AsyncValue<Menu> menuAsync, Carrito carrito, CotizacionPedido? cot) {
     final delLocal = !carrito.vacio && carrito.comercio?.id == comercio.id;
+    final escritorio = context.esEscritorio;
 
     final portada = MyCard(
       padding: EdgeInsets.zero,
@@ -191,13 +141,17 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                   children: [
                     _Logo(url: comercio.logoUrl, lado: 64),
                     const SizedBox(width: MySpacing.md),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(comercio.nombre, style: MyType.headlineLg),
-                        Text(comercio.rubro, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
-                      ],
+                    // Flexible: con un nombre largo la fila desbordaba la
+                    // tarjeta en vez de pasar a dos renglones.
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(comercio.nombre, style: MyType.headlineLg, maxLines: 2, overflow: TextOverflow.ellipsis),
+                          Text(comercio.rubro, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -247,13 +201,15 @@ class _LocalPageState extends ConsumerState<LocalPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (secciones.length > 1)
-              MyFiltros<String?>(
-                seleccionado: _seccionId,
-                onChanged: (v) => setState(() => _seccionId = v),
-                opciones: [
-                  (null, 'Todo', m.productos.length),
-                  for (final x in secciones) (x.id, x.nombre, m.deSeccion(x.id).length),
-                ],
+              MyArrastreConMouse(
+                child: MyFiltros<String?>(
+                  seleccionado: _seccionId,
+                  onChanged: (v) => setState(() => _seccionId = v),
+                  opciones: [
+                    (null, 'Todo', m.productos.length),
+                    for (final x in secciones) (x.id, x.nombre, m.deSeccion(x.id).length),
+                  ],
+                ),
               ),
             for (final x in visibles) ...[
               const SizedBox(height: MySpacing.lg),
@@ -272,100 +228,56 @@ class _LocalPageState extends ConsumerState<LocalPage> {
       },
     );
 
-    final panel = MyCard(
-      child: Column(
+    final pagina = MyPagina(
+      volver: _volver,
+      rotulo: comercio.rubro,
+      titulo: comercio.nombre,
+      bajada: comercio.abierto ? 'Tocá un producto para agregarlo' : 'Ahora no está tomando pedidos. Podés mirar el menú.',
+      conDock: false,
+      children: [
+        portada,
+        const SizedBox(height: MySpacing.md),
+        menu,
+        if (!escritorio && delLocal) const SizedBox(height: 90),
+      ],
+    );
+
+    if (escritorio) {
+      // El panel va afuera del scroll del menú a propósito: adentro se iba
+      // para arriba al bajar y, a mitad de un menú largo, no quedaba ningún
+      // botón para ir a pagar.
+      return Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Icon(Symbols.shopping_bag, color: MyColors.onSurface, fill: 1),
-              const SizedBox(width: MySpacing.xs),
-              Text('Tu pedido', style: MyType.headlineSm),
-            ],
+          Expanded(child: pagina),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, MySpacing.xl, MySpacing.xxl, MySpacing.xl),
+            child: SizedBox(
+              width: 340,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: _PanelPedido(comercio: comercio, cot: cot),
+              ),
+            ),
           ),
-          const SizedBox(height: MySpacing.md),
-          if (!delLocal)
-            Text(
-              carrito.vacio
-                  ? 'Todavía no agregaste nada. Tocá un producto para sumarlo.'
-                  : 'Tenés un pedido abierto en ${carrito.comercio?.nombre}.',
-              style: MyType.bodyMd.copyWith(color: MyColors.secondary),
-            )
-          else ...[
-            for (final i in carrito.items)
-              Padding(
-                padding: const EdgeInsets.only(bottom: MySpacing.xs),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(width: 30, child: Text('${i.cantidad}×', style: MyType.labelLg.copyWith(color: MyColors.tertiary))),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(i.producto.nombre, style: MyType.labelLg),
-                          if (i.elegidas.isNotEmpty)
-                            Text(i.elegidas.map((o) => o.nombre).join(', '), style: MyType.bodySm.copyWith(color: MyColors.secondary)),
-                        ],
-                      ),
-                    ),
-                    Text(Formato.pesos(i.subtotal), style: MyType.labelMd),
-                  ],
-                ),
-              ),
-            const Divider(height: MySpacing.lg),
-            Row(
-              children: [
-                Text('Productos', style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
-                const Spacer(),
-                Text(Formato.pesos(carrito.subtotal), style: MyType.labelLg),
-              ],
-            ),
-            if (cot != null)
-              Row(
-                children: [
-                  Text('Envío', style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
-                  const Spacer(),
-                  Text(Formato.pesos(cot.costoEnvio), style: MyType.labelLg),
-                ],
-              ),
-            const SizedBox(height: MySpacing.md),
-            MyBotonAccion(
-              label: 'Ver pedido · ${Formato.pesos(carrito.subtotal + (cot?.costoEnvio ?? 0))}',
-              icon: Symbols.arrow_forward,
-              onPressed: () async => context.go('/cliente/carrito'),
-            ),
-          ],
         ],
-      ),
-    );
+      );
+    }
 
     return Stack(
       children: [
-        MyPagina(
-          volver: () => context.canPop() ? context.pop() : context.go('/cliente'),
-          rotulo: comercio.rubro,
-          titulo: comercio.nombre,
-          bajada: comercio.abierto ? 'Tocá un producto para agregarlo' : 'Ahora no está tomando pedidos. Podés mirar el menú.',
-          conDock: false,
-          children: [
-            MyConPanel(
-              anchoPanel: 340,
-              principal: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [portada, const SizedBox(height: MySpacing.md), menu],
-              ),
-              panel: panel,
-            ),
-            if (!context.esEscritorio && delLocal) const SizedBox(height: 90),
-          ],
-        ),
-        if (!context.esEscritorio && delLocal)
+        pagina,
+        if (delLocal)
           Positioned(
             left: MySpacing.xxl,
             right: MySpacing.xxl,
             bottom: MySpacing.lg,
-            child: _BarraPedido(carrito: carrito),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: _BarraPedido(carrito: carrito, cot: cot),
+              ),
+            ),
           ),
       ],
     );
@@ -384,12 +296,14 @@ class _LocalPageState extends ConsumerState<LocalPage> {
 
     return [
       if (secciones.length > 1)
-        SliverToBoxAdapter(
-          child: SizedBox(
-            height: 48,
+        // Fijas debajo de la portada: en un menú largo, para cambiar de
+        // sección no hay que volver a subir hasta arriba.
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _ChipsFijos(
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: MySpacing.screenEdge),
+              padding: const EdgeInsets.symmetric(horizontal: MySpacing.screenEdge, vertical: MySpacing.xs),
               children: [
                 MyChip('Todo', selected: _seccionId == null, onTap: () => setState(() => _seccionId = null)),
                 for (final s in secciones) ...[
@@ -435,6 +349,285 @@ class _LocalPageState extends ConsumerState<LocalPage> {
       );
 }
 
+/// Los chips de secciones, pegados arriba mientras se baja por el menú.
+class _ChipsFijos extends SliverPersistentHeaderDelegate {
+  const _ChipsFijos({required this.child});
+
+  final Widget child;
+
+  static const _alto = 56.0;
+
+  @override
+  double get minExtent => _alto;
+
+  @override
+  double get maxExtent => _alto;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return ColoredBox(color: MyColors.surface, child: SizedBox.expand(child: child));
+  }
+
+  // El chip elegido cambia sin que cambie el alto: hay que redibujar igual.
+  @override
+  bool shouldRebuild(covariant _ChipsFijos oldDelegate) => true;
+}
+
+/// Nombre, estado, demora y costo del envío, arriba del menú en el celular.
+class _FichaDelLocal extends StatelessWidget {
+  const _FichaDelLocal({required this.comercio, required this.cot});
+
+  final Comercio comercio;
+  final CotizacionPedido? cot;
+
+  @override
+  Widget build(BuildContext context) {
+    final cot = this.cot;
+    return MyCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _Logo(url: comercio.logoUrl, lado: 52),
+              const SizedBox(width: MySpacing.sm),
+              Expanded(
+                child: Text(comercio.nombre, style: MyType.headlineLg, maxLines: 2, overflow: TextOverflow.ellipsis),
+              ),
+              const SizedBox(width: MySpacing.xs),
+              MyBadge(
+                comercio.abierto ? 'Abierto' : 'Cerrado',
+                tone: comercio.abierto ? MyBadgeTone.success : MyBadgeTone.dark,
+                dot: true,
+              ),
+            ],
+          ),
+          Text(comercio.rubro, style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
+          if (cot != null) ...[
+            const SizedBox(height: MySpacing.sm),
+            Wrap(
+              spacing: MySpacing.xs,
+              runSpacing: MySpacing.xs,
+              children: [
+                MyBadge('${cot.minutosEstimados} min', tone: MyBadgeTone.info, icon: Symbols.schedule),
+                MyBadge(Formato.km(cot.distanciaKm), tone: MyBadgeTone.info, icon: Symbols.route),
+              ],
+            ),
+          ],
+          const SizedBox(height: MySpacing.sm),
+          Container(
+            padding: const EdgeInsets.all(MySpacing.sm),
+            decoration: BoxDecoration(
+              color: MyColors.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(MyRadius.md),
+            ),
+            child: Row(
+              children: [
+                Icon(Symbols.sports_motorsports, size: 20, color: MyColors.tertiary),
+                const SizedBox(width: MySpacing.xs),
+                Expanded(
+                  child: Text(
+                    cot == null
+                        ? 'Agregá tu dirección para ver el envío'
+                        : cot.envioGratis
+                            ? 'Envío gratis con Plus'
+                            : 'Envío ${Formato.pesos(cot.costoEnvio)}',
+                    style: MyType.labelLg,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!comercio.abierto) ...[
+            const SizedBox(height: MySpacing.sm),
+            Text(
+              'Ahora no está tomando pedidos. Podés mirar el menú.',
+              style: MyType.bodySm.copyWith(color: MyColors.error),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// "Tu pedido" en la PC: lo que lleva, cuánto suma y el botón para pagar.
+///
+/// Es alto como su contenido hasta llegar al borde de la ventana; de ahí en
+/// más se desplazan los productos y el total con el botón quedan siempre
+/// abajo, a la vista.
+class _PanelPedido extends ConsumerWidget {
+  const _PanelPedido({required this.comercio, required this.cot});
+
+  final Comercio comercio;
+  final CotizacionPedido? cot;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final carrito = ref.watch(carritoProvider);
+    final notifier = ref.read(carritoProvider.notifier);
+    final delLocal = !carrito.vacio && carrito.comercio?.id == comercio.id;
+    final cot = this.cot;
+    final gris = MyType.bodyMd.copyWith(color: MyColors.secondary);
+
+    final encabezado = Padding(
+      padding: const EdgeInsets.fromLTRB(MySpacing.lg, MySpacing.lg, MySpacing.lg, MySpacing.sm),
+      child: Row(
+        children: [
+          Icon(Symbols.shopping_bag, color: MyColors.onSurface, fill: 1),
+          const SizedBox(width: MySpacing.xs),
+          Expanded(child: Text('Tu pedido', style: MyType.headlineSm)),
+          if (delLocal)
+            MyBadge(
+              '${carrito.cantidad} ${carrito.cantidad == 1 ? 'producto' : 'productos'}',
+              tone: MyBadgeTone.info,
+            ),
+        ],
+      ),
+    );
+
+    if (!delLocal) {
+      return MyCard(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            encabezado,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(MySpacing.lg, 0, MySpacing.lg, MySpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    carrito.vacio
+                        ? 'Todavía no agregaste nada. Tocá un producto para sumarlo.'
+                        : 'Tenés un pedido abierto en ${carrito.comercio?.nombre}. Si agregás algo de acá, '
+                            'se empieza uno nuevo.',
+                    style: gris,
+                  ),
+                  if (!carrito.vacio) ...[
+                    const SizedBox(height: MySpacing.md),
+                    MyBoton(
+                      label: 'Ver ese pedido',
+                      icon: Symbols.shopping_bag,
+                      tipo: MyBotonTipo.secundario,
+                      onPressed: () => context.go('/cliente/carrito'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return MyCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          encabezado,
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(horizontal: MySpacing.lg),
+              itemCount: carrito.items.length,
+              separatorBuilder: (_, _) => const Divider(height: MySpacing.lg),
+              itemBuilder: (_, n) {
+                final i = carrito.items[n];
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(i.producto.nombre, style: MyType.labelLg, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    if (i.elegidas.isNotEmpty)
+                      Text(
+                        i.elegidas.map((o) => o.nombre).join(', '),
+                        style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    const SizedBox(height: MySpacing.xs),
+                    Row(
+                      children: [
+                        MyStepper(
+                          valor: i.cantidad,
+                          compacto: true,
+                          conQuitar: true,
+                          onChanged: (c) => notifier.cambiarCantidad(i.clave, c),
+                        ),
+                        const Spacer(),
+                        Text(Formato.pesos(i.subtotal), style: MyType.labelLg),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          const Divider(height: MySpacing.xl),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(MySpacing.lg, 0, MySpacing.lg, MySpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Sin dirección el envío no se sabe y "Productos" repetía el
+                // mismo número que el total de abajo.
+                if (cot != null) _Renglon('Productos', Formato.pesos(carrito.subtotal)),
+                _Renglon(
+                  'Envío',
+                  cot == null
+                      ? 'Según tu dirección'
+                      : cot.envioGratis
+                          ? 'Gratis con Plus'
+                          : Formato.pesos(cot.costoEnvio),
+                ),
+                const SizedBox(height: MySpacing.xxs),
+                Row(
+                  children: [
+                    Expanded(child: Text(cot == null ? 'Subtotal' : 'Total', style: MyType.headlineSm)),
+                    MyNumeroAnimado(
+                      valor: _totalConEnvio(carrito, cot),
+                      formato: Formato.pesos,
+                      style: MyType.headlineMd.copyWith(color: MyColors.tertiary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: MySpacing.md),
+                MyBotonAccion(
+                  label: 'Ir a pagar',
+                  icon: Symbols.arrow_forward,
+                  onPressed: () async => context.go('/cliente/carrito'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Renglon extends StatelessWidget {
+  const _Renglon(this.concepto, this.valor);
+
+  final String concepto;
+  final String valor;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: MySpacing.xxs),
+        child: Row(
+          children: [
+            Expanded(child: Text(concepto, style: MyType.bodyMd.copyWith(color: MyColors.secondary))),
+            Text(valor, style: MyType.labelLg),
+          ],
+        ),
+      );
+}
+
 class _TarjetaProducto extends StatelessWidget {
   const _TarjetaProducto({required this.producto, required this.habilitado, required this.onAgregar});
 
@@ -444,6 +637,9 @@ class _TarjetaProducto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Más chica en un celular angosto: a 360 px una foto de 110 dejaba el
+    // nombre y el precio apretados en media tarjeta.
+    final lado = MediaQuery.sizeOf(context).width < 400 ? 92.0 : 110.0;
     return MyCard(
       onTap: habilitado ? onAgregar : null,
       child: Row(
@@ -453,7 +649,7 @@ class _TarjetaProducto extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(producto.nombre, style: MyType.headlineSm),
+                Text(producto.nombre, style: MyType.headlineSm, maxLines: 2, overflow: TextOverflow.ellipsis),
                 if (producto.descripcion != null) ...[
                   const SizedBox(height: 2),
                   Text(
@@ -490,7 +686,7 @@ class _TarjetaProducto extends StatelessWidget {
           ),
           if (producto.fotoUrl != null) ...[
             const SizedBox(width: MySpacing.sm),
-            MyImagen(url: producto.fotoUrl, ancho: 110, alto: 110, radio: MyRadius.lg),
+            MyImagen(url: producto.fotoUrl, ancho: lado, alto: lado, radio: MyRadius.lg),
           ],
         ],
       ),
@@ -561,46 +757,74 @@ class _TarjetaProductoAncha extends StatelessWidget {
   }
 }
 
+/// Barra flotante del celular y la tableta: cuánto lleva y el botón para
+/// verlo. Está mientras haya algo de este local en el carrito.
 class _BarraPedido extends StatelessWidget {
-  const _BarraPedido({required this.carrito});
+  const _BarraPedido({required this.carrito, required this.cot});
 
   final Carrito carrito;
+  final CotizacionPedido? cot;
 
   @override
   Widget build(BuildContext context) {
     return MyApareceEn(
       desplazamiento: 40,
       duracion: const Duration(milliseconds: 420),
-      child: MyPressable(
-        escala: 0.97,
-        onTap: () => context.go('/cliente/carrito'),
-        child: Material(
-          color: MyColors.dock,
-          shape: const StadiumBorder(),
-          elevation: 10,
-          shadowColor: MyColors.primary.withValues(alpha: 0.45),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: MySpacing.md, vertical: MySpacing.sm),
-            child: Row(
-              children: [
-                MyPop(
-                  disparador: carrito.cantidad,
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: MyColors.primary,
-                    child: Text('${carrito.cantidad}', style: MyType.labelLg.copyWith(color: MyColors.onPrimary)),
+      child: Semantics(
+        button: true,
+        label: 'Ver pedido',
+        child: MyPressable(
+          escala: 0.97,
+          onTap: () => context.go('/cliente/carrito'),
+          child: Material(
+            color: MyColors.dock,
+            shape: const StadiumBorder(),
+            elevation: 10,
+            shadowColor: MyColors.primary.withValues(alpha: 0.45),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: MySpacing.md, vertical: MySpacing.sm),
+              child: Row(
+                children: [
+                  MyPop(
+                    disparador: carrito.cantidad,
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: MyColors.primary,
+                      child: Text('${carrito.cantidad}', style: MyType.labelLg.copyWith(color: MyColors.onPrimary)),
+                    ),
                   ),
-                ),
-                const SizedBox(width: MySpacing.sm),
-                Text('Ver pedido', style: MyType.headlineSm.copyWith(color: MyColors.inverseOnSurface)),
-                const Spacer(),
-                MyNumeroAnimado(
-                  valor: carrito.subtotal,
-                  formato: Formato.pesos,
-                  style: MyType.headlineSm.copyWith(color: MyColors.primary),
-                ),
-                Icon(Symbols.chevron_right, color: MyColors.primary),
-              ],
+                  const SizedBox(width: MySpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Ver pedido',
+                          style: MyType.headlineSm.copyWith(color: MyColors.inverseOnSurface),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        // Sin dirección no se sabe el envío: que no se lea el
+                        // subtotal como si fuera lo que se va a pagar.
+                        Text(
+                          cot == null ? 'Sin contar el envío' : 'Total con envío',
+                          style: MyType.bodySm.copyWith(color: MyColors.primary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: MySpacing.xs),
+                  MyNumeroAnimado(
+                    valor: _totalConEnvio(carrito, cot),
+                    formato: Formato.pesos,
+                    style: MyType.headlineSm.copyWith(color: MyColors.primary),
+                  ),
+                  Icon(Symbols.chevron_right, color: MyColors.primary),
+                ],
+              ),
             ),
           ),
         ),
