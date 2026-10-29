@@ -6,6 +6,7 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import '../../comun/estados_ui.dart';
+import 'widgets/envio.dart';
 import 'widgets/envio_tile.dart';
 
 enum _Filtro { todos, enCurso, entregados, cancelados }
@@ -99,7 +100,7 @@ class _HistorialPageState extends ConsumerState<HistorialPage> {
                   )
                 else if (context.esMovil)
                   for (final e in lista) ...[
-                    EnvioTile(envio: e, onTap: () => context.go('/local/envios/${e.id}')),
+                    EnvioTile(envio: e, onTap: () => mostrarDetalleEnvio(context, e.id)),
                     const SizedBox(height: MySpacing.sm),
                   ]
                 else
@@ -116,7 +117,7 @@ class _HistorialPageState extends ConsumerState<HistorialPage> {
                     filas: [
                       for (final e in lista)
                         MyFila(
-                          onTap: () => context.go('/local/envios/${e.id}'),
+                          onTap: () => mostrarDetalleEnvio(context, e.id),
                           celdas: [
                             MyCeldaDoble(e.codigo, bajada: e.pedidoId != null ? 'App' : 'Cadetería'),
                             MyCeldaDoble(Formato.fechaCorta(e.creadoEn), bajada: Formato.hora(e.creadoEn)),
