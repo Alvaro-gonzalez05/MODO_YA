@@ -7,6 +7,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import '../../comun/formulario_emergente.dart';
+
 /// Lo que el local pidió dar de alta, con su estado. Va dentro de "Mis riders".
 class SolicitudesDelLocal extends ConsumerWidget {
   const SolicitudesDelLocal({super.key});
@@ -36,27 +38,35 @@ class SolicitudesDelLocal extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         MyCard(
-          padding: const EdgeInsets.all(MySpacing.sm),
-          child: Row(
+          padding: const EdgeInsets.all(MySpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Symbols.person_add, color: MyColors.tertiary),
-              const SizedBox(width: MySpacing.sm),
-              Expanded(
-                child: Text(
-                  '¿Tu cadete todavía no está en MODO YA? Pedí su alta con su '
-                  'documentación. Cuando la administración la apruebe, queda en tu lista.',
-                  style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Symbols.person_add, color: MyColors.tertiary),
+                  const SizedBox(width: MySpacing.sm),
+                  Expanded(
+                    child: Text(
+                      '¿Tu cadete todavía no está en MODO YA? Pedí su alta con su '
+                      'documentación. Cuando la administración la apruebe, queda en tu lista.',
+                      style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: MySpacing.sm),
+              const SizedBox(height: MySpacing.sm),
               MyBoton(
-                label: 'Pedir alta',
+                label: 'Pedir el alta de un rider',
                 icon: Symbols.add,
                 tipo: MyBotonTipo.secundario,
-                onPressed: () => showModalBottomSheet<void>(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
+                // Ventana en la compu y hoja en el celular, como el resto de
+                // los formularios cortos: una hoja de abajo a 1400 px de ancho
+                // no se lee.
+                onPressed: () => mostrarFormularioEmergente(
+                  context,
+                  titulo: 'Pedir el alta de un rider',
                   builder: (_) => const _FormularioSolicitud(),
                 ),
               ),
@@ -84,17 +94,18 @@ class SolicitudesDelLocal extends ConsumerWidget {
                         },
                         style: MyType.bodySm.copyWith(color: MyColors.secondary),
                       ),
+                      const SizedBox(height: MySpacing.xxs),
+                      MyBadge(
+                        s.estado.label,
+                        tone: switch (s.estado) {
+                          EstadoSolicitudRider.pendiente => MyBadgeTone.info,
+                          EstadoSolicitudRider.aprobada => MyBadgeTone.success,
+                          EstadoSolicitudRider.rechazada => MyBadgeTone.danger,
+                        },
+                        dot: true,
+                      ),
                     ],
                   ),
-                ),
-                MyBadge(
-                  s.estado.label,
-                  tone: switch (s.estado) {
-                    EstadoSolicitudRider.pendiente => MyBadgeTone.info,
-                    EstadoSolicitudRider.aprobada => MyBadgeTone.success,
-                    EstadoSolicitudRider.rechazada => MyBadgeTone.danger,
-                  },
-                  dot: true,
                 ),
                 if (s.estado == EstadoSolicitudRider.pendiente)
                   IconButton(
@@ -173,11 +184,15 @@ class _FormularioSolicitudState extends ConsumerState<_FormularioSolicitud> {
     if (mounted) setState(() => _fotos[tipo] = (bytes, ext));
   }
 
-  bool get _completa =>
-      _nombre.text.trim().length >= 2 &&
-      _telefono.text.trim().length >= 6 &&
-      _exigidos != null &&
-      _exigidos!.every(_fotos.containsKey);
+  /// Lo que todavía no se cargó, para decirlo arriba del botón.
+  List<String> get _faltan => [
+        if (_nombre.text.trim().length < 2) 'el nombre',
+        if (_telefono.text.trim().length < 6) 'el teléfono',
+        for (final t in _exigidos ?? const <String>[])
+          if (!_fotos.containsKey(t)) 'la foto de "$t"',
+      ];
+
+  bool get _completa => _exigidos != null && _faltan.isEmpty;
 
   Future<void> _enviar() async {
     final comercioId = ref.read(sesionProvider).comercioId;
@@ -213,102 +228,100 @@ class _FormularioSolicitudState extends ConsumerState<_FormularioSolicitud> {
   Widget build(BuildContext context) {
     final exigidos = _exigidos;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (_, scroll) => Container(
-        decoration: BoxDecoration(
-          color: MyColors.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(MyRadius.hero)),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'La administración revisa la documentación. Si la aprueba, le crea '
+          'la cuenta y queda como rider tuyo.',
+          style: MyType.bodySm.copyWith(color: MyColors.secondary),
         ),
-        child: ListView(
-          controller: scroll,
-          padding: const EdgeInsets.all(MySpacing.lg),
+        const SizedBox(height: MySpacing.lg),
+        Text('El rider', style: MyType.headlineSm),
+        const SizedBox(height: MySpacing.sm),
+        MyCampo(controller: _nombre, label: 'Nombre y apellido', hint: 'Ej: Martín Sosa', icon: Symbols.person),
+        MyCampo(
+          controller: _telefono,
+          label: 'Teléfono',
+          hint: 'Ej: 260 4555-1290',
+          icon: Symbols.call,
+          keyboard: TextInputType.phone,
+        ),
+        const MyOverline('Vehículo'),
+        const SizedBox(height: MySpacing.xs),
+        Wrap(
+          spacing: MySpacing.xs,
+          runSpacing: MySpacing.xs,
           children: [
-            Text('Pedir el alta de un rider', style: MyType.headlineSm),
-            const SizedBox(height: MySpacing.xs),
-            Text(
-              'La administración revisa la documentación. Si la aprueba, le crea '
-              'la cuenta y queda como rider tuyo.',
-              style: MyType.bodySm.copyWith(color: MyColors.secondary),
-            ),
-            const SizedBox(height: MySpacing.lg),
-            MyCampo(controller: _nombre, label: 'Nombre y apellido', icon: Symbols.person),
-            MyCampo(
-              controller: _telefono,
-              label: 'Teléfono',
-              icon: Symbols.call,
-              keyboard: TextInputType.phone,
-            ),
-            const MyOverline('Vehículo'),
-            const SizedBox(height: MySpacing.xs),
-            Wrap(
-              spacing: MySpacing.xs,
-              runSpacing: MySpacing.xs,
-              children: [
-                for (final v in Vehiculo.values)
-                  MyChip(
-                    v.label,
-                    selected: _vehiculo == v,
-                    onTap: () {
-                      setState(() => _vehiculo = v);
-                      _cargarExigidos();
-                    },
-                  ),
-              ],
-            ),
-            const SizedBox(height: MySpacing.lg),
-            const MyOverline('Documentación'),
-            const SizedBox(height: MySpacing.xs),
-            if (exigidos == null)
-              const Padding(
-                padding: EdgeInsets.all(MySpacing.md),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else
-              for (final tipo in exigidos)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: MySpacing.xs),
-                  child: MyCard(
-                    padding: const EdgeInsets.all(MySpacing.sm),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _fotos.containsKey(tipo) ? Symbols.check_circle : Symbols.badge,
-                          color: _fotos.containsKey(tipo) ? MyColors.success : MyColors.outline,
-                          fill: _fotos.containsKey(tipo) ? 1 : 0,
-                        ),
-                        const SizedBox(width: MySpacing.sm),
-                        Expanded(child: Text(tipo, style: MyType.labelLg)),
-                        MyBoton(
-                          label: _fotos.containsKey(tipo) ? 'Cambiar' : 'Subir foto',
-                          icon: Symbols.photo_camera,
-                          tipo: MyBotonTipo.texto,
-                          onPressed: () => _elegirFoto(tipo),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            const SizedBox(height: MySpacing.md),
-            MyCampo(
-              controller: _nota,
-              label: 'Algo que quieras aclarar',
-              icon: Symbols.short_text,
-              obligatorio: false,
-              lineas: 2,
-            ),
-            const SizedBox(height: MySpacing.md),
-            MyBotonAccion(
-              label: _enviando ? 'Enviando…' : 'Enviar a la administración',
-              icon: Symbols.send,
-              onPressed: _completa && !_enviando ? _enviar : null,
-            ),
-            const SizedBox(height: MySpacing.md),
+            for (final v in Vehiculo.values)
+              MyChip(
+                v.label,
+                selected: _vehiculo == v,
+                onTap: () {
+                  setState(() => _vehiculo = v);
+                  _cargarExigidos();
+                },
+              ),
           ],
         ),
-      ),
+        const SizedBox(height: MySpacing.lg),
+        Text('Documentación', style: MyType.headlineSm),
+        Text(
+          'Una foto de cada uno. Lo que se pide depende del vehículo.',
+          style: MyType.bodySm.copyWith(color: MyColors.secondary),
+        ),
+        const SizedBox(height: MySpacing.sm),
+        if (exigidos == null)
+          const Padding(
+            padding: EdgeInsets.all(MySpacing.md),
+            child: MyCargando(),
+          )
+        else
+          for (final tipo in exigidos)
+            Padding(
+              padding: const EdgeInsets.only(bottom: MySpacing.xs),
+              child: MyCard(
+                padding: const EdgeInsets.all(MySpacing.sm),
+                child: Row(
+                  children: [
+                    Icon(
+                      _fotos.containsKey(tipo) ? Symbols.check_circle : Symbols.badge,
+                      color: _fotos.containsKey(tipo) ? MyColors.success : MyColors.outline,
+                      fill: _fotos.containsKey(tipo) ? 1 : 0,
+                    ),
+                    const SizedBox(width: MySpacing.sm),
+                    Expanded(child: Text(tipo, style: MyType.labelLg)),
+                    MyBoton(
+                      label: _fotos.containsKey(tipo) ? 'Cambiar' : 'Subir foto',
+                      icon: Symbols.photo_camera,
+                      tipo: MyBotonTipo.texto,
+                      onPressed: () => _elegirFoto(tipo),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        const SizedBox(height: MySpacing.md),
+        MyCampo(
+          controller: _nota,
+          label: 'Algo que quieras aclarar (opcional)',
+          hint: 'Ej: Trabaja conmigo los fines de semana',
+          icon: Symbols.short_text,
+          obligatorio: false,
+          lineas: 2,
+        ),
+        // Lo que falta, dicho: antes el botón quedaba gris sin explicar por qué.
+        if (_faltan.isNotEmpty) ...[
+          Text('Falta: ${_faltan.join(', ')}.', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+          const SizedBox(height: MySpacing.sm),
+        ],
+        MyBotonAccion(
+          label: _enviando ? 'Enviando…' : 'Enviar a la administración',
+          icon: Symbols.send,
+          onPressed: _completa && !_enviando ? _enviar : null,
+        ),
+      ],
     );
   }
 }

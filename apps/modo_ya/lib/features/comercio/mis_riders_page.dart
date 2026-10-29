@@ -127,6 +127,9 @@ class _FilaRider extends StatelessWidget {
   Widget build(BuildContext context) {
     return MyCard(
       padding: const EdgeInsets.all(MySpacing.sm),
+      // Todo el renglón marca o desmarca: en el celular el interruptor solo
+      // es un blanco chico.
+      onTap: () => onCambiar(!rider.esMio),
       child: Row(
         children: [
           MyAvatar(nombre: rider.nombre, size: 40),
