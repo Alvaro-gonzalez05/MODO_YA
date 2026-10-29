@@ -7,6 +7,7 @@ import 'package:my_ui/my_ui.dart';
 
 import '../../comun/credenciales.dart';
 import 'admin_shell.dart';
+import 'encoger.dart';
 import 'preinscripciones.dart';
 
 enum _Filtro { todos, abiertos, suspendidos, sinUbicacion }
@@ -156,7 +157,7 @@ class _AdminComerciosPageState extends ConsumerState<AdminComerciosPage> {
                           bajada: c.direccion.tieneCoordenadas ? c.direccion.referencia : 'Sin ubicación en el mapa',
                         ),
                         if (context.esEscritorio && seleccionado == null) Text(c.telefono, style: MyType.bodyMd),
-                        _EstadoLocal(comercio: c),
+                        Encoger(child: _EstadoLocal(comercio: c)),
                       ],
                     ),
                 ],
@@ -318,8 +319,10 @@ class _FichaLocal extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: MySpacing.lg),
-        DatosDeAcceso(comercioId: c.id, nombre: c.nombre, telefono: c.telefono),
-        const SizedBox(height: MySpacing.md),
+        // Agrupado por tema, de lo que más se consulta (cómo contactarlo y
+        // dónde está) a lo que menos (la decisión sobre la cuenta, al final y
+        // separada para no tocarla sin querer).
+        const _Titulo('Contacto y retiro'),
         MyDato('Teléfono', c.telefono, icono: Symbols.call),
         MyDato('Dirección de retiro', c.direccion.calle, icono: Symbols.location_on),
         if ((c.direccion.referencia ?? '').isNotEmpty) MyDato('Referencia', c.direccion.referencia!, icono: Symbols.pin_drop),
@@ -333,8 +336,25 @@ class _FichaLocal extends ConsumerWidget {
               MyMarcador(punto: LatLng(c.direccion.lat!, c.direccion.lng!), icono: Symbols.storefront),
             ],
           ),
-        ],
+        ] else
+          Text(
+            'Sin ubicación en el mapa: no puede pedir riders.',
+            style: MyType.bodySm.copyWith(color: MyColors.error),
+          ),
         const SizedBox(height: MySpacing.lg),
+        const _Titulo('Acceso'),
+        DatosDeAcceso(comercioId: c.id, nombre: c.nombre, telefono: c.telefono),
+        const SizedBox(height: MySpacing.lg),
+        const _Titulo('Cuenta'),
+        Text(
+          switch (c.aprobacion) {
+            EstadoAprobacion.pendiente => 'Se anotó y espera que lo apruebes para empezar a vender.',
+            _ when operando => 'Puede vender y pedir riders.',
+            _ => 'No puede vender ni pedir riders.',
+          },
+          style: MyType.bodySm.copyWith(color: MyColors.secondary),
+        ),
+        const SizedBox(height: MySpacing.sm),
         if (operando)
           MyBoton(
             label: 'Suspender cuenta',
@@ -362,6 +382,21 @@ class _FichaLocal extends ConsumerWidget {
           ],
         ],
       ],
+    );
+  }
+}
+
+/// Rótulo de un grupo de la ficha.
+class _Titulo extends StatelessWidget {
+  const _Titulo(this.texto);
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: MySpacing.xs),
+      child: Text(texto, style: MyType.headlineSm),
     );
   }
 }

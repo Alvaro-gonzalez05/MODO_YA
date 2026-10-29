@@ -160,8 +160,12 @@ class _SolicitudState extends ConsumerState<_Solicitud> {
                   ),
           ),
           const SizedBox(height: MySpacing.md),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+          // Wrap y no Row: en 360 px los dos botones con icono no entran en un
+          // renglón.
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: MySpacing.xs,
+            runSpacing: MySpacing.xs,
             children: [
               MyBoton(
                 label: 'No aprobar',
@@ -169,7 +173,6 @@ class _SolicitudState extends ConsumerState<_Solicitud> {
                 tipo: MyBotonTipo.texto,
                 onPressed: _trabajando ? null : _rechazar,
               ),
-              const SizedBox(width: MySpacing.xs),
               MyBoton(
                 label: 'Aprobar',
                 icon: Symbols.check,
