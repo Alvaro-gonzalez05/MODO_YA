@@ -242,30 +242,39 @@ class _InicioRepartidorPageState extends ConsumerState<InicioRepartidorPage> {
                 ),
               ],
 
+              if (enCurso.isNotEmpty) ...[
+                const SizedBox(height: MySpacing.lg),
+                Text(
+                  enCurso.length > 1 ? 'Llevás ${enCurso.length} envíos' : 'Tu envío en curso',
+                  style: MyType.headlineMd,
+                ),
+              ],
               for (final e in enCurso) ...[
-                const SizedBox(height: MySpacing.md),
-                MyCard(
-                  onTap: () => context.push('/servicio/${e.id}'),
-                  color: MyColors.primaryFixed,
-                  child: Row(
-                    children: [
-                      Icon(Symbols.local_shipping, color: MyColors.onPrimaryFixed, size: 28, fill: 1),
-                      const SizedBox(width: MySpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            MyOverline(enCurso.length > 1
-                                ? 'Servicio en curso · ${enCurso.indexOf(e) + 1} de ${enCurso.length}'
-                                : 'Servicio en curso'),
-                            Text('${e.codigo} - ${e.nombreRetiro}', style: MyType.headlineSm),
-                            Text('${e.estado.label} · a ${e.destino.calle}', style: MyType.bodySm),
-                          ],
-                        ),
+                const SizedBox(height: MySpacing.sm),
+                _ServicioEnCurso(
+                  envio: e,
+                  orden: enCurso.length > 1 ? '${enCurso.indexOf(e) + 1} de ${enCurso.length}' : null,
+                ),
+              ],
+              // Desde 0077 al que reparte le pueden llegar ofertas, hasta dos
+              // envíos a la vez: que no se sorprenda con una a mitad de camino,
+              // ni espere una que no va a llegar.
+              if (conectado && enCurso.isNotEmpty) ...[
+                const SizedBox(height: MySpacing.sm),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Symbols.info, size: 18, color: MyColors.secondary),
+                    const SizedBox(width: MySpacing.xs),
+                    Expanded(
+                      child: Text(
+                        enCurso.length >= 2
+                            ? 'Con dos envíos encima no te llegan ofertas nuevas hasta que entregues uno.'
+                            : 'Mientras repartís te puede llegar otro envío. Llevás hasta dos a la vez.',
+                        style: MyType.bodySm.copyWith(color: MyColors.secondary),
                       ),
-                      Icon(Symbols.chevron_right, color: MyColors.onSurface),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
 
@@ -335,23 +344,27 @@ class _TarjetaConexion extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // Wrap: en un celular angosto el botón pasa abajo de la pastilla en
+          // vez de desbordar la tarjeta.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: MySpacing.sm,
             children: [
               const MyBadge('CONECTADO', tone: MyBadgeTone.dark, dot: true),
-              const Spacer(),
               TextButton(
                 onPressed: () => onCambiar(false),
-                style: TextButton.styleFrom(foregroundColor: Colors.white),
+                style: TextButton.styleFrom(foregroundColor: MyColors.inverseOnSurface),
                 child: const Text('Desconectarme'),
               ),
             ],
           ),
           const SizedBox(height: MySpacing.md),
           Text(nombre.isEmpty ? 'Listo para trabajar' : 'Hola, ${nombre.split(' ').first}',
-              style: MyType.headlineLg.copyWith(color: Colors.white)),
+              style: MyType.headlineLg.copyWith(color: MyColors.inverseOnSurface)),
           Text(
             'Tu ubicación se comparte solo mientras estás conectado.',
-            style: MyType.bodyMd.copyWith(color: Colors.white70),
+            style: MyType.bodyMd.copyWith(color: MyColors.inverseOnSurface.withValues(alpha: 0.72)),
           ),
         ],
       ),
@@ -403,6 +416,69 @@ class _EstadoUbicacion extends ConsumerWidget {
         const SizedBox(width: MySpacing.xs),
         Expanded(child: Text(texto, style: MyType.bodySm.copyWith(color: color))),
       ],
+    );
+  }
+}
+
+/// Un envío en curso en el inicio: de dónde a dónde y qué le toca hacer ahora.
+///
+/// Con dos envíos encima lo que importa es cuál sigue: antes la tarjeta decía
+/// el estado ("Asignado", "Retirado") y había que traducirlo a qué hacer.
+class _ServicioEnCurso extends StatelessWidget {
+  const _ServicioEnCurso({required this.envio, this.orden});
+
+  final Envio envio;
+
+  /// "1 de 2" cuando lleva más de uno.
+  final String? orden;
+
+  String get _ahora => switch (envio.estado) {
+        EstadoEnvio.asignado => 'Andá a retirarlo a ${envio.origen.calle}',
+        EstadoEnvio.enLocal => envio.esMandado ? 'Retiralo y salí' : 'Retirá el pedido en el local',
+        EstadoEnvio.retirado => 'Salí para ${envio.destino.calle}',
+        EstadoEnvio.enCamino => 'Llevalo a ${envio.destino.calle}',
+        _ => envio.estado.label,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final e = envio;
+    return MyCard(
+      onTap: () => context.push('/servicio/${e.id}'),
+      color: MyColors.primaryFixed,
+      padding: const EdgeInsets.all(MySpacing.md),
+      child: Row(
+        children: [
+          MyIconoCaja(
+            e.estado.index < EstadoEnvio.retirado.index ? Symbols.storefront : Symbols.home_pin,
+            tamano: 44,
+            circular: true,
+          ),
+          const SizedBox(width: MySpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                MyOverline(orden == null ? e.codigo : '${e.codigo} · $orden', color: MyColors.onPrimaryFixedVariant),
+                Text(
+                  e.nombreRetiro,
+                  style: MyType.headlineSm.copyWith(color: MyColors.onPrimaryFixed),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  _ahora,
+                  style: MyType.bodySm.copyWith(color: MyColors.onPrimaryFixed),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: MySpacing.xs),
+          Icon(Symbols.chevron_right, color: MyColors.onPrimaryFixed),
+        ],
+      ),
     );
   }
 }
