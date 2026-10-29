@@ -82,152 +82,217 @@ class _OfertaSheetState extends ConsumerState<OfertaSheet> {
             .where((e) => !e.esMandado && e.comercioId == envio.comercioId)
             .firstOrNull;
 
+    // Los otros envíos que ya lleva (0077: con uno encima le puede llegar
+    // otro, de cualquier local). Que lo sepa antes de aceptar.
+    final lleva = (ref.watch(enviosEnCursoProvider).value ?? const <Envio>[]).length;
+
+    // En un celular bajo el anillo grande se comía la pantalla y los botones
+    // quedaban debajo, con el reloj corriendo.
+    final alto = MediaQuery.sizeOf(context).height;
+    final anillo = alto < 700 ? 168.0 : 210.0;
+
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(MySpacing.screenEdge),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                MyBadge(sumaA != null ? 'OTRO PEDIDO' : 'NUEVO SERVICIO',
-                    tone: MyBadgeTone.ember, icon: Symbols.notifications_active),
-                const Spacer(),
-                Text(envio.codigo, style: MyType.labelLg),
-              ],
-            ),
-            const SizedBox(height: MySpacing.lg),
-            Center(
-              child: SizedBox(
-                width: 210,
-                height: 210,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox.expand(
-                      child: CircularProgressIndicator(
-                        value: progreso,
-                        strokeWidth: 12,
-                        strokeCap: StrokeCap.round,
-                        backgroundColor: MyColors.secondaryContainer,
-                        valueColor: AlwaysStoppedAnimation(MyColors.primary),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(MySpacing.screenEdge, MySpacing.screenEdge, MySpacing.screenEdge, 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: MyBadge(sumaA != null ? 'OTRO PEDIDO' : 'NUEVO SERVICIO',
+                              tone: MyBadgeTone.ember, icon: Symbols.notifications_active),
+                        ),
+                      ),
+                      const SizedBox(width: MySpacing.sm),
+                      Text(envio.codigo, style: MyType.labelLg),
+                    ],
+                  ),
+                  const SizedBox(height: MySpacing.md),
+                  Center(
+                    child: SizedBox(
+                      width: anillo,
+                      height: anillo,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox.expand(
+                            child: CircularProgressIndicator(
+                              value: progreso,
+                              strokeWidth: 12,
+                              strokeCap: StrokeCap.round,
+                              backgroundColor: MyColors.secondaryContainer,
+                              valueColor: AlwaysStoppedAnimation(MyColors.primary),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(MySpacing.lg),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                MyBadge('${_restante.inSeconds}s', tone: MyBadgeTone.ember, icon: Symbols.timer),
+                                const SizedBox(height: MySpacing.xs),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(Formato.pesos(envio.cotizacion.gananciaRepartidor), style: MyType.displayLg),
+                                ),
+                                const MyOverline('Tu ganancia'),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        MyBadge('${_restante.inSeconds}s', tone: MyBadgeTone.ember, icon: Symbols.timer),
-                        const SizedBox(height: MySpacing.xs),
-                        Text(Formato.pesos(envio.cotizacion.gananciaRepartidor), style: MyType.displayLg),
-                        const MyOverline('Tu ganancia'),
+                  ),
+                  // Antes de aceptar tiene que saber si va a manejar plata o posnet.
+                  if (envio.hayQueCobrar) ...[
+                    const SizedBox(height: MySpacing.sm),
+                    Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: MyBadge(
+                          envio.textoCobro,
+                          tone: MyBadgeTone.ember,
+                          icon: envio.cobroMetodo == MetodoPago.tarjeta ? Symbols.credit_card : Symbols.payments,
+                        ),
+                      ),
+                    ),
+                  ],
+                  // Ya va para ese local: este se retira en el mismo viaje.
+                  if (sumaA case final s?) ...[
+                    const SizedBox(height: MySpacing.md),
+                    _Aviso(
+                      icono: Symbols.package_2,
+                      texto: 'Es de ${envio.comercioNombre}, igual que tu ${s.codigo}: lo retirás en el mismo viaje.',
+                    ),
+                  ] else if (lleva > 0) ...[
+                    const SizedBox(height: MySpacing.md),
+                    _Aviso(
+                      icono: Symbols.local_shipping,
+                      texto: 'Ya llevás $lleva ${lleva == 1 ? 'envío' : 'envíos'}: si aceptás, '
+                          'este se suma a tu recorrido.',
+                    ),
+                  ],
+                  const SizedBox(height: MySpacing.lg),
+                  MyStatRow(tiles: [
+                    MyStatTile(
+                        icon: Symbols.near_me,
+                        value: Formato.km(o.distanciaAlRetiroKm),
+                        label: envio.esMandado ? 'Hasta el retiro' : 'Hasta el local'),
+                    MyStatTile(icon: Symbols.route, value: Formato.km(envio.cotizacion.distanciaKm), label: 'Viaje'),
+                    MyStatTile(icon: Symbols.schedule, value: '${envio.cotizacion.minutosEstimados}', label: 'Min est.'),
+                  ]),
+                  const SizedBox(height: MySpacing.md),
+                  if (envio.origen.tieneCoordenadas && envio.destino.tieneCoordenadas) ...[
+                    MyMapaVista(
+                      alto: alto < 700 ? 120 : 150,
+                      marcadores: [
+                        MyMarcador(
+                          punto: LatLng(envio.origen.lat!, envio.origen.lng!),
+                          icono: envio.esMandado ? Symbols.pin_drop : Symbols.storefront,
+                          etiqueta: 'Retiro',
+                        ),
+                        MyMarcador(
+                          punto: LatLng(envio.destino.lat!, envio.destino.lng!),
+                          icono: Symbols.home,
+                          color: MyColors.dock,
+                          etiqueta: 'Entrega',
+                        ),
                       ],
                     ),
+                    const SizedBox(height: MySpacing.md),
                   ],
-                ),
+                  MyRouteTimeline(
+                    stops: [
+                      MyRouteStop(
+                        overline: 'Retiro',
+                        title: envio.nombreRetiro,
+                        // En un mandado, qué retirar es lo que decide si le sirve.
+                        subtitle: [
+                          envio.origen.calle,
+                          if (envio.esMandado && envio.origen.referencia != null) envio.origen.referencia!,
+                        ].join(' - '),
+                        icon: Symbols.restaurant,
+                      ),
+                      MyRouteStop(
+                        overline: 'Entrega',
+                        title: envio.destino.calle,
+                        subtitle: 'Los datos del cliente aparecen al aceptar',
+                        icon: Symbols.home,
+                        iconBackground: MyColors.dock,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: MySpacing.md),
+                ],
               ),
             ),
-            // Antes de aceptar tiene que saber si va a manejar plata o posnet.
-            if (envio.hayQueCobrar) ...[
-              const SizedBox(height: MySpacing.sm),
-              MyBadge(
-                envio.textoCobro,
-                tone: MyBadgeTone.ember,
-                icon: envio.cobroMetodo == MetodoPago.tarjeta ? Symbols.credit_card : Symbols.payments,
-              ),
-            ],
-            // Ya va para ese local: este se retira en el mismo viaje.
-            if (sumaA case final s?) ...[
-              const SizedBox(height: MySpacing.md),
-              Container(
-                padding: const EdgeInsets.all(MySpacing.sm),
-                decoration: BoxDecoration(
-                  color: MyColors.primaryFixed,
-                  borderRadius: BorderRadius.circular(MyRadius.lg),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Symbols.package_2, color: MyColors.onPrimaryFixed, fill: 1),
-                    const SizedBox(width: MySpacing.sm),
-                    Expanded(
-                      child: Text(
-                        'Es de ${envio.comercioNombre}, igual que tu ${s.codigo}: lo retirás en el mismo viaje.',
-                        style: MyType.labelLg.copyWith(color: MyColors.onPrimaryFixed),
-                      ),
+          ),
+          // Fijos abajo: el detalle se puede bajar, pero aceptar o rechazar
+          // tiene que estar a mano sin buscarlo mientras corre el reloj.
+          DecoratedBox(
+            decoration: BoxDecoration(border: Border(top: BorderSide(color: MyColors.outlineVariant))),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(MySpacing.screenEdge, MySpacing.sm, MySpacing.screenEdge, MySpacing.sm),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _cerrar(RespuestaOferta.rechaza),
+                      child: const Text('Rechazar'),
                     ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: MySpacing.lg),
-            MyStatRow(tiles: [
-              MyStatTile(icon: Symbols.near_me, value: Formato.km(o.distanciaAlRetiroKm), label: envio.esMandado ? 'Hasta el retiro' : 'Hasta el local'),
-              MyStatTile(icon: Symbols.route, value: Formato.km(envio.cotizacion.distanciaKm), label: 'Viaje'),
-              MyStatTile(icon: Symbols.schedule, value: '${envio.cotizacion.minutosEstimados}', label: 'Min est.'),
-            ]),
-            const SizedBox(height: MySpacing.md),
-            if (envio.origen.tieneCoordenadas && envio.destino.tieneCoordenadas) ...[
-              MyMapaVista(
-                alto: 150,
-                marcadores: [
-                  MyMarcador(
-                    punto: LatLng(envio.origen.lat!, envio.origen.lng!),
-                    icono: envio.esMandado ? Symbols.pin_drop : Symbols.storefront,
-                    etiqueta: 'Retiro',
                   ),
-                  MyMarcador(
-                    punto: LatLng(envio.destino.lat!, envio.destino.lng!),
-                    icono: Symbols.home,
-                    color: MyColors.dock,
-                    etiqueta: 'Entrega',
+                  const SizedBox(width: MySpacing.sm),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton.icon(
+                      onPressed: () => _cerrar(RespuestaOferta.acepta),
+                      icon: const Icon(Symbols.bolt, size: 22, fill: 1),
+                      label: const Text('Aceptar'),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: MySpacing.md),
-            ],
-            MyRouteTimeline(
-              stops: [
-                MyRouteStop(
-                  overline: 'Retiro',
-                  title: envio.nombreRetiro,
-                  // En un mandado, qué retirar es lo que decide si le sirve.
-                  subtitle: [
-                    envio.origen.calle,
-                    if (envio.esMandado && envio.origen.referencia != null) envio.origen.referencia!,
-                  ].join(' - '),
-                  icon: Symbols.restaurant,
-                ),
-                MyRouteStop(
-                  overline: 'Entrega',
-                  title: envio.destino.calle,
-                  subtitle: 'Los datos del cliente aparecen al aceptar',
-                  icon: Symbols.home,
-                  iconBackground: MyColors.dock,
-                ),
-              ],
             ),
-            const SizedBox(height: MySpacing.lg),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _cerrar(RespuestaOferta.rechaza),
-                    child: const Text('Rechazar'),
-                  ),
-                ),
-                const SizedBox(width: MySpacing.sm),
-                Expanded(
-                  flex: 2,
-                  child: FilledButton.icon(
-                    onPressed: () => _cerrar(RespuestaOferta.acepta),
-                    icon: const Icon(Symbols.bolt, size: 22, fill: 1),
-                    label: const Text('Aceptar'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Recuadro amarillo pálido con un dato que cambia la decisión de aceptar.
+class _Aviso extends StatelessWidget {
+  const _Aviso({required this.icono, required this.texto});
+
+  final IconData icono;
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(MySpacing.sm),
+      decoration: BoxDecoration(
+        color: MyColors.primaryFixed,
+        borderRadius: BorderRadius.circular(MyRadius.lg),
+      ),
+      child: Row(
+        children: [
+          Icon(icono, color: MyColors.onPrimaryFixed, fill: 1),
+          const SizedBox(width: MySpacing.sm),
+          Expanded(
+            child: Text(texto, style: MyType.labelLg.copyWith(color: MyColors.onPrimaryFixed)),
+          ),
+        ],
       ),
     );
   }
