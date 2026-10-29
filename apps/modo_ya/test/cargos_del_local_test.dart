@@ -105,15 +105,17 @@ void main() {
   }
 
   group('Cargar un monto negativo', () {
+    // El formulario lee el monto con `MilesFormatter.leer`, el mismo de todos
+    // los campos de plata (antes tenía un parseo propio, `montoConSigno`).
     test('el signo sobrevive al parseo', () {
-      expect(montoConSigno('15000'), 15000);
-      expect(montoConSigno('-15000'), -15000);
+      expect(MilesFormatter.leer('15000'), 15000);
+      expect(MilesFormatter.leer('-15.000'), -15000);
       // Lo que escribe alguien copiando de la pantalla.
-      expect(montoConSigno(r'-$15.000'), -15000);
-      expect(montoConSigno(''), isNull);
-      expect(montoConSigno('-'), isNull);
+      expect(MilesFormatter.leer(r'-$15.000'), -15000);
+      expect(MilesFormatter.leer(''), isNull);
+      expect(MilesFormatter.leer('-'), isNull);
       // El signo cuenta solo adelante: atrás es un tipeo, no una devolución.
-      expect(montoConSigno('15000-'), 15000);
+      expect(MilesFormatter.leer('15000-'), 15000);
     });
 
     testWidgets('se puede devolverle plata al local desde la pantalla',

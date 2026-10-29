@@ -10,10 +10,11 @@ import 'hoja_de_liquidacion.dart';
 
 /// Liquidaciones: qué le queda a cada local y a cada rider en un período.
 ///
-/// La plata la cobra MODO YA (tarjeta en la app) o la junta el rider
-/// (efectivo). Acá se arma el reparto:
+/// La plata la cobra MODO YA (tarjeta en la app) o la junta el rider (el
+/// efectivo de los mandados). Acá se arma el reparto:
 ///
-///   Local = lo que vendió − mensualidad − publicidad − ajustes
+///   Local = lo que vendió − comisión por pedido − cobro con tarjeta
+///           − mensualidad − publicidad − ajustes
 ///   Rider = lo que ganó − el efectivo que cobró y todavía no rindió
 ///
 /// Al cerrar una liquidación, esos pedidos y envíos quedan marcados: no se
@@ -97,28 +98,123 @@ class _Saldo extends StatelessWidget {
   }
 }
 
+/// Cierra la liquidación de un local. Devuelve true si se cerró, para que la
+/// hoja desde donde se cerró se pueda ir: ya no tiene nada pendiente que
+/// mostrar.
+Future<bool> _cerrarComercio(BuildContext context, WidgetRef ref, PendienteComercio p, Periodo periodo) async {
+  final ok = await confirmar(
+    context,
+    titulo: 'Cerrar la liquidación de ${p.comercio}',
+    mensaje: p.total >= 0
+        ? 'Le vas a pagar ${Formato.pesos(p.total)}. Los pedidos y cargos de este período quedan cerrados.'
+        : 'El local te debe ${Formato.pesos(p.total.abs())}. Los pedidos y cargos de este período quedan cerrados.',
+    aceptar: 'Cerrar',
+  );
+  if (!ok) return false;
+  try {
+    await ref.read(liquidacionesRepositoryProvider).cerrarComercio(p.comercioId, periodo.desde, periodo.hasta);
+    if (context.mounted) mostrarAviso(context, 'Liquidación cerrada. Queda en "Cerradas".');
+    return true;
+  } catch (e) {
+    if (context.mounted) mostrarError(context, e);
+    return false;
+  }
+}
+
+Future<bool> _cerrarRider(BuildContext context, WidgetRef ref, PendienteRider p, Periodo periodo) async {
+  final ok = await confirmar(
+    context,
+    titulo: 'Cerrar la liquidación de ${p.rider}',
+    mensaje: p.total >= 0
+        ? 'Le vas a pagar ${Formato.pesos(p.total)} por ${p.envios} envíos.'
+        : 'Cobró ${Formato.pesos(p.efectivo)} en la calle y ganó ${Formato.pesos(p.ganancias)}'
+            '${p.cargos == 0 ? '' : ', con ${Formato.pesos(p.cargos)} de cargos'}'
+            ': tiene que rendirte ${Formato.pesos(p.total.abs())}.',
+    aceptar: 'Cerrar',
+  );
+  if (!ok) return false;
+  try {
+    await ref.read(liquidacionesRepositoryProvider).cerrarRider(p.repartidorId, periodo.desde, periodo.hasta);
+    if (context.mounted) mostrarAviso(context, 'Liquidación cerrada. Queda en "Cerradas".');
+    return true;
+  } catch (e) {
+    if (context.mounted) mostrarError(context, e);
+    return false;
+  }
+}
+
+/// Una fila de la lista en el celular y la tableta: nombre, saldo y el
+/// resumen en un renglón. Tocarla abre la hoja, que es donde están las
+/// acciones; sin botones acá, la tarjeta no se parte en dos en 360 px.
+class _TarjetaLiquidacion extends StatelessWidget {
+  const _TarjetaLiquidacion({required this.nombre, required this.total, required this.resumen, required this.onTap});
+
+  final String nombre;
+  final int total;
+  final String resumen;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return MyCard(
+      padding: const EdgeInsets.all(MySpacing.md),
+      onTap: onTap,
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(nombre, style: MyType.headlineSm, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: MySpacing.xs),
+                    _Saldo(total),
+                  ],
+                ),
+                const SizedBox(height: MySpacing.xxs),
+                Text(resumen, style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+              ],
+            ),
+          ),
+          const SizedBox(width: MySpacing.xs),
+          Icon(Symbols.chevron_right, color: MyColors.secondary),
+        ],
+      ),
+    );
+  }
+}
+
 class _Locales extends ConsumerWidget {
   const _Locales({required this.periodo});
 
   final Periodo periodo;
 
-  Future<void> _cerrar(BuildContext context, WidgetRef ref, PendienteComercio p) async {
-    final ok = await confirmar(
-      context,
-      titulo: 'Cerrar la liquidación de ${p.comercio}',
-      mensaje: p.total >= 0
-          ? 'Le vas a pagar ${Formato.pesos(p.total)}. Los pedidos y cargos de este período quedan cerrados.'
-          : 'El local te debe ${Formato.pesos(p.total.abs())}. Los pedidos y cargos de este período quedan cerrados.',
-      aceptar: 'Cerrar',
-    );
-    if (!ok) return;
-    try {
-      await ref.read(liquidacionesRepositoryProvider).cerrarComercio(p.comercioId, periodo.desde, periodo.hasta);
-      if (context.mounted) mostrarAviso(context, 'Liquidación cerrada. Queda en "Cerradas".');
-    } catch (e) {
-      if (context.mounted) mostrarError(context, e);
-    }
-  }
+  void _abrir(BuildContext context, WidgetRef ref, PendienteComercio p) => mostrarHojaDeComercio(
+        context,
+        p,
+        periodo.desde,
+        periodo.hasta,
+        // Las acciones van en la hoja y no en la fila: se cierra mirando el
+        // renglón por renglón, no un total suelto.
+        acciones: (hoja) => [
+          MyBoton(
+            label: 'Cargos',
+            icon: Symbols.receipt,
+            tipo: MyBotonTipo.texto,
+            onPressed: () => mostrarCargos(hoja, ref, p.comercioId, p.comercio),
+          ),
+          MyBoton(
+            label: 'Cerrar liquidación',
+            icon: Symbols.done_all,
+            onPressed: () async {
+              if (await _cerrarComercio(hoja, ref, p, periodo) && hoja.mounted) Navigator.pop(hoja);
+            },
+          ),
+        ],
+      );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -137,43 +233,18 @@ class _Locales extends ConsumerWidget {
             ),
           );
         }
-        if (context.esMovil) {
+        // Seis columnas de plata no entran en una tableta con la barra
+        // lateral: hasta la compu van tarjetas.
+        if (!context.esEscritorio) {
           return Column(
             children: [
               for (final p in lista) ...[
-                MyCard(
-                  // En el celular la hoja entra desde abajo, pero es el mismo
-                  // detalle: tocar la tarjeta lo abre.
-                  onTap: () => mostrarHojaDeComercio(context, p, periodo.desde, periodo.hasta),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(child: Text(p.comercio, style: MyType.headlineSm)),
-                          _Saldo(p.total),
-                        ],
-                      ),
-                      Text(
-                        '${p.pedidos} pedidos · vendió ${Formato.pesos(p.ventas)} · descuentos ${Formato.pesos(p.cargos)}',
-                        style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                      ),
-                      const SizedBox(height: MySpacing.sm),
-                      Wrap(
-                        alignment: WrapAlignment.end,
-                        spacing: MySpacing.xs,
-                        children: [
-                          MyBoton(
-                            label: 'Cargos',
-                            icon: Symbols.receipt,
-                            tipo: MyBotonTipo.texto,
-                            onPressed: () => mostrarCargos(context, ref, p.comercioId, p.comercio),
-                          ),
-                          MyBoton(label: 'Cerrar', icon: Symbols.done_all, onPressed: () => _cerrar(context, ref, p)),
-                        ],
-                      ),
-                    ],
-                  ),
+                _TarjetaLiquidacion(
+                  nombre: p.comercio,
+                  total: p.total,
+                  resumen: '${p.pedidos} pedidos · vendió ${Formato.pesos(p.ventas)} · '
+                      'descuentos ${Formato.pesos(p.cargos)}',
+                  onTap: () => _abrir(context, ref, p),
                 ),
                 const SizedBox(height: MySpacing.sm),
               ],
@@ -187,43 +258,27 @@ class _Locales extends ConsumerWidget {
             MyColumna('Vendió', alDerecha: true),
             MyColumna('Descuentos', alDerecha: true),
             MyColumna('A pagar', alDerecha: true),
-            MyColumna('', flex: 2, alDerecha: true),
+            MyColumna('', alDerecha: true),
           ],
           filas: [
             for (final p in lista)
               MyFila(
+                // Toda la fila abre la hoja con el renglón por renglón: el
+                // resumen no alcanza para explicarle un descuento.
+                onTap: () => _abrir(context, ref, p),
                 celdas: [
-                  // El nombre abre la hoja con el renglón por renglón: el
-                  // resumen no alcanza para explicarle un descuento.
-                  MyPressable(
-                    onTap: () => mostrarHojaDeComercio(context, p, periodo.desde, periodo.hasta),
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(p.comercio, style: MyType.labelLg,
-                              maxLines: 1, overflow: TextOverflow.ellipsis),
-                        ),
-                        const SizedBox(width: MySpacing.xxs),
-                        Icon(Symbols.chevron_right, size: 18, color: MyColors.secondary),
-                      ],
-                    ),
-                  ),
+                  Text(p.comercio, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text('${p.pedidos}', style: MyType.bodyMd),
                   Text(Formato.pesos(p.ventas), style: MyType.bodyMd),
                   Text(Formato.pesos(p.cargos), style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
                   _Saldo(p.total),
-                  Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: MySpacing.xs,
-                    children: [
-                      MyBoton(
-                        label: 'Cargos',
-                        icon: Symbols.receipt,
-                        tipo: MyBotonTipo.texto,
-                        onPressed: () => mostrarCargos(context, ref, p.comercioId, p.comercio),
-                      ),
-                      MyBoton(label: 'Cerrar', icon: Symbols.done_all, onPressed: () => _cerrar(context, ref, p)),
-                    ],
+                  // El cierre de fin de semana son varios seguidos: en la compu
+                  // queda a mano en la fila, además de en la hoja.
+                  MyBoton(
+                    label: 'Cerrar',
+                    icon: Symbols.done_all,
+                    tipo: MyBotonTipo.secundario,
+                    onPressed: () => _cerrarComercio(context, ref, p, periodo),
                   ),
                 ],
               ),
@@ -239,25 +294,21 @@ class _Riders extends ConsumerWidget {
 
   final Periodo periodo;
 
-  Future<void> _cerrar(BuildContext context, WidgetRef ref, PendienteRider p) async {
-    final ok = await confirmar(
-      context,
-      titulo: 'Cerrar la liquidación de ${p.rider}',
-      mensaje: p.total >= 0
-          ? 'Le vas a pagar ${Formato.pesos(p.total)} por ${p.envios} envíos.'
-          : 'Cobró ${Formato.pesos(p.efectivo)} en la calle y ganó ${Formato.pesos(p.ganancias)}'
-              '${p.cargos == 0 ? '' : ', con ${Formato.pesos(p.cargos)} de cargos'}'
-              ': tiene que rendirte ${Formato.pesos(p.total.abs())}.',
-      aceptar: 'Cerrar',
-    );
-    if (!ok) return;
-    try {
-      await ref.read(liquidacionesRepositoryProvider).cerrarRider(p.repartidorId, periodo.desde, periodo.hasta);
-      if (context.mounted) mostrarAviso(context, 'Liquidación cerrada. Queda en "Cerradas".');
-    } catch (e) {
-      if (context.mounted) mostrarError(context, e);
-    }
-  }
+  void _abrir(BuildContext context, WidgetRef ref, PendienteRider p) => mostrarHojaDeRider(
+        context,
+        p,
+        periodo.desde,
+        periodo.hasta,
+        acciones: (hoja) => [
+          MyBoton(
+            label: 'Cerrar liquidación',
+            icon: Symbols.done_all,
+            onPressed: () async {
+              if (await _cerrarRider(hoja, ref, p, periodo) && hoja.mounted) Navigator.pop(hoja);
+            },
+          ),
+        ],
+      );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -276,35 +327,19 @@ class _Riders extends ConsumerWidget {
             ),
           );
         }
-        if (context.esMovil) {
+        if (!context.esEscritorio) {
           return Column(
             children: [
               for (final p in lista) ...[
-                MyCard(
-                  // En el celular la hoja entra desde abajo, pero es el mismo
-                  // detalle: tocar la tarjeta lo abre.
-                  onTap: () => mostrarHojaDeRider(context, p, periodo.desde, periodo.hasta),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(child: Text(p.rider, style: MyType.headlineSm)),
-                          _Saldo(p.total),
-                        ],
-                      ),
-                      Text(
-                        '${p.envios} envíos · ganó ${Formato.pesos(p.ganancias)} · cobró ${Formato.pesos(p.efectivo)}'
-                        '${p.cargos == 0 ? '' : ' · cargos ${Formato.pesos(p.cargos)}'}',
-                        style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                      ),
-                      const SizedBox(height: MySpacing.sm),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: MyBoton(label: 'Cerrar', icon: Symbols.done_all, onPressed: () => _cerrar(context, ref, p)),
-                      ),
-                    ],
-                  ),
+                _TarjetaLiquidacion(
+                  nombre: p.rider,
+                  total: p.total,
+                  // El efectivo es el de los mandados: el rider lo cobra en la
+                  // puerta y se le descuenta acá.
+                  resumen: '${p.envios} envíos · ganó ${Formato.pesos(p.ganancias)} · '
+                      'cobró ${Formato.pesos(p.efectivo)} en efectivo'
+                      '${p.cargos == 0 ? '' : ' · cargos ${Formato.pesos(p.cargos)}'}',
+                  onTap: () => _abrir(context, ref, p),
                 ),
                 const SizedBox(height: MySpacing.sm),
               ],
@@ -324,22 +359,11 @@ class _Riders extends ConsumerWidget {
           filas: [
             for (final p in lista)
               MyFila(
+                // Toda la fila abre la hoja: el resumen no alcanza para
+                // discutirlo con el rider.
+                onTap: () => _abrir(context, ref, p),
                 celdas: [
-                  // El nombre abre la hoja con el renglón por renglón: el
-                  // resumen no alcanza para discutirlo con el rider.
-                  MyPressable(
-                    onTap: () => mostrarHojaDeRider(context, p, periodo.desde, periodo.hasta),
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(p.rider, style: MyType.labelLg,
-                              maxLines: 1, overflow: TextOverflow.ellipsis),
-                        ),
-                        const SizedBox(width: MySpacing.xxs),
-                        Icon(Symbols.chevron_right, size: 18, color: MyColors.secondary),
-                      ],
-                    ),
-                  ),
+                  Text(p.rider, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text('${p.envios}', style: MyType.bodyMd),
                   Text(Formato.pesos(p.ganancias), style: MyType.bodyMd),
                   Text(Formato.pesos(p.efectivo), style: MyType.bodyMd.copyWith(color: MyColors.secondary)),
@@ -350,7 +374,12 @@ class _Riders extends ConsumerWidget {
                     ),
                   ),
                   _Saldo(p.total),
-                  MyBoton(label: 'Cerrar', icon: Symbols.done_all, onPressed: () => _cerrar(context, ref, p)),
+                  MyBoton(
+                    label: 'Cerrar',
+                    icon: Symbols.done_all,
+                    tipo: MyBotonTipo.secundario,
+                    onPressed: () => _cerrarRider(context, ref, p, periodo),
+                  ),
                 ],
               ),
           ],
@@ -383,51 +412,7 @@ class _Historial extends ConsumerWidget {
         return Column(
           children: [
             for (final l in lista) ...[
-              MyCard(
-                // Tres semanas después "$84.500 del 1 al 7" no se puede
-                // explicar: la hoja trae lo que entró en ese cierre.
-                onTap: () => mostrarHojaCerrada(context, l),
-                child: Row(
-                  children: [
-                    MyIconoCaja(l.esComercio ? Symbols.storefront : Symbols.sports_motorsports),
-                    const SizedBox(width: MySpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(l.nombre, style: MyType.labelLg),
-                          Text(
-                            '${Formato.fechaCorta(l.desde)} al ${Formato.fechaCorta(l.hasta)} · '
-                            '${l.esComercio ? "vendió" : "ganó"} ${Formato.pesos(l.aFavor)} · '
-                            '${l.esComercio ? "descuentos" : "efectivo"} ${Formato.pesos(l.enContra)}'
-                            // Los cargos del rider salen de su propia columna:
-                            // sin nombrarlos, la resta no da el saldo de al lado.
-                            '${l.ajustes == 0 ? "" : " · cargos ${Formato.pesos(l.ajustes)}"}',
-                            style: MyType.bodySm.copyWith(color: MyColors.secondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: MySpacing.sm),
-                    _Saldo(l.total),
-                    const SizedBox(width: MySpacing.sm),
-                    if (l.pagada)
-                      const MyBadge('Pagada', tone: MyBadgeTone.success, icon: Symbols.check)
-                    else
-                      MyBoton(
-                        label: 'Marcar pagada',
-                        icon: Symbols.payments,
-                        onPressed: () async {
-                          try {
-                            await ref.read(liquidacionesRepositoryProvider).marcarPagada(l);
-                          } catch (e) {
-                            if (context.mounted) mostrarError(context, e);
-                          }
-                        },
-                      ),
-                  ],
-                ),
-              ),
+              _Cerrada(liquidacion: l),
               const SizedBox(height: MySpacing.sm),
             ],
           ],
@@ -437,25 +422,87 @@ class _Historial extends ConsumerWidget {
   }
 }
 
-/// Lee el monto escrito **respetando el signo**.
-///
-/// Antes el parseo era `int.tryParse(texto.replaceAll(RegExp(r'\D'), ''))`, que
-/// borra el `-` antes de leerlo, y el campo era `soloNumeros` así que el signo
-/// no se podía ni tipear. Un ajuste negativo era imposible de cargar desde la
-/// pantalla, aunque el esquema lo contempla desde 0035 ("Negativo: se le suma,
-/// una devolución") y el formulario del rider sí lo permita.
-///
-/// Es la única vía para devolverle una penalidad a un local cuando ya se
-/// liquidó: borrar el cargo no sirve (los totales guardados no se recalculan)
-/// y entrar por SQL no es una respuesta.
-int? montoConSigno(String texto) {
-  final limpio = texto.replaceAll(RegExp(r'[^\d-]'), '');
-  final digitos = limpio.replaceAll('-', '');
-  if (digitos.isEmpty) return null;
-  final n = int.tryParse(digitos);
-  if (n == null) return null;
-  // El signo cuenta solo adelante: "-1500" devuelve, "1500-" es un tipeo.
-  return limpio.startsWith('-') ? -n : n;
+class _Cerrada extends ConsumerWidget {
+  const _Cerrada({required this.liquidacion});
+
+  final Liquidacion liquidacion;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = liquidacion;
+    final estado = l.pagada
+        ? const MyBadge('Pagada', tone: MyBadgeTone.success, icon: Symbols.check)
+        : MyBoton(
+            label: 'Marcar pagada',
+            icon: Symbols.payments,
+            onPressed: () async {
+              try {
+                await ref.read(liquidacionesRepositoryProvider).marcarPagada(l);
+              } catch (e) {
+                if (context.mounted) mostrarError(context, e);
+              }
+            },
+          );
+    final textos = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l.nombre, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(
+          '${Formato.fechaCorta(l.desde)} al ${Formato.fechaCorta(l.hasta)} · '
+          '${l.esComercio ? "vendió" : "ganó"} ${Formato.pesos(l.aFavor)} · '
+          '${l.esComercio ? "descuentos" : "efectivo"} ${Formato.pesos(l.enContra)}'
+          // Los cargos del rider salen de su propia columna: sin nombrarlos, la
+          // resta no da el saldo de al lado.
+          '${l.ajustes == 0 ? "" : " · cargos ${Formato.pesos(l.ajustes)}"}',
+          style: MyType.bodySm.copyWith(color: MyColors.secondary),
+        ),
+      ],
+    );
+
+    return MyCard(
+      padding: const EdgeInsets.all(MySpacing.md),
+      // Tres semanas después "$84.500 del 1 al 7" no se puede explicar: la
+      // hoja trae lo que entró en ese cierre.
+      onTap: () => mostrarHojaCerrada(context, l),
+      // En una fila sola, icono + textos + saldo + "Marcar pagada" no entran en
+      // un celular: el botón baja a su propio renglón.
+      child: MyResponsivo(
+        builder: (context, _, ancho) {
+          final icono = MyIconoCaja(l.esComercio ? Symbols.storefront : Symbols.sports_motorsports);
+          if (ancho < 560) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    icono,
+                    const SizedBox(width: MySpacing.sm),
+                    Expanded(child: textos),
+                    const SizedBox(width: MySpacing.xs),
+                    _Saldo(l.total),
+                  ],
+                ),
+                const SizedBox(height: MySpacing.sm),
+                Align(alignment: Alignment.centerRight, child: estado),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              icono,
+              const SizedBox(width: MySpacing.sm),
+              Expanded(child: textos),
+              const SizedBox(width: MySpacing.sm),
+              _Saldo(l.total),
+              const SizedBox(width: MySpacing.sm),
+              estado,
+            ],
+          );
+        },
+      ),
+    );
+  }
 }
 
 /// Cargos de un local: la mensualidad del plan, la publicidad y los ajustes.
@@ -476,6 +523,7 @@ class _Cargos extends ConsumerStatefulWidget {
 }
 
 class _CargosState extends ConsumerState<_Cargos> {
+  final _form = GlobalKey<FormState>();
   final _detalle = TextEditingController();
   final _monto = TextEditingController();
   var _concepto = 'mensualidad';
@@ -486,6 +534,14 @@ class _CargosState extends ConsumerState<_Cargos> {
     'ajuste': 'Ajuste',
   };
 
+  /// Un ejemplo distinto para cada concepto: "Plan Básico de septiembre" en un
+  /// ajuste confunde más de lo que ayuda.
+  static const _ejemplos = {
+    'mensualidad': 'Plan Básico de septiembre',
+    'publicidad': 'Destacado en el inicio, semana del 20',
+    'ajuste': 'Penalidad por rechazar P-1234',
+  };
+
   @override
   void dispose() {
     _detalle.dispose();
@@ -494,17 +550,18 @@ class _CargosState extends ConsumerState<_Cargos> {
   }
 
   Future<void> _agregar() async {
-    final monto = montoConSigno(_monto.text);
-    if (monto == null || monto == 0 || _detalle.text.trim().isEmpty) {
-      mostrarError(context, 'Escribí un detalle y un monto.');
-      return;
-    }
+    // La validación va al lado de cada campo: antes un aviso flotante decía
+    // "Escribí un detalle y un monto" sin señalar cuál faltaba.
+    if (!_form.currentState!.validate()) return;
     try {
       await ref.read(liquidacionesRepositoryProvider).agregarCargo(
             comercioId: widget.comercioId,
             concepto: _concepto,
             detalle: _detalle.text.trim(),
-            monto: monto,
+            // Respeta el signo: un negativo es una devolución (0035) y es la
+            // única forma de devolverle una penalidad ya liquidada, porque
+            // borrar el cargo no recalcula los totales guardados.
+            monto: MilesFormatter.leer(_monto.text)!,
           );
       _detalle.clear();
       _monto.clear();
@@ -521,86 +578,128 @@ class _CargosState extends ConsumerState<_Cargos> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Wrap(
-          spacing: MySpacing.xs,
-          children: [
-            for (final e in _conceptos.entries)
-              ChoiceChip(
-                selected: _concepto == e.key,
-                onSelected: (_) => setState(() => _concepto = e.key),
-                label: Text(e.value),
+        Form(
+          key: _form,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Nuevo cargo', style: MyType.headlineSm),
+              const SizedBox(height: MySpacing.xxs),
+              Text(
+                'Se le descuenta de lo que cobra en su próxima liquidación. '
+                'Un monto negativo se lo devuelve.',
+                style: MyType.bodySm.copyWith(color: MyColors.secondary),
               ),
-          ],
+              const SizedBox(height: MySpacing.md),
+              const MyOverline('Qué es'),
+              const SizedBox(height: MySpacing.xs),
+              Wrap(
+                spacing: MySpacing.xs,
+                runSpacing: MySpacing.xs,
+                children: [
+                  for (final e in _conceptos.entries)
+                    MyChip(e.value, selected: _concepto == e.key, onTap: () => setState(() => _concepto = e.key)),
+                ],
+              ),
+              const SizedBox(height: MySpacing.md),
+              MyCampo(
+                controller: _detalle,
+                label: 'Detalle',
+                hint: _ejemplos[_concepto],
+                icon: Symbols.description,
+              ),
+              MyCampo(
+                controller: _monto,
+                label: 'Cuánto',
+                hint: '15.000 · -15.000 para devolverle',
+                icon: Symbols.payments,
+                // `soloNumeros` filtra con `digitsOnly`, que se come el signo
+                // mientras se tipea: el campo quedaba sin forma de cargar una
+                // devolución.
+                miles: true,
+                negativos: true,
+                validar: (v) {
+                  final n = MilesFormatter.leer(v);
+                  if (n == null || n == 0) return 'Escribí un monto distinto de cero';
+                  return null;
+                },
+              ),
+              MyBotonAccion(label: 'Agregar cargo', icon: Symbols.add, onPressed: _agregar),
+            ],
+          ),
         ),
-        const SizedBox(height: MySpacing.sm),
-        Text(
-          'Se le descuenta de lo que cobra en su próxima liquidación. '
-          'Un monto negativo se lo devuelve.',
-          style: MyType.bodySm.copyWith(color: MyColors.secondary),
-        ),
-        const SizedBox(height: MySpacing.sm),
-        MyCampo(controller: _detalle, label: 'Detalle', hint: 'Plan Básico de septiembre', icon: Symbols.description),
-        MyCampo(
-          controller: _monto,
-          label: 'Cuánto',
-          hint: '15.000 · -15.000 para devolverle',
-          icon: Symbols.payments,
-          // `soloNumeros` filtra con `digitsOnly`, que se come el signo mientras
-          // se tipea: el campo quedaba sin forma de cargar una devolución.
-          miles: true,
-          negativos: true,
-        ),
-        MyBotonAccion(label: 'Agregar cargo', icon: Symbols.add, onPressed: _agregar),
-        const Divider(height: MySpacing.lg),
+        const Divider(height: MySpacing.xl),
+        Text('Cargados', style: MyType.headlineSm),
+        const SizedBox(height: MySpacing.xs),
         if (cargos.isEmpty)
           Text('Todavía no tiene cargos.', style: MyType.bodyMd.copyWith(color: MyColors.secondary))
         else
-          for (final c in cargos)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(switch (c.concepto) {
-                'publicidad' => Symbols.campaign,
-                'ajuste' => Symbols.tune,
-                _ => Symbols.card_membership,
-              }),
-              title: Text(c.detalle, style: MyType.labelMd),
-              subtitle: Text(
-                '${Formato.fechaCorta(c.fecha)}'
-                // Un negativo no es un descuento: hay que poder distinguirlo
-                // de un ojo, o la lista se lee como si se le cobrara todo.
-                '${c.monto < 0 ? ' · se le devuelve' : ''}'
-                '${c.liquidado ? ' · ya liquidado' : ''}',
-                style: MyType.bodySm.copyWith(color: MyColors.secondary),
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    Formato.pesos(c.monto),
-                    style: MyType.labelLg.copyWith(
-                      color: c.monto < 0 ? MyColors.tertiary : null,
-                    ),
-                  ),
-                  if (!c.liquidado)
-                    IconButton(
-                      tooltip: 'Borrar',
-                      icon: Icon(Symbols.delete, size: 20, color: MyColors.error),
-                      // La lista es un stream: si la liquidación se cerró desde
-                      // otro dispositivo y el evento no llegó, el botón todavía
-                      // está acá y la base rebota el borrado. Sin mostrar el
-                      // error el toque no hacía nada y no se entendía por qué.
-                      onPressed: () async {
-                        try {
-                          await ref.read(liquidacionesRepositoryProvider).borrarCargo(c.id);
-                        } catch (e) {
-                          if (context.mounted) mostrarError(context, e);
-                        }
-                      },
-                    ),
-                ],
-              ),
-            ),
+          for (final c in cargos) _Cargo(cargo: c),
       ],
+    );
+  }
+}
+
+class _Cargo extends ConsumerWidget {
+  const _Cargo({required this.cargo});
+
+  final CargoComercio cargo;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = cargo;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: MySpacing.xs),
+      child: Row(
+        children: [
+          Icon(
+            switch (c.concepto) {
+              'publicidad' => Symbols.campaign,
+              'ajuste' => Symbols.tune,
+              _ => Symbols.card_membership,
+            },
+            color: MyColors.secondary,
+          ),
+          const SizedBox(width: MySpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(c.detalle, style: MyType.labelMd, maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(
+                  '${Formato.fechaCorta(c.fecha)}'
+                  // Un negativo no es un descuento: hay que poder distinguirlo
+                  // de un ojo, o la lista se lee como si se le cobrara todo.
+                  '${c.monto < 0 ? ' · se le devuelve' : ''}'
+                  '${c.liquidado ? ' · ya liquidado' : ''}',
+                  style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: MySpacing.xs),
+          Text(
+            Formato.pesos(c.monto),
+            style: MyType.labelLg.copyWith(color: c.monto < 0 ? MyColors.tertiary : null),
+          ),
+          if (!c.liquidado)
+            IconButton(
+              tooltip: 'Borrar',
+              icon: Icon(Symbols.delete, size: 20, color: MyColors.error),
+              // La lista es un stream: si la liquidación se cerró desde otro
+              // dispositivo y el evento no llegó, el botón todavía está acá y
+              // la base rebota el borrado. Sin mostrar el error el toque no
+              // hacía nada y no se entendía por qué.
+              onPressed: () async {
+                try {
+                  await ref.read(liquidacionesRepositoryProvider).borrarCargo(c.id);
+                } catch (e) {
+                  if (context.mounted) mostrarError(context, e);
+                }
+              },
+            ),
+        ],
+      ),
     );
   }
 }
