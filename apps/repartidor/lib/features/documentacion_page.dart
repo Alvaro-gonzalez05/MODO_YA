@@ -91,13 +91,13 @@ class _Resumen extends StatelessWidget {
             tone: c.completa ? MyBadgeTone.success : MyBadgeTone.dark,
           ),
           const SizedBox(height: MySpacing.sm),
-          Text(c.titular, style: MyType.headlineMd.copyWith(color: Colors.white)),
+          Text(c.titular, style: MyType.headlineMd.copyWith(color: MyColors.inverseOnSurface)),
           const SizedBox(height: MySpacing.xxs),
           Text(
             c.total == 0
                 ? 'Para ${vehiculo.label.toLowerCase()} no se pide documentación.'
                 : '${c.alDia} de ${c.total} aprobados · ${vehiculo.label}',
-            style: MyType.bodyMd.copyWith(color: Colors.white70),
+            style: MyType.bodyMd.copyWith(color: MyColors.inverseOnSurface.withValues(alpha: 0.72)),
           ),
         ],
       ),

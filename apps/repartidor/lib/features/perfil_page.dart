@@ -40,8 +40,13 @@ class PerfilPage extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(rider?.nombre ?? s.nombre, style: MyType.headlineMd),
-                          Text(s.email ?? '', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                          Text(rider?.nombre ?? s.nombre, style: MyType.headlineMd, maxLines: 2, overflow: TextOverflow.ellipsis),
+                          Text(
+                            s.email ?? '',
+                            style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           Text(rider?.telefono ?? '', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
                           const SizedBox(height: MySpacing.xxs),
                           if (rider != null)
