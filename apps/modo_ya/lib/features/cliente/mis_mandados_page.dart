@@ -35,6 +35,9 @@ class MisMandadosPage extends ConsumerWidget {
       rotulo: 'Mandados',
       titulo: 'Mis mandados',
       anchoMaximo: 700,
+      // Es una pantalla de detalle: el dock no se muestra y no hace falta
+      // dejarle lugar abajo.
+      conDock: false,
       acciones: [
         MyBoton(
           label: 'Pedir un rider',
