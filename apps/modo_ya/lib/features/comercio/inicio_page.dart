@@ -6,9 +6,35 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import 'widgets/envio.dart';
 import 'widgets/envio_tile.dart';
+import 'widgets/kpi_cargando.dart';
+import 'widgets/pedido.dart';
 
-/// Lo que lleva cobrado la semana, con el acceso a la liquidación.
+/// Un indicador que depende de una lectura en vivo: mientras no llegó la
+/// primera, se dibuja cargando y no con un cero.
+Widget _kpi(
+  AsyncValue<Object?> fuente, {
+  required String rotulo,
+  required IconData icono,
+  required VoidCallback reintentar,
+  required MyKpi Function() listo,
+}) {
+  if (fuente.hasValue) return listo();
+  if (fuente.hasError) {
+    return MyKpi(
+      rotulo: rotulo,
+      valor: '—',
+      icono: icono,
+      detalle: 'No se pudo cargar. Tocá para reintentar',
+      onTap: reintentar,
+    );
+  }
+  return KpiCargando(rotulo: rotulo, icono: icono);
+}
+
+/// Lo que lleva cobrado la semana. Tocarlo abre la hoja de la liquidación al
+/// costado, sin salir del inicio.
 ///
 /// Va en el inicio porque es la pregunta que el local se hace sin entrar a
 /// buscarla, y porque antes el saldo le llegaba sin que pudiera verlo venir.
@@ -18,68 +44,155 @@ class _KpiDeLaSemana extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final (desde, hasta) = RangoDePeriodo.estaSemana.periodo;
-    final r = ref.watch(miLiquidacionDeComercioProvider((desde: desde, hasta: hasta))).value;
+    final periodo = (desde: desde, hasta: hasta);
+    final resumen = ref.watch(miLiquidacionDeComercioProvider(periodo));
 
-    return MyKpi(
+    return _kpi(
+      resumen,
       rotulo: 'Vas a cobrar',
-      // Sin movimientos todavía no hay fila (ver 0065): se muestra un guion en
-      // vez de un "$0" que haría pensar que el cálculo dio cero.
-      valor: r == null ? '—' : Formato.pesos(r.total),
       icono: Symbols.payments,
-      detalle: r == null ? 'Esta semana, sin movimientos' : 'Esta semana · tocá para ver el detalle',
-      onTap: () => context.go('/local/dinero'),
+      reintentar: () => ref.invalidate(pendientesComerciosProvider(periodo)),
+      listo: () {
+        final r = resumen.value;
+        return MyKpi(
+          rotulo: 'Vas a cobrar',
+          // Sin movimientos todavía no hay fila (ver 0065): se muestra un guion
+          // en vez de un "$0" que haría pensar que el cálculo dio cero.
+          valor: r == null ? '—' : Formato.pesos(r.total),
+          icono: Symbols.payments,
+          detalle: r == null ? 'Esta semana, sin movimientos' : 'Esta semana · tocá para ver el detalle',
+          onTap: r == null
+              ? () => context.go('/local/dinero')
+              : () => mostrarHojaLateral(
+                    context,
+                    titulo: 'Esta semana',
+                    builder: (hoja) => Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        MyHojaDeComercio(resumen: r, desde: desde, hasta: hasta, paraElMismo: true),
+                        const SizedBox(height: MySpacing.md),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: MyBoton(
+                            label: 'Ver liquidaciones cerradas',
+                            icon: Symbols.history,
+                            tipo: MyBotonTipo.secundario,
+                            onPressed: () {
+                              Navigator.of(hoja).pop();
+                              context.go('/local/dinero');
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+        );
+      },
     );
   }
 }
 
 /// Inicio del local (A4): estado, pedidos por atender, pedir un rider y los
 /// envíos de hoy.
+///
+/// Todo lo que se toca acá se abre en el lugar (pedido, envío, liquidación):
+/// el inicio es lo que el local deja abierto mientras trabaja, y mandarlo a
+/// otra pestaña le hacía perder de vista lo demás.
 class InicioComercioPage extends ConsumerWidget {
   const InicioComercioPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final comercio = ref.watch(comercioActualProvider).value;
-    final envios = ref.watch(enviosDelComercioProvider).value ?? const <Envio>[];
-    final pedidos = ref.watch(pedidosDelComercioProvider).value ?? const <Pedido>[];
+    final enviosAsync = ref.watch(enviosDelComercioProvider);
+    final pedidosAsync = ref.watch(pedidosDelComercioProvider);
+    final envios = enviosAsync.value ?? const <Envio>[];
+    final pedidos = pedidosAsync.value ?? const <Pedido>[];
 
     final hoy = DateTime.now();
     bool esDeHoy(DateTime d) => d.year == hoy.year && d.month == hoy.month && d.day == hoy.day;
-    final nuevos = pedidos.where((p) => p.estado == EstadoPedido.pagado).length;
-    final enCocina = pedidos.where((p) => p.estado == EstadoPedido.aceptado || p.estado == EstadoPedido.enPreparacion).length;
+    bool esNuevo(Pedido p) => p.estado == EstadoPedido.pagado;
+    bool enCocina(Pedido p) => p.estado == EstadoPedido.aceptado || p.estado == EstadoPedido.enPreparacion;
+    bool enLaCalle(Envio e) => e.estado.esActivo;
+    bool entregadoHoy(Envio e) => e.estado == EstadoEnvio.entregado && esDeHoy(e.creadoEn);
+
+    final nuevos = pedidos.where(esNuevo).toList()..sort((a, b) => a.creadoEn.compareTo(b.creadoEn));
+    final cocina = pedidos.where(enCocina).length;
     final listos = pedidos.where((p) => p.estado == EstadoPedido.listo).length;
+    final calle = envios.where(enLaCalle).length;
+    final entregados = envios.where(entregadoHoy).length;
     final enviosHoy = envios.where((e) => e.estado.esActivo || esDeHoy(e.creadoEn)).toList();
-    final entregadosHoy = envios.where((e) => e.estado == EstadoEnvio.entregado && esDeHoy(e.creadoEn)).length;
+
+    void reintentarPedidos() => ref.invalidate(pedidosDelComercioProvider);
+    void reintentarEnvios() => ref.invalidate(enviosDelComercioProvider);
 
     final kpis = MyGrilla(
       anchoMinimo: context.esMovil ? 150 : 200,
       children: [
-        MyKpi(
+        _kpi(
+          pedidosAsync,
           rotulo: 'Pedidos nuevos',
-          valor: '$nuevos',
           icono: Symbols.notifications_active,
-          detalle: nuevos > 0 ? 'Tocá para aceptarlos' : 'Nada por aceptar',
-          destacado: nuevos > 0,
-          onTap: () => context.go('/local/pedidos'),
+          reintentar: reintentarPedidos,
+          listo: () => MyKpi(
+            rotulo: 'Pedidos nuevos',
+            valor: '${nuevos.length}',
+            icono: Symbols.notifications_active,
+            detalle: nuevos.isNotEmpty ? 'Tocá para aceptarlos' : 'Nada por aceptar',
+            destacado: nuevos.isNotEmpty,
+            onTap: nuevos.isEmpty
+                ? null
+                : () => mostrarPedidos(context, titulo: 'Pedidos nuevos', filtro: esNuevo, ahora: pedidos),
+          ),
         ),
-        MyKpi(
+        _kpi(
+          pedidosAsync,
           rotulo: 'En cocina',
-          valor: '$enCocina',
           icono: Symbols.skillet,
-          detalle: listos > 0 ? '$listos listos esperando rider' : 'Aceptados y en preparación',
-          onTap: () => context.go('/local/pedidos'),
+          reintentar: reintentarPedidos,
+          listo: () => MyKpi(
+            rotulo: 'En cocina',
+            valor: '$cocina',
+            icono: Symbols.skillet,
+            detalle: listos > 0 ? '$listos ${listos == 1 ? 'listo esperando' : 'listos esperando'} rider' : 'Aceptados y en preparación',
+            onTap: cocina + listos == 0
+                ? null
+                : () => mostrarPedidos(
+                      context,
+                      titulo: 'En cocina y listos',
+                      filtro: (p) => enCocina(p) || p.estado == EstadoPedido.listo,
+                      ahora: pedidos,
+                    ),
+          ),
         ),
-        MyKpi(
+        _kpi(
+          enviosAsync,
           rotulo: 'Envíos en la calle',
-          valor: '${envios.where((e) => e.estado.esActivo).length}',
           icono: Symbols.sports_motorsports,
-          detalle: 'Cadetería y pedidos de la app',
+          reintentar: reintentarEnvios,
+          listo: () => MyKpi(
+            rotulo: 'Envíos en la calle',
+            valor: '$calle',
+            icono: Symbols.sports_motorsports,
+            detalle: 'Cadetería y pedidos de la app',
+            onTap: calle == 0 ? null : () => mostrarEnvios(context, titulo: 'En la calle', filtro: enLaCalle, ahora: envios),
+          ),
         ),
-        MyKpi(
+        _kpi(
+          enviosAsync,
           rotulo: 'Entregados hoy',
-          valor: '$entregadosHoy',
           icono: Symbols.task_alt,
-          detalle: 'Confirmados con código',
+          reintentar: reintentarEnvios,
+          listo: () => MyKpi(
+            rotulo: 'Entregados hoy',
+            valor: '$entregados',
+            icono: Symbols.task_alt,
+            detalle: 'Confirmados con código',
+            onTap: entregados == 0
+                ? null
+                : () => mostrarEnvios(context, titulo: 'Entregados hoy', filtro: entregadoHoy, ahora: envios),
+          ),
         ),
         const _KpiDeLaSemana(),
       ],
@@ -87,8 +200,12 @@ class InicioComercioPage extends ConsumerWidget {
 
     final estado = comercio == null ? const SizedBox() : _EstadoLocal(comercio: comercio);
     final cadeteria = _Cadeteria(comercio: comercio);
-    final listaEnvios = _EnviosDeHoy(envios: enviosHoy);
+    final listaEnvios = _EnviosDeHoy(envios: enviosHoy, cargando: !enviosAsync.hasValue && !enviosAsync.hasError);
+    // Los pedidos que esperan respuesta van a la vista y con su botón: son lo
+    // único del inicio que tiene un reloj corriendo.
+    final porAceptar = nuevos.isEmpty ? null : _PorAceptar(pedidos: nuevos);
 
+    const espacio = SizedBox(height: MySpacing.md);
     return MyPagina(
       rotulo: DateFormat("EEEE d 'de' MMMM", 'es_AR').format(hoy),
       titulo: comercio?.nombre ?? 'Mi local',
@@ -100,9 +217,10 @@ class InicioComercioPage extends ConsumerWidget {
       children: [
         if (context.esMovil) ...[
           estado,
-          const SizedBox(height: MySpacing.md),
+          espacio,
+          if (porAceptar != null) ...[porAceptar, const SizedBox(height: MySpacing.xl)],
           kpis,
-          const SizedBox(height: MySpacing.md),
+          espacio,
           cadeteria,
           const SizedBox(height: MySpacing.xl),
           listaEnvios,
@@ -112,17 +230,52 @@ class InicioComercioPage extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(flex: 3, child: listaEnvios),
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (porAceptar != null) ...[porAceptar, const SizedBox(height: MySpacing.xl)],
+                    listaEnvios,
+                  ],
+                ),
+              ),
               const SizedBox(width: MySpacing.lg),
               Expanded(
                 flex: 2,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [estado, const SizedBox(height: MySpacing.md), cadeteria],
+                  children: [estado, espacio, cadeteria],
                 ),
               ),
             ],
           ),
+        ],
+      ],
+    );
+  }
+}
+
+class _PorAceptar extends StatelessWidget {
+  const _PorAceptar({required this.pedidos});
+
+  final List<Pedido> pedidos;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        MySectionHeader(
+          title: pedidos.length == 1 ? 'Un pedido para aceptar' : '${pedidos.length} pedidos para aceptar',
+          subtitle: 'Tocalo para ver todo lo que pidió',
+          actionLabel: 'Ir a Pedidos',
+          onAction: () => context.go('/local/pedidos'),
+        ),
+        const SizedBox(height: MySpacing.md),
+        for (final p in pedidos) ...[
+          TarjetaPedido(pedido: p, mostrarEstado: false),
+          const SizedBox(height: MySpacing.sm),
         ],
       ],
     );
@@ -192,9 +345,10 @@ class _Cadeteria extends ConsumerWidget {
 }
 
 class _EnviosDeHoy extends StatelessWidget {
-  const _EnviosDeHoy({required this.envios});
+  const _EnviosDeHoy({required this.envios, required this.cargando});
 
   final List<Envio> envios;
+  final bool cargando;
 
   @override
   Widget build(BuildContext context) {
@@ -208,7 +362,10 @@ class _EnviosDeHoy extends StatelessWidget {
           onAction: () => context.go('/local/envios'),
         ),
         const SizedBox(height: MySpacing.md),
-        if (envios.isEmpty)
+        if (cargando)
+          // "Sin envíos hoy" mientras carga era tan engañoso como el cero.
+          const MyCard(child: Padding(padding: EdgeInsets.all(MySpacing.lg), child: MyCargando()))
+        else if (envios.isEmpty)
           const MyCard(
             child: MyEmptyState(
               icon: Symbols.sports_motorsports,
@@ -218,7 +375,7 @@ class _EnviosDeHoy extends StatelessWidget {
           )
         else
           for (final e in envios) ...[
-            EnvioTile(envio: e, onTap: () => context.go('/local/envios/${e.id}')),
+            EnvioTile(envio: e, onTap: () => mostrarDetalleEnvio(context, e.id)),
             const SizedBox(height: MySpacing.sm),
           ],
       ],

@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import 'widgets/formulario.dart';
 
 /// Horarios de atención. Un turno puede cruzar la medianoche (20:00 a 01:00).
 ///
@@ -86,29 +87,37 @@ class _HorariosPageState extends ConsumerState<HorariosPage> {
         if (_dias == null) _cargar(h);
         final dias = _dias!;
 
+        // Un interruptor por día (abierto o cerrado) y los turnos abajo. Antes
+        // el día se abría con un "+" sin rótulo y no se entendía que "Cerrado"
+        // era el estado y no un botón.
         Widget dia(int d) => MyCard(
-              padding: const EdgeInsets.all(MySpacing.md),
+              padding: const EdgeInsets.fromLTRB(MySpacing.md, MySpacing.xs, MySpacing.xs, MySpacing.sm),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
                     children: [
                       Expanded(child: Text(Horario.nombresDias[d], style: MyType.headlineSm)),
-                      if (dias[d].isEmpty) Text('Cerrado', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
-                      IconButton(
-                        tooltip: 'Agregar turno',
-                        icon: Icon(Symbols.add_circle, color: MyColors.onSurface, fill: 1),
-                        onPressed: () => setState(() => dias[d].add(
-                              dias[d].isEmpty
-                                  ? _Turno(const TimeOfDay(hour: 11, minute: 0), const TimeOfDay(hour: 15, minute: 0))
-                                  : _Turno(const TimeOfDay(hour: 20, minute: 0), const TimeOfDay(hour: 0, minute: 30)),
-                            )),
+                      Text(
+                        dias[d].isEmpty ? 'Cerrado' : 'Abierto',
+                        style: MyType.labelMd.copyWith(color: dias[d].isEmpty ? MyColors.secondary : MyColors.onSurface),
+                      ),
+                      const SizedBox(width: MySpacing.xs),
+                      Switch(
+                        value: dias[d].isNotEmpty,
+                        onChanged: (abierto) => setState(() {
+                          if (abierto) {
+                            dias[d].add(_Turno(const TimeOfDay(hour: 11, minute: 0), const TimeOfDay(hour: 15, minute: 0)));
+                          } else {
+                            dias[d].clear();
+                          }
+                        }),
                       ),
                     ],
                   ),
                   for (final t in dias[d])
                     Padding(
-                      padding: const EdgeInsets.only(top: MySpacing.xxs),
+                      padding: const EdgeInsets.only(top: MySpacing.xxs, right: MySpacing.xs),
                       child: Wrap(
                         crossAxisAlignment: WrapCrossAlignment.center,
                         spacing: MySpacing.xs,
@@ -138,13 +147,27 @@ class _HorariosPageState extends ConsumerState<HorariosPage> {
                         ],
                       ),
                     ),
+                  if (dias[d].isNotEmpty)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => setState(
+                          () => dias[d].add(_Turno(const TimeOfDay(hour: 20, minute: 0), const TimeOfDay(hour: 0, minute: 30))),
+                        ),
+                        icon: const Icon(Symbols.add, size: 18),
+                        label: const Text('Agregar otro turno'),
+                      ),
+                    ),
                 ],
               ),
             );
 
         // Lunes primero, que es como se piensa la semana.
         const orden = [1, 2, 3, 4, 5, 6, 0];
-        return MyPagina(
+        final guardar = MyBotonAccion(label: 'Guardar horarios', icon: Symbols.save, onPressed: _guardar);
+        return ConBarraDeGuardado(
+          boton: guardar,
+          pagina: MyPagina(
           volver: () => context.canPop() ? context.pop() : context.go('/local/cuenta'),
           rotulo: 'Mi local',
           titulo: 'Horarios de atención',
@@ -153,7 +176,7 @@ class _HorariosPageState extends ConsumerState<HorariosPage> {
           conDock: false,
           acciones: [
             MyBoton(
-              label: 'Copiar lunes a viernes',
+              label: 'Repetir el lunes hasta el viernes',
               icon: Symbols.content_copy,
               tipo: MyBotonTipo.secundario,
               onPressed: () => setState(() {
@@ -183,13 +206,12 @@ class _HorariosPageState extends ConsumerState<HorariosPage> {
               ),
             ),
             const SizedBox(height: MySpacing.md),
-            if (context.esMovil) ...[
-              for (final d in orden) ...[dia(d), const SizedBox(height: MySpacing.xs)],
-              const SizedBox(height: MySpacing.md),
-              MyBotonAccion(label: 'Guardar horarios', icon: Symbols.save, onPressed: _guardar),
-            ] else
+            if (context.esMovil)
+              for (final d in orden) ...[dia(d), const SizedBox(height: MySpacing.xs)]
+            else
               MyGrilla(anchoMinimo: 380, maxColumnas: 2, espacio: MySpacing.sm, children: [for (final d in orden) dia(d)]),
           ],
+          ),
         );
       },
     );

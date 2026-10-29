@@ -9,6 +9,7 @@ import 'package:my_ui/my_ui.dart';
 import '../../comun/cambiar_password.dart';
 import '../../comun/formulario_emergente.dart';
 import '../../comun/menu_usuario.dart';
+import 'widgets/formulario.dart';
 
 /// Mi local (A12): vidriera, datos, punto de retiro, horarios y seguridad.
 class CuentaLocalPage extends ConsumerWidget {
@@ -314,63 +315,11 @@ class _Datos extends ConsumerWidget {
 
   final Comercio comercio;
 
-  Future<void> _editar(BuildContext context, WidgetRef ref) async {
-    final c = comercio;
-    final nombre = TextEditingController(text: c.nombre);
-    final telefono = TextEditingController(text: c.telefono);
-    final calle = TextEditingController(text: c.direccion.calle);
-    final referencia = TextEditingController(text: c.direccion.referencia);
-    final demora = TextEditingController(text: '${c.demoraEstimadaMin}');
-    final form = GlobalKey<FormState>();
-
-    await mostrarFormularioEmergente(
-      context,
-      titulo: 'Datos del local',
-      builder: (hoja) => Form(
-        key: form,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            MyCampo(controller: nombre, label: 'Nombre', icon: Symbols.storefront),
-            MyCampo(controller: telefono, label: 'Teléfono', icon: Symbols.call, keyboard: TextInputType.phone),
-            MyCampo(controller: calle, label: 'Dirección', icon: Symbols.location_on),
-            MyCampo(controller: referencia, label: 'Referencia', icon: Symbols.pin_drop, obligatorio: false),
-            MyCampo(
-              controller: demora,
-              label: 'Demora de preparación (minutos)',
-              icon: Symbols.timer,
-              soloNumeros: true,
-              validar: (t) => (int.tryParse(t) ?? 0) <= 0 ? 'Poné los minutos' : null,
-            ),
-            const SizedBox(height: MySpacing.xs),
-            MyBotonAccion(
-              label: 'Guardar',
-              onPressed: () async {
-                if (!form.currentState!.validate()) return;
-                try {
-                  await ref.read(comerciosRepositoryProvider).actualizar(
-                        c.id,
-                        nombre: nombre.text,
-                        telefono: telefono.text,
-                        calle: calle.text,
-                        referencia: referencia.text,
-                        demoraEstimadaMin: int.parse(demora.text),
-                      );
-                  ref.invalidate(comercioActualProvider);
-                  if (hoja.mounted) Navigator.pop(hoja);
-                } catch (e) {
-                  if (hoja.mounted) mostrarError(hoja, e);
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-    for (final t in [nombre, telefono, calle, referencia, demora]) {
-      t.dispose();
-    }
-  }
+  Future<void> _editar(BuildContext context) => mostrarFormularioEmergente(
+        context,
+        titulo: 'Datos del local',
+        builder: (_) => _FormularioDatos(comercio: comercio),
+      );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -382,7 +331,7 @@ class _Datos extends ConsumerWidget {
           Row(
             children: [
               Expanded(child: Text('Datos del local', style: MyType.headlineSm)),
-              MyBoton(label: 'Editar', icon: Symbols.edit, tipo: MyBotonTipo.secundario, onPressed: () => _editar(context, ref)),
+              MyBoton(label: 'Editar', icon: Symbols.edit, tipo: MyBotonTipo.secundario, onPressed: () => _editar(context)),
             ],
           ),
           const SizedBox(height: MySpacing.sm),
@@ -390,6 +339,115 @@ class _Datos extends ConsumerWidget {
           MyDato('Dirección', c.direccion.calle, icono: Symbols.location_on),
           if ((c.direccion.referencia ?? '').isNotEmpty) MyDato('Referencia', c.direccion.referencia!, icono: Symbols.pin_drop),
           MyDato('Demora de preparación', '${c.demoraEstimadaMin} minutos', icono: Symbols.timer),
+        ],
+      ),
+    );
+  }
+}
+
+/// Nombre, teléfono, dirección y demora, por bloques.
+///
+/// Es un widget con estado para que los controladores vivan hasta que la hoja
+/// termine de cerrarse: liberados apenas volvía `mostrarFormularioEmergente`,
+/// el campo se seguía dibujando durante la animación con el controlador ya
+/// liberado.
+class _FormularioDatos extends ConsumerStatefulWidget {
+  const _FormularioDatos({required this.comercio});
+
+  final Comercio comercio;
+
+  @override
+  ConsumerState<_FormularioDatos> createState() => _FormularioDatosState();
+}
+
+class _FormularioDatosState extends ConsumerState<_FormularioDatos> {
+  final _form = GlobalKey<FormState>();
+  late final _nombre = TextEditingController(text: widget.comercio.nombre);
+  late final _telefono = TextEditingController(text: widget.comercio.telefono);
+  late final _calle = TextEditingController(text: widget.comercio.direccion.calle);
+  late final _referencia = TextEditingController(text: widget.comercio.direccion.referencia);
+  late var _demora = widget.comercio.demoraEstimadaMin;
+
+  @override
+  void dispose() {
+    for (final t in [_nombre, _telefono, _calle, _referencia]) {
+      t.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _guardar() async {
+    if (!_form.currentState!.validate()) return;
+    try {
+      await ref.read(comerciosRepositoryProvider).actualizar(
+            widget.comercio.id,
+            nombre: _nombre.text,
+            telefono: _telefono.text,
+            calle: _calle.text,
+            referencia: _referencia.text,
+            demoraEstimadaMin: _demora,
+          );
+      ref.invalidate(comercioActualProvider);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) mostrarError(context, e);
+    }
+  }
+
+  Widget _titulo(String texto) => Padding(
+        padding: const EdgeInsets.only(bottom: MySpacing.sm),
+        child: Text(texto, style: MyType.headlineSm),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: _form,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _titulo('Cómo te encuentran'),
+          MyCampo(controller: _nombre, label: 'Nombre', hint: 'Ej: Pizzería Don Pepe', icon: Symbols.storefront),
+          MyCampo(
+            controller: _telefono,
+            label: 'Teléfono',
+            hint: 'Ej: 260 4555-1290',
+            icon: Symbols.call,
+            keyboard: TextInputType.phone,
+            validar: (t) => t.replaceAll(RegExp(r'\D'), '').length < 6 ? 'Revisá el número' : null,
+          ),
+          const SizedBox(height: MySpacing.xs),
+          _titulo('Dónde estás'),
+          MyCampo(controller: _calle, label: 'Dirección', hint: 'Ej: Av. San Martín 450', icon: Symbols.location_on),
+          MyCampo(
+            controller: _referencia,
+            label: 'Referencia (opcional)',
+            hint: 'Ej: Frente a la plaza',
+            icon: Symbols.pin_drop,
+            obligatorio: false,
+          ),
+          Text(
+            'El punto donde te buscan los riders se mueve aparte, en el mapa de "Punto de retiro".',
+            style: MyType.bodySm.copyWith(color: MyColors.secondary),
+          ),
+          const SizedBox(height: MySpacing.lg),
+          _titulo('Cocina'),
+          Text(
+            'Cuánto tardás en tener listo un pedido. Se lo mostramos al cliente.',
+            style: MyType.bodySm.copyWith(color: MyColors.secondary),
+          ),
+          const SizedBox(height: MySpacing.xs),
+          Contador(
+            valor: _demora,
+            minimo: 5,
+            maximo: 120,
+            paso: 5,
+            formato: Formato.minutos,
+            onChanged: (n) => setState(() => _demora = n),
+          ),
+          const SizedBox(height: MySpacing.xl),
+          MyBotonAccion(label: 'Guardar', icon: Symbols.save, onPressed: _guardar),
         ],
       ),
     );

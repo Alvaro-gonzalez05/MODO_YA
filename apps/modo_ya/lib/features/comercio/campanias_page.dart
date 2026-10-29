@@ -87,23 +87,17 @@ class _Planes extends ConsumerWidget {
           style: MyType.bodySm.copyWith(color: MyColors.secondary),
         ),
         const SizedBox(height: MySpacing.sm),
-        LayoutBuilder(
-          builder: (context, c) {
-            final columnas = c.maxWidth > 700 ? 3 : 1;
-            return GridView.count(
-              crossAxisCount: columnas,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: MySpacing.sm,
-              crossAxisSpacing: MySpacing.sm,
-              childAspectRatio: columnas == 1 ? 2.6 : 0.95,
-              children: [
-                _Plan(diario: 5000, recomendado: false, pedidosEstimados: 18, visitas: 220),
-                _Plan(diario: 9000, recomendado: true, pedidosEstimados: 31, visitas: 375),
-                _PlanPropio(),
-              ],
-            );
-          },
+        // MyGrilla y no un GridView con proporción fija: en el celular la
+        // tarjeta medía el ancho dividido 2,6 y el botón quedaba afuera.
+        const MyGrilla(
+          anchoMinimo: 220,
+          maxColumnas: 3,
+          espacio: MySpacing.sm,
+          children: [
+            _Plan(diario: 5000, recomendado: false, pedidosEstimados: 18, visitas: 220),
+            _Plan(diario: 9000, recomendado: true, pedidosEstimados: 31, visitas: 375),
+            _PlanPropio(),
+          ],
         ),
         const SizedBox(height: MySpacing.lg),
         Text('MODO YA Plus: envío gratis para tus clientes', style: MyType.headlineSm),
@@ -350,19 +344,19 @@ class _TarjetaCampania extends ConsumerWidget {
                   label: 'Pausar',
                   icon: Symbols.pause,
                   tipo: MyBotonTipo.secundario,
-                  onPressed: () => repo.cambiarEstado(campania.id, EstadoCampania.pausada),
+                  onPressed: () => _cambiarEstado(context, repo, EstadoCampania.pausada),
                 )
               else if (campania.estado == EstadoCampania.pausada)
                 MyBoton(
                   label: 'Reanudar',
                   icon: Symbols.play_arrow,
                   tipo: MyBotonTipo.secundario,
-                  onPressed: () => repo.cambiarEstado(campania.id, EstadoCampania.activa),
+                  onPressed: () => _cambiarEstado(context, repo, EstadoCampania.activa),
                 ),
               MyBoton(
                 label: 'Sumar fondo',
                 icon: Symbols.add,
-                onPressed: () => _sumarFondo(context, ref),
+                onPressed: () => _sumarFondo(context),
               ),
             ],
           ),
@@ -371,22 +365,20 @@ class _TarjetaCampania extends ConsumerWidget {
     );
   }
 
-  Future<void> _sumarFondo(BuildContext context, WidgetRef ref) async {
-    final texto = await pedirTexto(
-      context,
-      titulo: 'Sumar fondo a ${campania.tipo.label}',
-      label: 'Cuánto le sumás (ahora el tope es ${Formato.pesos(campania.presupuesto)})',
-      aceptar: 'Sumar',
-    );
-    final suma = int.tryParse((texto ?? '').replaceAll(RegExp(r'\D'), ''));
-    if (suma == null || suma <= 0) return;
+  // Sin esto un error de la base al pausar no se mostraba en ningún lado.
+  Future<void> _cambiarEstado(BuildContext context, CampaniasRepository repo, EstadoCampania nuevo) async {
     try {
-      await ref.read(campaniasRepositoryProvider).cambiarPresupuesto(campania.id, campania.presupuesto + suma);
-      if (context.mounted) mostrarAviso(context, 'Fondo actualizado.');
+      await repo.cambiarEstado(campania.id, nuevo);
     } catch (e) {
       if (context.mounted) mostrarError(context, e);
     }
   }
+
+  Future<void> _sumarFondo(BuildContext context) => mostrarFormularioEmergente(
+        context,
+        titulo: 'Sumar fondo',
+        builder: (_) => _FormularioFondo(campania: campania),
+      );
 
   Future<void> _verGastos(BuildContext context, WidgetRef ref) => mostrarFormularioEmergente(
         context,
@@ -467,70 +459,187 @@ class _Agregar extends ConsumerWidget {
   }
 }
 
-/// Alta de una campaña: el tope total y, si es publicidad, cuánto por día.
-Future<void> nuevaCampania(BuildContext context, WidgetRef ref, TipoCampania tipo, {int? diario}) async {
-  final comercioId = ref.read(sesionProvider).comercioId;
-  if (comercioId == null) return;
+/// Sumarle plata al tope de una campaña.
+///
+/// Antes era un campo de texto suelto, sin punto de miles: "50000" había que
+/// contarlo, y no decía en cuánto quedaba el tope.
+///
+/// Es un widget con estado (y no un formulario armado en una función) para que
+/// el controlador viva hasta que la hoja termine de cerrarse.
+class _FormularioFondo extends ConsumerStatefulWidget {
+  const _FormularioFondo({required this.campania});
 
-  final presupuesto = TextEditingController(text: diario == null ? '' : MilesFormatter.formatear(diario * 30));
-  final porDia = TextEditingController(text: diario == null ? '' : MilesFormatter.formatear(diario));
-  final form = GlobalKey<FormState>();
+  final Campania campania;
 
-  await mostrarFormularioEmergente(
-    context,
-    titulo: tipo == TipoCampania.plus ? 'Adherirme a MODO YA Plus' : 'Nueva publicidad',
-    builder: (h) => Form(
-      key: form,
+  @override
+  ConsumerState<_FormularioFondo> createState() => _FormularioFondoState();
+}
+
+class _FormularioFondoState extends ConsumerState<_FormularioFondo> {
+  final _form = GlobalKey<FormState>();
+  final _suma = TextEditingController();
+
+  @override
+  void dispose() {
+    _suma.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sumar() async {
+    if (!_form.currentState!.validate()) return;
+    final c = widget.campania;
+    try {
+      await ref.read(campaniasRepositoryProvider).cambiarPresupuesto(c.id, c.presupuesto + MilesFormatter.leer(_suma.text)!);
+      if (!mounted) return;
+      mostrarAviso(context, 'Fondo actualizado');
+      Navigator.pop(context);
+    } catch (e) {
+      if (mounted) mostrarError(context, e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.campania;
+    final n = MilesFormatter.leer(_suma.text) ?? 0;
+    return Form(
+      key: _form,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            tipo == TipoCampania.plus
-                ? 'Los clientes con Plus no pagan envío en tu local: lo ponés vos. Se te descuenta de tus ventas y podés frenarlo cuando quieras.'
-                : 'Tu local aparece destacado. Se te descuenta de tus ventas, hasta el tope que pongas.',
+            '${c.tipo.label}: hoy el tope es ${Formato.pesos(c.presupuesto)} y quedan ${Formato.pesos(c.disponible)}.',
             style: MyType.bodyMd.copyWith(color: MyColors.secondary),
           ),
           const SizedBox(height: MySpacing.md),
-          if (tipo == TipoCampania.publicidad)
+          MyCampo(
+            controller: _suma,
+            label: 'Cuánto le sumás',
+            hint: 'Ej: 30.000',
+            icon: Symbols.add_card,
+            miles: true,
+            onChanged: (_) => setState(() {}),
+            validar: (v) => (MilesFormatter.leer(v) ?? 0) <= 0 ? 'Escribí cuánto le sumás' : null,
+          ),
+          if (n > 0) ...[
+            Text('El tope pasa a ${Formato.pesos(c.presupuesto + n)}.', style: MyType.labelLg),
+            const SizedBox(height: MySpacing.md),
+          ],
+          MyBotonAccion(label: 'Sumar', icon: Symbols.add, onPressed: _sumar),
+        ],
+      ),
+    );
+  }
+}
+
+/// Alta de una campaña: el tope total y, si es publicidad, cuánto por día.
+Future<void> nuevaCampania(BuildContext context, WidgetRef ref, TipoCampania tipo, {int? diario}) async {
+  if (ref.read(sesionProvider).comercioId == null) return;
+  await mostrarFormularioEmergente(
+    context,
+    titulo: tipo == TipoCampania.plus ? 'Adherirme a MODO YA Plus' : 'Nueva publicidad',
+    builder: (_) => _FormularioCampania(tipo: tipo, diario: diario),
+  );
+}
+
+class _FormularioCampania extends ConsumerStatefulWidget {
+  const _FormularioCampania({required this.tipo, this.diario});
+
+  final TipoCampania tipo;
+
+  /// El del plan que tocó, para arrancar con los números cargados.
+  final int? diario;
+
+  @override
+  ConsumerState<_FormularioCampania> createState() => _FormularioCampaniaState();
+}
+
+class _FormularioCampaniaState extends ConsumerState<_FormularioCampania> {
+  final _form = GlobalKey<FormState>();
+  late final _presupuesto =
+      TextEditingController(text: widget.diario == null ? '' : MilesFormatter.formatear(widget.diario! * 30));
+  late final _porDia = TextEditingController(text: widget.diario == null ? '' : MilesFormatter.formatear(widget.diario!));
+
+  bool get _esPublicidad => widget.tipo == TipoCampania.publicidad;
+
+  @override
+  void dispose() {
+    _presupuesto.dispose();
+    _porDia.dispose();
+    super.dispose();
+  }
+
+  Future<void> _activar() async {
+    if (!_form.currentState!.validate()) return;
+    final comercioId = ref.read(sesionProvider).comercioId;
+    if (comercioId == null) return;
+    try {
+      await ref.read(campaniasRepositoryProvider).crear(
+            comercioId: comercioId,
+            tipo: widget.tipo,
+            presupuesto: MilesFormatter.leer(_presupuesto.text)!,
+            presupuestoDiario: _esPublicidad ? MilesFormatter.leer(_porDia.text) : null,
+          );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) mostrarError(context, e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dia = MilesFormatter.leer(_porDia.text) ?? 0;
+    final tope = MilesFormatter.leer(_presupuesto.text) ?? 0;
+
+    return Form(
+      key: _form,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            _esPublicidad
+                ? 'Tu local aparece destacado. Se te descuenta de tus ventas, hasta el tope que pongas.'
+                : 'Los clientes con Plus no pagan envío en tu local: lo ponés vos. Se te descuenta de tus ventas y podés frenarlo cuando quieras.',
+            style: MyType.bodyMd.copyWith(color: MyColors.secondary),
+          ),
+          const SizedBox(height: MySpacing.md),
+          if (_esPublicidad)
             MyCampo(
-              controller: porDia,
-              label: 'Cuánto por día',
-              hint: '9.000',
+              controller: _porDia,
+              label: 'Cuánto por día, como máximo',
+              hint: 'Ej: 9.000',
               icon: Symbols.today,
               miles: true,
+              onChanged: (_) => setState(() {}),
               validar: (v) => (MilesFormatter.leer(v) ?? 0) <= 0 ? 'Escribí cuánto por día' : null,
             ),
           MyCampo(
-            controller: presupuesto,
+            controller: _presupuesto,
             label: 'Tope total de la campaña',
-            hint: '60.000',
+            hint: 'Ej: 60.000',
             icon: Symbols.savings,
             miles: true,
-            validar: (v) => (MilesFormatter.leer(v) ?? 0) <= 0 ? 'Escribí el tope' : null,
-          ),
-          MyBotonAccion(
-            label: 'Activar',
-            icon: Symbols.rocket_launch,
-            onPressed: () async {
-              if (!form.currentState!.validate()) return;
-              try {
-                await ref.read(campaniasRepositoryProvider).crear(
-                      comercioId: comercioId,
-                      tipo: tipo,
-                      presupuesto: MilesFormatter.leer(presupuesto.text)!,
-                      presupuestoDiario: tipo == TipoCampania.publicidad ? MilesFormatter.leer(porDia.text) : null,
-                    );
-                if (h.mounted) Navigator.pop(h);
-              } catch (e) {
-                if (h.mounted) mostrarError(h, e);
-              }
+            onChanged: (_) => setState(() {}),
+            validar: (v) {
+              final n = MilesFormatter.leer(v) ?? 0;
+              if (n <= 0) return 'Escribí el tope';
+              if (_esPublicidad && dia > n) return 'Es menos de lo que gastás en un día';
+              return null;
             },
           ),
+          // La cuenta que el local hacía de cabeza: cuánto le dura la plata.
+          if (_esPublicidad && dia > 0 && tope >= dia) ...[
+            Text(
+              'Te alcanza para ${tope ~/ dia} ${tope ~/ dia == 1 ? 'día' : 'días'} como mínimo, si cada día se gasta el máximo.',
+              style: MyType.bodySm.copyWith(color: MyColors.secondary),
+            ),
+            const SizedBox(height: MySpacing.md),
+          ],
+          MyBotonAccion(label: 'Activar', icon: Symbols.rocket_launch, onPressed: _activar),
         ],
       ),
-    ),
-  );
-  presupuesto.dispose();
-  porDia.dispose();
+    );
+  }
 }

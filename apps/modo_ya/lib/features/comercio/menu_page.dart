@@ -68,13 +68,13 @@ class MenuPage extends ConsumerWidget {
       onRefresh: () => ref.refresh(menuDeComercioProvider(comercioId).future),
       acciones: [
         MyBoton(
-          label: 'Promos',
+          label: 'Promociones',
           icon: Symbols.sell,
           tipo: MyBotonTipo.secundario,
           onPressed: () => context.go('/local/menu/promociones'),
         ),
-        MyBoton(label: 'Sección', icon: Symbols.playlist_add, tipo: MyBotonTipo.secundario, onPressed: seccion),
-        MyBoton(label: 'Producto', icon: Symbols.add, onPressed: () => context.go('/local/menu/producto')),
+        MyBoton(label: 'Nueva sección', icon: Symbols.playlist_add, tipo: MyBotonTipo.secundario, onPressed: seccion),
+        MyBoton(label: 'Nuevo producto', icon: Symbols.add, onPressed: () => context.go('/local/menu/producto')),
       ],
       children: [
         MyAsync(
