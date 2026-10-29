@@ -5,6 +5,18 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import 'admin_shell.dart';
+import 'encoger.dart';
+
+/// La ficha de un envío en curso, encima de lo que se esté mirando: panel a la
+/// derecha en la compu, hoja desde abajo en el celular.
+///
+/// Es pública porque el Resumen la abre en el lugar: antes tocar un envío en
+/// curso llevaba a esta sección y había que volver a buscarlo en la lista.
+Future<void> mostrarFichaEnvio(BuildContext context, String envioId) => mostrarHojaLateral(
+      context,
+      titulo: 'Envío',
+      builder: (_) => _FichaEnvio(envioId: envioId),
+    );
 
 /// Envíos en la calle, en vivo, con su recorrido y el reparto del dinero.
 class AdminEnviosPage extends ConsumerStatefulWidget {
@@ -21,7 +33,7 @@ class _AdminEnviosPageState extends ConsumerState<AdminEnviosPage> {
     if (context.esEscritorio) {
       setState(() => _seleccionado = e.id);
     } else {
-      mostrarPanelComoHoja(context, (_) => _FichaEnvio(envioId: e.id));
+      mostrarFichaEnvio(context, e.id);
     }
   }
 
@@ -63,14 +75,26 @@ class _AdminEnviosPageState extends ConsumerState<AdminEnviosPage> {
                             children: [
                               Text(e.codigo, style: MyType.labelLg.copyWith(color: MyColors.tertiary)),
                               const SizedBox(width: MySpacing.xs),
-                              Text(Formato.haceCuanto(e.creadoEn), style: MyType.bodySm.copyWith(color: MyColors.secondary)),
-                              const Spacer(),
+                              Expanded(
+                                child: Text(
+                                  Formato.haceCuanto(e.creadoEn),
+                                  style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: MySpacing.xs),
                               Text(Formato.pesos(e.total), style: MyType.labelLg),
                             ],
                           ),
                           const SizedBox(height: MySpacing.xs),
-                          Text(e.comercioNombre, style: MyType.headlineSm),
-                          Text('→ ${e.destino.calle}', style: MyType.bodySm.copyWith(color: MyColors.secondary)),
+                          Text(e.nombreRetiro, style: MyType.headlineSm, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(
+                            '→ ${e.destino.calle}',
+                            style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           const SizedBox(height: MySpacing.xs),
                           Row(
                             children: [
@@ -78,10 +102,15 @@ class _AdminEnviosPageState extends ConsumerState<AdminEnviosPage> {
                                 child: Text(
                                   e.repartidorNombre ?? 'Sin rider',
                                   style: MyType.bodySm,
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true),
+                              const SizedBox(width: MySpacing.xs),
+                              Flexible(
+                                flex: 2,
+                                child: Encoger(child: MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true)),
+                              ),
                             ],
                           ),
                         ],
@@ -102,7 +131,7 @@ class _AdminEnviosPageState extends ConsumerState<AdminEnviosPage> {
                   if (!compacta) const MyColumna('Destino', flex: 2),
                   const MyColumna('Rider', flex: 2),
                   if (!compacta) const MyColumna('Total', alDerecha: true),
-                  const MyColumna('Estado', flex: 2, alDerecha: true),
+                  const MyColumna('Estado', flex: 3, alDerecha: true),
                 ],
                 filas: [
                   for (final e in lista)
@@ -111,7 +140,7 @@ class _AdminEnviosPageState extends ConsumerState<AdminEnviosPage> {
                       onTap: () => _abrir(e),
                       celdas: [
                         MyCeldaDoble(e.codigo, bajada: Formato.hora(e.creadoEn)),
-                        Text(e.comercioNombre, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text(e.nombreRetiro, style: MyType.labelLg, maxLines: 1, overflow: TextOverflow.ellipsis),
                         if (!compacta) Text(e.destino.calle, style: MyType.bodyMd, maxLines: 1, overflow: TextOverflow.ellipsis),
                         Text(
                           e.repartidorNombre ?? 'Buscando…',
@@ -120,7 +149,7 @@ class _AdminEnviosPageState extends ConsumerState<AdminEnviosPage> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (!compacta) Text(Formato.pesos(e.total), style: MyType.labelLg),
-                        MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true),
+                        Encoger(child: MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true)),
                       ],
                     ),
                 ],
@@ -162,7 +191,10 @@ class _FichaEnvio extends ConsumerWidget {
                 children: [
                   Text(e.codigo, style: MyType.headlineMd),
                   Text(
-                    'Creado ${Formato.haceCuanto(e.creadoEn)}${e.pedidoId != null ? ' · pedido de la app' : ' · cadetería'}',
+                    // Un mandado tampoco tiene pedido, pero no es cadetería de
+                    // un local: lo pidió un cliente.
+                    'Creado ${Formato.haceCuanto(e.creadoEn)} · '
+                    '${e.pedidoId != null ? 'pedido de la app' : e.esMandado ? 'mandado de un cliente' : 'cadetería'}',
                     style: MyType.bodySm.copyWith(color: MyColors.secondary),
                   ),
                 ],
@@ -172,13 +204,16 @@ class _FichaEnvio extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: MySpacing.sm),
-        Align(alignment: Alignment.centerLeft, child: MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true)),
+        Encoger(
+          alineacion: Alignment.centerLeft,
+          child: MyBadge(e.estado.label, tone: tonoEnvio(e.estado), dot: true),
+        ),
         const SizedBox(height: MySpacing.lg),
         MyRouteTimeline(
           stops: [
             MyRouteStop(
               overline: 'Retiro',
-              title: e.comercioNombre,
+              title: e.nombreRetiro,
               subtitle: e.origen.calle,
               icon: Symbols.storefront,
             ),
@@ -195,6 +230,9 @@ class _FichaEnvio extends ConsumerWidget {
         MyDato('Rider', e.repartidorNombre ?? 'Todavía sin asignar', icono: Symbols.sports_motorsports),
         MyDato('Distancia', Formato.km(e.cotizacion.distanciaKm), icono: Symbols.straighten),
         MyDato('Quién paga', e.quienPaga.label, icono: Symbols.account_balance_wallet),
+        // Los mandados se pagan en efectivo y lo cobra el rider: es plata que
+        // después se le descuenta en su liquidación.
+        if (e.hayQueCobrar) MyDato('En la puerta', e.textoCobro, icono: Symbols.payments),
         const SizedBox(height: MySpacing.sm),
         Container(
           padding: const EdgeInsets.all(MySpacing.md),

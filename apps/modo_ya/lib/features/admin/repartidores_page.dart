@@ -13,6 +13,17 @@ import 'solicitudes_rider.dart';
 
 enum _Filtro { todos, conectados, enServicio, documentacion, suspendidos }
 
+/// La ficha de un rider encima de lo que se esté mirando: panel a la derecha en
+/// la compu, hoja desde abajo en el celular.
+///
+/// Es pública porque el Resumen la abre en el lugar cuando un rider espera
+/// aprobación: antes mandaba a Riders y había que volver a buscarlo.
+Future<void> mostrarFichaRider(BuildContext context, String riderId) => mostrarHojaLateral(
+      context,
+      titulo: 'Rider',
+      builder: (_) => _FichaRider(riderId: riderId),
+    );
+
 /// Riders: quién está conectado, ficha con su última ubicación, alta,
 /// suspensión y contraseña nueva.
 class AdminRepartidoresPage extends ConsumerStatefulWidget {
@@ -46,7 +57,7 @@ class _AdminRepartidoresPageState extends ConsumerState<AdminRepartidoresPage> {
     if (context.esEscritorio) {
       setState(() => _seleccionado = r.id);
     } else {
-      mostrarPanelComoHoja(context, (_) => _FichaRider(riderId: r.id));
+      mostrarFichaRider(context, r.id);
     }
   }
 

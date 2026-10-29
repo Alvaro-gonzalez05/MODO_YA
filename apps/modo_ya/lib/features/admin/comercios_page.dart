@@ -11,6 +11,18 @@ import 'preinscripciones.dart';
 
 enum _Filtro { todos, abiertos, suspendidos, sinUbicacion }
 
+/// La ficha de un local encima de lo que se esté mirando: panel a la derecha en
+/// la compu, hoja desde abajo en el celular.
+///
+/// Es pública porque el Resumen la abre en el lugar ("no tiene ubicación",
+/// "espera que lo apruebes"): antes mandaba a Locales y había que volver a
+/// buscarlo en el padrón.
+Future<void> mostrarFichaLocal(BuildContext context, String comercioId) => mostrarHojaLateral(
+      context,
+      titulo: 'Local',
+      builder: (_) => _FichaLocal(comercioId: comercioId),
+    );
+
 /// Locales: padrón con búsqueda y filtros, ficha al costado (PC) o en una hoja
 /// (celular), alta, suspensión y contraseña nueva.
 class AdminComerciosPage extends ConsumerStatefulWidget {
@@ -36,7 +48,7 @@ class _AdminComerciosPageState extends ConsumerState<AdminComerciosPage> {
     if (context.esEscritorio) {
       setState(() => _seleccionado = c.id);
     } else {
-      mostrarPanelComoHoja(context, (_) => _FichaLocal(comercioId: c.id));
+      mostrarFichaLocal(context, c.id);
     }
   }
 
