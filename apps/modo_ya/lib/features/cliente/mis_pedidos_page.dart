@@ -6,6 +6,17 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import '../../comun/estados_ui.dart';
+import 'detalle_pedido.dart';
+
+/// Tocar un pedido: si está en curso se sigue en su pantalla (con el mapa y
+/// los pasos); si ya terminó, el detalle se abre encima de la lista.
+void abrirPedido(BuildContext context, Pedido p) {
+  if (p.estado.esFinal) {
+    mostrarPedidoTerminado(context, p);
+  } else {
+    context.go('/cliente/pedidos/${p.id}');
+  }
+}
 
 /// Pedidos del cliente: los que están en curso arriba, después el historial.
 class MisPedidosPage extends ConsumerWidget {
@@ -56,7 +67,7 @@ class MisPedidosPage extends ConsumerWidget {
                         filas: [
                           for (final p in ps)
                             MyFila(
-                              onTap: () => context.go('/cliente/pedidos/${p.id}'),
+                              onTap: () => abrirPedido(context, p),
                               celdas: [
                                 MyCeldaDoble(
                                   p.comercioNombre,
@@ -112,7 +123,7 @@ class _Tarjeta extends StatelessWidget {
     final p = pedido;
     return MyCard(
       padding: const EdgeInsets.all(MySpacing.md),
-      onTap: () => context.go('/cliente/pedidos/${p.id}'),
+      onTap: () => abrirPedido(context, p),
       child: Row(
         children: [
           MyImagen(url: p.comercioLogoUrl, ancho: 56, alto: 56, icono: Symbols.storefront),
@@ -125,9 +136,13 @@ class _Tarjeta extends StatelessWidget {
                 Text(
                   '${p.codigo} · ${Formato.fechaCorta(p.creadoEn)} ${Formato.hora(p.creadoEn)}',
                   style: MyType.bodySm.copyWith(color: MyColors.secondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: MySpacing.xxs),
-                _Estado(pedido: p),
+                // La pastilla no achica su texto: en un celular angosto, con
+                // "En preparación" y un total largo, se salía de la tarjeta.
+                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: _Estado(pedido: p)),
               ],
             ),
           ),
