@@ -232,7 +232,10 @@ class PartesDeEnvio {
           )
         : null;
 
-    final cancelar = !envio.estado.esFinal && envio.estado != EstadoEnvio.enCamino
+    // Con el paquete en la mano del rider (`retirado` o `en_camino`) ya no se
+    // cancela: la base lo rechaza desde 0079. Antes el botón aparecía en
+    // `retirado` y, en un pedido de la app, le devolvía todo al cliente.
+    final cancelar = !envio.estado.esFinal && envio.estado != EstadoEnvio.retirado && envio.estado != EstadoEnvio.enCamino
         ? MyBoton(
             label: 'Cancelar envío',
             icon: Symbols.cancel,
