@@ -272,6 +272,52 @@ void mostrarInfo(BuildContext context, String texto, {String? accion, VoidCallba
   mostrarAvisoFlotante(context, texto, tipo: MyAvisoTipo.info, accion: accion, onAccion: onAccion);
 }
 
+/// Un interruptor que se mueve apenas se toca y guarda por detrás.
+///
+/// Los de "Hay / Sin stock" y "Recibiendo pedidos" esperaban la respuesta de
+/// la base para moverse: en medio del servicio, con mala señal, el local lo
+/// tocaba dos veces creyendo que no había agarrado. Si guardar falla, vuelve
+/// solo a donde estaba y el error lo muestra quien llama.
+class MyInterruptor extends StatefulWidget {
+  const MyInterruptor({super.key, required this.valor, required this.onChanged});
+
+  final bool valor;
+  final Future<void> Function(bool) onChanged;
+
+  @override
+  State<MyInterruptor> createState() => _MyInterruptorState();
+}
+
+class _MyInterruptorState extends State<MyInterruptor> {
+  bool? _local;
+  var _guardando = false;
+
+  @override
+  void didUpdateWidget(MyInterruptor viejo) {
+    super.didUpdateWidget(viejo);
+    // Llegó el valor de la base: manda ella.
+    if (!_guardando && widget.valor != viejo.valor) _local = null;
+  }
+
+  Future<void> _cambiar(bool v) async {
+    if (_guardando) return;
+    setState(() {
+      _local = v;
+      _guardando = true;
+    });
+    try {
+      await widget.onChanged(v);
+    } catch (_) {
+      if (mounted) setState(() => _local = null);
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Switch(value: _local ?? widget.valor, onChanged: _cambiar);
+}
+
 /// Dibuja un AsyncValue con cargando / error / datos de forma pareja en toda la
 /// app. El error trae un boton de reintentar.
 class MyAsync<T> extends StatelessWidget {

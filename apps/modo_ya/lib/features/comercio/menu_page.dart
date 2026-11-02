@@ -149,29 +149,19 @@ class MenuPage extends ConsumerWidget {
   }
 }
 
-class _Disponible extends ConsumerWidget {
+class _Disponible extends StatelessWidget {
   const _Disponible({required this.producto});
 
   final Producto producto;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(producto.disponible ? 'Hay' : 'Sin stock', style: MyType.labelMd.copyWith(color: MyColors.secondary)),
         const SizedBox(width: MySpacing.xxs),
-        Switch(
-          value: producto.disponible,
-          onChanged: (v) async {
-            try {
-              await ref.read(catalogoRepositoryProvider).setDisponible(producto.id, v);
-              ref.invalidate(menuDeComercioProvider(producto.comercioId));
-            } catch (e) {
-              if (context.mounted) mostrarError(context, e);
-            }
-          },
-        ),
+        _SoloSwitch(producto: producto),
       ],
     );
   }
@@ -293,14 +283,15 @@ class _SoloSwitch extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Switch(
-      value: producto.disponible,
+    return MyInterruptor(
+      valor: producto.disponible,
       onChanged: (v) async {
         try {
           await ref.read(catalogoRepositoryProvider).setDisponible(producto.id, v);
           ref.invalidate(menuDeComercioProvider(producto.comercioId));
         } catch (e) {
           if (context.mounted) mostrarError(context, e);
+          rethrow;
         }
       },
     );

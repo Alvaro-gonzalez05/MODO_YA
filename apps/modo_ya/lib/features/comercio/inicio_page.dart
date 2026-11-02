@@ -419,14 +419,15 @@ class _EstadoLocal extends ConsumerWidget {
               ],
             ),
           ),
-          Switch(
-            value: comercio.aceptaPedidos,
+          MyInterruptor(
+            valor: comercio.aceptaPedidos,
             onChanged: (v) async {
               try {
                 await ref.read(comerciosRepositoryProvider).actualizar(comercio.id, aceptaPedidos: v);
                 ref.invalidate(comercioActualProvider);
               } catch (e) {
                 if (context.mounted) mostrarError(context, e);
+                rethrow;
               }
             },
           ),
