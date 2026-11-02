@@ -39,7 +39,9 @@ void main() {
     Stream<List<Repartidor>>? riders,
     Stream<List<Envio>>? envios,
     Stream<List<Preinscripcion>>? preinscripciones,
+    Stream<List<Pedido>>? pedidos,
   }) => [
+    todosLosPedidosProvider.overrideWith((ref) => pedidos ?? Stream.value(const [])),
     todosLosComerciosProvider.overrideWith((ref) => comercios ?? Stream.value(const [])),
     todosLosRepartidoresProvider.overrideWith((ref) => riders ?? Stream.value(const [])),
     enviosActivosProvider.overrideWith((ref) => envios ?? Stream.value(const [])),

@@ -235,6 +235,34 @@ ventas" en lugar de "$0", y el seguimiento del cliente dice "Gratis con Plus"
 igual que la pantalla de pago. Probado en
 `apps/modo_ya/test/pedido_del_local_test.dart`.
 
+### 16. Se podía cancelar lo que ya había salido — ARREGLADO (02/11, falta aplicar 0079)
+
+`cancelar_envio` y `cancelar_pedido` no miraban el estado; la app solo
+escondía el botón. El local o el cliente podían cancelar un envío `retirado` o
+`en_camino` (y en un pedido de la app eso le devolvía todo al cliente con la
+comida en la calle), y el cliente podía cancelar un pedido ya aceptado y
+llevarse el 100% sin penalidad para nadie. Además la ficha del envío del local
+mostraba "Cancelar envío" en `retirado`, y la de mandados del cliente en
+cualquier estado no final.
+
+**Arreglado en `0079_no_se_cancela_lo_que_ya_salio.sql`** (la administración
+sigue pudiendo cancelar en cualquier estado no final) y en las dos pantallas.
+Cubierto por `tests/cancelar_tarde.sql` y `tests/abandono_de_envio.sql`.
+
+### 17. La administración no tenía dónde ver los pedidos — ARREGLADO
+
+Al sacar la sección Cobros se fue la única lista de pedidos de la
+administración. Ahora hay **Admin → Pedidos**: búsqueda por código, cliente,
+teléfono o local, y la ficha al costado con el recorrido, lo que pidió, las
+cuentas y "Cancelar pedido". El Resumen avisa cuando un local lleva más de 5
+minutos sin aceptar un pedido pago.
+
+### 18. Un pedido cancelado no decía por qué — ARREGLADO
+
+El modelo leía `motivo_rechazo` pero no `motivo_cancelacion`: el detalle del
+local mostraba el motivo solo en los rechazados. `Pedido.motivoDelCierre` toma
+el que corresponde.
+
 ## Baja
 
 ### 13. Erratas de acentuación y voseo en texto que ve el usuario — ARREGLADO

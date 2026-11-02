@@ -15,7 +15,7 @@ export '../../comun/estados_ui.dart';
 ///
 /// En la PC: barra lateral navy y barra superior con el estado de la operación
 /// y el menú del usuario. En el celular: dock con Resumen, Liquidaciones,
-/// Locales, Riders y "Más" (Envíos, Tarifas, Carteles, Notificaciones,
+/// Locales, Riders y "Más" (Pedidos, Envíos, Tarifas, Carteles, Notificaciones,
 /// Reclamos, contraseña y cerrar sesión).
 ///
 /// No hay sección de cobros: desde 0058 en la app se paga solo con tarjeta y
@@ -48,6 +48,9 @@ class AdminShell extends ConsumerWidget {
         const MyDestino(icon: Symbols.account_balance_wallet, label: 'Liquidaciones'),
         const MyDestino(icon: Symbols.storefront, label: 'Locales'),
         MyDestino(icon: Symbols.sports_motorsports, label: 'Riders', contador: documentos),
+        // Antes de Envíos y no en el dock: en el celular el dock se queda como
+        // estaba y Pedidos entra en "Más", junto a Envíos.
+        const MyDestino(icon: Symbols.receipt_long, label: 'Pedidos'),
         const MyDestino(icon: Symbols.route, label: 'Envíos'),
         const MyDestino(icon: Symbols.tune, label: 'Tarifas y reglas'),
         const MyDestino(icon: Symbols.campaign, label: 'Carteles'),

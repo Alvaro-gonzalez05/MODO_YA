@@ -12,6 +12,7 @@ import 'features/admin/dashboard_page.dart';
 import 'features/admin/envios_page.dart';
 import 'features/admin/liquidaciones_page.dart';
 import 'features/admin/notificaciones_page.dart';
+import 'features/admin/pedidos_page.dart';
 import 'features/admin/promociones_admin_page.dart';
 import 'features/admin/reclamos_page.dart';
 import 'features/admin/repartidores_page.dart';
@@ -212,7 +213,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (_, state, shell) => AdminShell(
           navigationShell: shell,
-          enRaiz: const {'/admin', '/admin/liquidaciones', '/admin/locales', '/admin/riders', '/admin/envios', '/admin/tarifas', '/admin/carteles', '/admin/notificaciones', '/admin/reclamos'}
+          enRaiz: const {'/admin', '/admin/liquidaciones', '/admin/locales', '/admin/riders', '/admin/pedidos', '/admin/envios', '/admin/tarifas', '/admin/carteles', '/admin/notificaciones', '/admin/reclamos'}
               .contains(state.uri.path),
         ),
         // Mismo orden que los destinos de AdminShell.
@@ -239,6 +240,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, _) => const AdminRepartidoresPage(),
               routes: [GoRoute(path: 'nuevo', builder: (_, _) => const AltaCuentaPage(esLocal: false))],
             ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/admin/pedidos', builder: (_, _) => const AdminPedidosPage()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/admin/envios', builder: (_, _) => const AdminEnviosPage()),

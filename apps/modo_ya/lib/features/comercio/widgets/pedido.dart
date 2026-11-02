@@ -361,12 +361,12 @@ class DetallePedido extends ConsumerWidget {
           const SizedBox(height: MySpacing.sm),
           AvisoVencimiento(limite: limite),
         ],
-        if (p.motivoRechazo != null && (p.estado == EstadoPedido.rechazado || p.estado == EstadoPedido.cancelado)) ...[
+        if (p.motivoDelCierre case final motivo?) ...[
           const SizedBox(height: MySpacing.sm),
           Container(
             padding: const EdgeInsets.all(MySpacing.sm),
             decoration: BoxDecoration(color: MyColors.errorContainer, borderRadius: BorderRadius.circular(MyRadius.md)),
-            child: Text('Motivo: ${p.motivoRechazo}', style: MyType.bodySm.copyWith(color: MyColors.onErrorContainer)),
+            child: Text('Motivo: $motivo', style: MyType.bodySm.copyWith(color: MyColors.onErrorContainer)),
           ),
         ],
         if (!p.estado.esFinal) ...[

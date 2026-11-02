@@ -357,10 +357,15 @@ class Pedido {
     this.minutosEstimados,
     this.nota,
     this.motivoRechazo,
+    this.motivoCancelacion,
     this.metodoPago,
     this.cobrado = false,
     this.envioCubierto = 0,
     this.pagadoEn,
+    this.aceptadoEn,
+    this.listoEn,
+    this.entregadoEn,
+    this.canceladoEn,
     this.items = const [],
   });
 
@@ -386,6 +391,18 @@ class Pedido {
   final String? nota;
   final String? motivoRechazo;
 
+  /// Por qué se canceló (lo escribe quien cancela: cliente, local o
+  /// administración). Es otra columna que la del rechazo, y antes no se leía:
+  /// un pedido cancelado no decía por qué en ninguna pantalla.
+  final String? motivoCancelacion;
+
+  /// El motivo que corresponde al estado: rechazo o cancelación.
+  String? get motivoDelCierre => switch (estado) {
+        EstadoPedido.rechazado => motivoRechazo,
+        EstadoPedido.cancelado => motivoCancelacion ?? motivoRechazo,
+        _ => null,
+      };
+
   /// Cuánto del envío puso el local con su campaña Plus (0 = lo pagó el cliente).
   final int envioCubierto;
 
@@ -399,6 +416,13 @@ class Pedido {
 
   /// Cuándo entró el pago. Es lo que cuenta para el vencimiento.
   final DateTime? pagadoEn;
+
+  /// Las horas de cada paso. Las usa la administración para ver dónde se
+  /// trabó un pedido cuando un cliente pregunta.
+  final DateTime? aceptadoEn;
+  final DateTime? listoEn;
+  final DateTime? entregadoEn;
+  final DateTime? canceladoEn;
   final List<PedidoItem> items;
 
   /// Hasta cuándo tiene el local para responder, mientras el pedido espera.
@@ -441,11 +465,16 @@ class Pedido {
         minutosEstimados: Fila.enteroOpcional(f, 'envio_minutos_estimados'),
         nota: Fila.textoOpcional(f, 'nota_cliente'),
         motivoRechazo: Fila.textoOpcional(f, 'motivo_rechazo'),
+        motivoCancelacion: Fila.textoOpcional(f, 'motivo_cancelacion'),
         metodoPago: f['metodo_pago'] == null ? null : MetodoPago.fromWire(f['metodo_pago'] as String?),
         cobrado: f['pago_estado'] == 'acreditado',
         envioCubierto: Fila.entero(f, 'envio_cubierto'),
         creadoEn: Fila.fecha(f, 'creado_en'),
         pagadoEn: Fila.fechaOpcional(f, 'pagado_en'),
+        aceptadoEn: Fila.fechaOpcional(f, 'aceptado_en'),
+        listoEn: Fila.fechaOpcional(f, 'listo_en'),
+        entregadoEn: Fila.fechaOpcional(f, 'entregado_en'),
+        canceladoEn: Fila.fechaOpcional(f, 'cancelado_en'),
         items: items,
       );
 
@@ -466,11 +495,16 @@ class Pedido {
         minutosEstimados: minutosEstimados,
         nota: nota,
         motivoRechazo: motivoRechazo,
+        motivoCancelacion: motivoCancelacion,
         metodoPago: metodoPago,
         cobrado: cobrado,
         envioCubierto: envioCubierto,
         creadoEn: creadoEn,
         pagadoEn: pagadoEn,
+        aceptadoEn: aceptadoEn,
+        listoEn: listoEn,
+        entregadoEn: entregadoEn,
+        canceladoEn: canceladoEn,
         items: nuevos,
       );
 }

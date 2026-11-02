@@ -9,6 +9,7 @@ import 'admin_shell.dart';
 import 'comercios_page.dart';
 import 'encoger.dart';
 import 'envios_page.dart';
+import 'pedidos_page.dart';
 import 'preinscripciones.dart';
 import 'repartidores_page.dart';
 
@@ -20,6 +21,9 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final resumen = ref.watch(resumenAdminProvider);
+    // Aparte del resumen y sin frenarlo: si esta consulta falla, el panel se
+    // sigue viendo y solo falta este aviso.
+    final pedidos = ref.watch(todosLosPedidosProvider).value ?? const <Pedido>[];
 
     return MyPagina(
       rotulo: 'Malargüe · en vivo',
@@ -32,7 +36,7 @@ class DashboardPage extends ConsumerWidget {
         MyAsync(
           valor: resumen,
           onReintentar: () => refrescarResumenAdmin(ref),
-          datos: (datos) => _Resumen(datos: datos),
+          datos: (datos) => _Resumen(datos: datos, pedidos: pedidos),
         ),
       ],
     );
@@ -40,9 +44,14 @@ class DashboardPage extends ConsumerWidget {
 }
 
 class _Resumen extends StatelessWidget {
-  const _Resumen({required this.datos});
+  const _Resumen({required this.datos, required this.pedidos});
 
   final ResumenAdmin datos;
+  final List<Pedido> pedidos;
+
+  /// Desde cuántos minutos sin respuesta del local se avisa. Con 15 se rechaza
+  /// solo (0076): a los 5 todavía hay tiempo de llamarlo.
+  static const _minutosParaAvisar = 5;
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +100,15 @@ class _Resumen extends StatelessWidget {
     );
 
     final mapa = _TarjetaMapa(riders: conectados, envios: activos);
+    final ahora = DateTime.now();
+    final sinAceptar = pedidos
+        .where((p) =>
+            p.estado == EstadoPedido.pagado &&
+            ahora.difference(p.pagadoEn ?? p.creadoEn).inMinutes >= _minutosParaAvisar)
+        .toList();
+
     final atencion = _RequiereAtencion(
+      sinAceptar: sinAceptar,
       buscandoSinLibres: libres == 0 ? buscando : 0,
       sinUbicacion: comercios.where((c) => c.aprobacion.puedeOperar && !c.direccion.tieneCoordenadas).toList(),
       localesPendientes: comercios.where((c) => c.aprobacion == EstadoAprobacion.pendiente).toList(),
@@ -211,6 +228,7 @@ class _Referencia extends StatelessWidget {
 /// buscar de qué se hablaba. Cuando son varios, sí lleva a la lista.
 class _RequiereAtencion extends StatelessWidget {
   const _RequiereAtencion({
+    required this.sinAceptar,
     required this.buscandoSinLibres,
     required this.sinUbicacion,
     required this.localesPendientes,
@@ -219,6 +237,8 @@ class _RequiereAtencion extends StatelessWidget {
     required this.ridersWeb,
   });
 
+  /// Pedidos pagos que el local no aceptó todavía, con el reloj corriendo.
+  final List<Pedido> sinAceptar;
   final int buscandoSinLibres;
   final List<Comercio> sinUbicacion;
   final List<Comercio> localesPendientes;
@@ -237,6 +257,20 @@ class _RequiereAtencion extends StatelessWidget {
         );
 
     final items = <Widget>[
+      if (sinAceptar.isNotEmpty)
+        _Alerta(
+          urgente: true,
+          icono: Symbols.timer,
+          titulo: sinAceptar.length == 1
+              ? '${sinAceptar.single.comercioNombre} no acepta el pedido ${sinAceptar.single.codigo}'
+              : '${sinAceptar.length} pedidos esperan que el local los acepte',
+          detalle: 'A los ${Pedido.minutosParaResponder} minutos se rechaza solo y se le devuelve la plata al cliente. '
+              'Conviene llamar al local.',
+          accion: sinAceptar.length == 1 ? 'Ver pedido' : 'Ver pedidos',
+          onTap: () => sinAceptar.length == 1
+              ? mostrarFichaPedido(context, sinAceptar.single.id)
+              : context.go('/admin/pedidos'),
+        ),
       if (buscandoSinLibres > 0)
         _Alerta(
           urgente: true,

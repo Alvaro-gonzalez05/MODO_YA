@@ -92,6 +92,9 @@ class _Fila extends StatelessWidget {
   Widget build(BuildContext context) {
     final e = envio;
     final enCurso = !e.estado.esFinal;
+    // Una vez que el rider lo retiró, el paquete ya está en viaje: cancelar ahí
+    // lo dejaba sin cobrar el viaje hecho. La base lo rechaza desde 0079.
+    final cancelable = enCurso && e.estado != EstadoEnvio.retirado && e.estado != EstadoEnvio.enCamino;
 
     return MyCard(
       padding: const EdgeInsets.all(MySpacing.sm),
@@ -162,7 +165,7 @@ class _Fila extends StatelessWidget {
                 ),
               ),
               MyPrecio(precio: Formato.pesos(e.cobrarAlEntregar)),
-              if (enCurso) ...[
+              if (cancelable) ...[
                 const SizedBox(width: MySpacing.xs),
                 MyBoton(
                   label: 'Cancelar',

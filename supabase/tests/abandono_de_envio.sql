@@ -11,6 +11,7 @@ declare
   u_com uuid := gen_random_uuid();
   u_cli uuid := gen_random_uuid();
   u_rid uuid := gen_random_uuid();
+  u_adm uuid := gen_random_uuid();
   ciudad uuid; com uuid; cli uuid; dir uuid; prod uuid; sec uuid; rid uuid;
   ped public.pedidos;
   env public.envios;
@@ -23,7 +24,8 @@ begin
   values
     (u_com,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','aband-com@test.local','x','{"rol":"comercio"}',now(),now(),now()),
     (u_cli,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','aband-cli@test.local','x','{"provider":"email"}',now(),now(),now()),
-    (u_rid,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','aband-rid@test.local','x','{"rol":"repartidor"}',now(),now(),now());
+    (u_rid,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','aband-rid@test.local','x','{"rol":"repartidor"}',now(),now(),now()),
+    (u_adm,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','aband-adm@test.local','x','{"rol":"admin"}',now(),now(),now());
 
   insert into public.comercios (perfil_id, ciudad_id, nombre, rubro, telefono, calle, ubicacion, estado_aprobacion)
   values (u_com, ciudad, 'Aband Local', 'Pizzeria', '2604000090', 'Roca 900',
@@ -125,8 +127,24 @@ begin
   end;
   perform set_config('request.jwt.claims', null, true);
 
-  -- ---- Cancelar el envio arrastra al pedido y deja el reembolso --------------
+  -- ---- Con la comida en la calle el local ya no cancela (0079) --------------
+  -- Antes lo dejaba, y eso le devolvía todo al cliente con el pedido en camino.
   perform set_config('request.jwt.claims', json_build_object('sub', u_com)::text, true);
+  begin
+    env := public.cancelar_envio(ped.envio_id, 'Me arrepenti');
+    insert into _r values ('08b el local no cancela un envio retirado', 'MAL  lo dejo cancelar');
+  exception when others then
+    insert into _r values ('08b el local no cancela un envio retirado', 'OK  rechazado: ' || left(sqlerrm, 30));
+  end;
+  perform set_config('request.jwt.claims', null, true);
+
+  insert into _r values ('08c el pedido sigue vivo',
+    -- Al retirarlo el pedido pasó solo a `en_camino` (sincronizar_pedido_con_envio).
+    (select case when estado = 'en_camino' then 'OK  nadie le devolvio la plata' else 'MAL  ' || estado end
+       from public.pedidos where id = ped.id));
+
+  -- ---- La administracion si: arrastra al pedido y deja el reembolso ----------
+  perform set_config('request.jwt.claims', json_build_object('sub', u_adm)::text, true);
   env := public.cancelar_envio(ped.envio_id, 'No hay quien lo lleve');
   perform set_config('request.jwt.claims', null, true);
 
@@ -161,7 +179,7 @@ begin
   delete from public.clientes where id = cli;
   delete from public.repartidores where id = rid;
   delete from public.comercios where id = com;
-  delete from auth.users where id in (u_com, u_cli, u_rid);
+  delete from auth.users where id in (u_com, u_cli, u_rid, u_adm);
 end $$;
 
 select paso, resultado from _r order by paso;
