@@ -40,6 +40,25 @@ class PedidosRepository {
         },
       );
 
+  /// Los últimos pedidos de todos los locales, para la administración (RLS
+  /// deja leerlos solo a quien es admin).
+  ///
+  /// Con los que esperan pago: un cliente que llama porque "no le anda" el
+  /// pago está justamente ahí. Los carritos no, que nunca llegaron a pedido.
+  Stream<List<Pedido>> watchTodos() => enVivo(
+        canal: 'pedidos-admin',
+        tablas: const ['pedidos'],
+        leer: () async {
+          final pedidos = _lista(await _db
+              .from('v_pedidos')
+              .select()
+              .neq('estado', 'carrito')
+              .order('creado_en', ascending: false)
+              .limit(200));
+          return _conItems(pedidos);
+        },
+      );
+
   Stream<Pedido?> watchPorId(String id) => enVivo(
         canal: 'pedido-$id',
         // Tambien envios: cuando avanza el envio, cambia lo que ve el cliente.

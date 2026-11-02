@@ -191,6 +191,11 @@ final pedidosDelClienteProvider = StreamProvider<List<Pedido>>(
   (ref) => ref.watch(pedidosRepositoryProvider).watchDelCliente(),
 );
 
+/// Todos los pedidos recientes, para la sección Pedidos de la administración.
+final todosLosPedidosProvider = StreamProvider<List<Pedido>>(
+  (ref) => ref.watch(pedidosRepositoryProvider).watchTodos(),
+);
+
 final pedidoProvider = StreamProvider.family<Pedido?, String>(
   (ref, id) => ref.watch(pedidosRepositoryProvider).watchPorId(id),
 );
