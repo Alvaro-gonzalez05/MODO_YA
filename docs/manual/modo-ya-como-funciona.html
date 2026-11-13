@@ -1,0 +1,1239 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<title>MODO YA · Cómo funciona</title>
+<style>
+/* =====================================================================
+   MODO YA · Cómo funciona — documento para imprimir (A4)
+   Estética Codea Desarrollos: tres colores planos (lima, negro, blanco),
+   tipografías Bricolage Grotesque + Geist, tarjetas de borde y sombra dura.
+   Se renderiza con Chrome headless --print-to-pdf (ver armar.mjs).
+   ===================================================================== */
+
+@font-face{font-family:Bricolage;src:url(fuentes/bricolage-grotesque-latin-500-normal.woff2) format('woff2');font-weight:500;font-display:block}
+@font-face{font-family:Bricolage;src:url(fuentes/bricolage-grotesque-latin-700-normal.woff2) format('woff2');font-weight:700;font-display:block}
+@font-face{font-family:Bricolage;src:url(fuentes/bricolage-grotesque-latin-800-normal.woff2) format('woff2');font-weight:800;font-display:block}
+@font-face{font-family:Geist;src:url(fuentes/geist-latin-400-normal.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:Geist;src:url(fuentes/geist-latin-500-normal.woff2) format('woff2');font-weight:500;font-display:block}
+@font-face{font-family:Geist;src:url(fuentes/geist-latin-600-normal.woff2) format('woff2');font-weight:600;font-display:block}
+@font-face{font-family:Geist;src:url(fuentes/geist-latin-700-normal.woff2) format('woff2');font-weight:700;font-display:block}
+@font-face{font-family:'Geist Mono';src:url(fuentes/geist-mono-latin-400-normal.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:'Geist Mono';src:url(fuentes/geist-mono-latin-600-normal.woff2) format('woff2');font-weight:600;font-display:block}
+
+:root{
+  --lima:#D1F366;
+  --negro:#0B0B0B;
+  --carbon:#1A1A1A;
+  --humo:#2A2A2A;
+  --blanco:#F5F5F0;
+  --papel:#FFFFFF;
+  --ceniza:#8C8C86;
+  --niebla:#E4E4DC;
+  --rojo:#FF5A4E;
+  --amarillo:#F5C518;   /* el de MODO YA, solo donde se habla de la marca */
+  --display:Bricolage,'Arial Black',sans-serif;
+  --ui:Geist,system-ui,sans-serif;
+  --mono:'Geist Mono',ui-monospace,monospace;
+}
+
+@page{ size:A4; margin:16mm 14mm 18mm; }
+@page:first{ margin:0; }
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--ui);
+  font-size:10.2pt;
+  line-height:1.52;
+  color:var(--negro);
+  background:var(--papel);
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+
+/* ---------- Portada ---------- */
+.portada{
+  page-break-after:always;
+  background:var(--negro);
+  color:var(--blanco);
+  height:297mm; width:210mm;
+  padding:22mm 18mm;
+  display:flex; flex-direction:column; justify-content:space-between;
+  position:relative; overflow:hidden;
+}
+.portada::after{
+  content:""; position:absolute; right:-40mm; top:-40mm;
+  width:130mm; height:130mm; border-radius:50%;
+  background:var(--lima); opacity:.14;
+}
+.portada__marca{
+  font-family:var(--display); font-weight:800; font-size:13pt;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--lima);
+  position:relative; z-index:1;
+}
+.portada__centro{position:relative; z-index:1}
+.portada__kicker{
+  display:inline-block; font-family:var(--mono); font-size:9.5pt;
+  letter-spacing:.1em; text-transform:uppercase;
+  color:var(--negro); background:var(--lima);
+  padding:5px 12px; border-radius:99px; margin-bottom:14mm;
+}
+.portada h1{
+  font-family:var(--display); font-weight:800;
+  font-size:58pt; line-height:.92; letter-spacing:-.035em; margin:0;
+}
+.portada h1 em{font-style:normal; color:var(--lima)}
+.portada__bajada{
+  margin-top:9mm; font-size:13pt; line-height:1.45; max-width:135mm;
+  color:#D6D6CE;
+}
+.portada__pie{
+  position:relative; z-index:1;
+  display:flex; justify-content:space-between; align-items:flex-end;
+  border-top:2px solid rgba(245,245,240,.22); padding-top:7mm;
+  font-size:9.5pt; color:#B9B9B2;
+}
+.portada__pie b{display:block; color:var(--blanco); font-size:11pt; font-family:var(--display); font-weight:700}
+.portada__sello{
+  font-family:var(--display); font-weight:800; font-size:11pt;
+  color:var(--negro); background:var(--lima);
+  padding:7px 14px; border:3px solid var(--negro);
+  box-shadow:6px 6px 0 var(--blanco);
+}
+
+/* ---------- Estructura ---------- */
+section{page-break-before:always}
+section.seguida{page-break-before:auto}
+
+h2{
+  font-family:var(--display); font-weight:800; font-size:23pt;
+  line-height:1.02; letter-spacing:-.025em; margin:0 0 2mm;
+  padding-bottom:3mm; border-bottom:4px solid var(--negro);
+  break-after:avoid;
+}
+h2 .num{
+  font-family:var(--mono); font-size:11pt; font-weight:600;
+  color:var(--negro); background:var(--lima);
+  padding:3px 9px; margin-right:9px; vertical-align:middle;
+  border:2px solid var(--negro);
+}
+h3{
+  font-family:var(--display); font-weight:700; font-size:13.5pt;
+  letter-spacing:-.015em; margin:8mm 0 2.5mm; break-after:avoid;
+}
+h4{
+  font-family:var(--ui); font-weight:700; font-size:10.5pt;
+  margin:5mm 0 1.5mm; break-after:avoid;
+}
+p{margin:0 0 3mm}
+ul,ol{margin:0 0 3mm; padding-left:5mm}
+li{margin-bottom:1.6mm}
+li::marker{color:var(--negro); font-weight:700}
+strong{font-weight:700}
+code,.mono{font-family:var(--mono); font-size:9pt; background:var(--niebla); padding:1px 5px; border-radius:3px}
+
+.entradilla{
+  font-size:11.5pt; line-height:1.45; color:var(--humo);
+  margin:4mm 0 6mm; padding-left:5mm; border-left:5px solid var(--lima);
+}
+
+/* ---------- Tarjetas ---------- */
+.ficha{
+  border:3px solid var(--negro); box-shadow:7px 7px 0 var(--lima);
+  padding:5mm 6mm; margin:0 0 7mm; background:var(--papel);
+  break-inside:avoid;
+}
+.ficha--negra{background:var(--negro); color:var(--blanco); box-shadow:7px 7px 0 var(--lima)}
+.ficha--negra h4{color:var(--lima)}
+.ficha--negra code{background:var(--humo); color:var(--lima)}
+.ficha--lima{background:var(--lima); box-shadow:7px 7px 0 var(--negro)}
+.ficha--alerta{box-shadow:7px 7px 0 var(--rojo)}
+.ficha__titulo{
+  font-family:var(--display); font-weight:800; font-size:12pt;
+  margin:0 0 2.5mm; letter-spacing:-.01em;
+}
+.ficha p:last-child,.ficha ul:last-child,.ficha ol:last-child{margin-bottom:0}
+
+.dato{
+  display:flex; gap:4mm; align-items:baseline;
+  border-bottom:1px solid var(--niebla); padding:2mm 0;
+}
+.dato:last-child{border-bottom:0}
+.dato__k{flex:0 0 46mm; font-weight:600; font-size:9.6pt}
+.dato__v{flex:1}
+
+/* ---------- Pasos ---------- */
+.pasos{counter-reset:paso; list-style:none; padding:0; margin:0 0 6mm}
+.pasos > li{
+  counter-increment:paso; position:relative;
+  padding:0 0 4.5mm 14mm; margin:0;
+  border-left:3px solid var(--negro); margin-left:5mm;
+  break-inside:avoid;
+}
+.pasos > li:last-child{border-left-color:transparent; padding-bottom:0}
+.pasos > li::before{
+  content:counter(paso); position:absolute; left:-5.5mm; top:-1mm;
+  width:11mm; height:11mm; border-radius:50%;
+  background:var(--lima); border:3px solid var(--negro);
+  font-family:var(--display); font-weight:800; font-size:11pt;
+  display:flex; align-items:center; justify-content:center;
+}
+.pasos__t{font-family:var(--display); font-weight:700; font-size:12pt; display:block; margin-bottom:1mm; letter-spacing:-.01em}
+
+/* ---------- Tablas ---------- */
+table{width:100%; border-collapse:collapse; margin:0 0 6mm; font-size:9.4pt; break-inside:avoid}
+th{
+  background:var(--negro); color:var(--blanco); text-align:left;
+  font-family:var(--display); font-weight:700; font-size:9.6pt;
+  padding:2.6mm 3mm; letter-spacing:-.01em;
+}
+td{padding:2.4mm 3mm; border-bottom:1px solid var(--niebla); vertical-align:top}
+tr:nth-child(even) td{background:#FAFAF7}
+td.num{font-family:var(--mono); white-space:nowrap}
+
+/* ---------- Estados ---------- */
+.cadena{display:flex; flex-wrap:wrap; gap:2mm; margin:0 0 5mm}
+.estado{
+  font-family:var(--mono); font-size:8.6pt;
+  border:2px solid var(--negro); padding:1.6mm 2.6mm; background:var(--papel);
+}
+.estado--ok{background:var(--lima)}
+.estado--fin{background:var(--negro); color:var(--blanco)}
+.estado--mal{background:var(--rojo); color:#fff; border-color:var(--negro)}
+.flecha{align-self:center; font-weight:700; color:var(--ceniza)}
+
+/* ---------- Avisos ---------- */
+.nota{
+  background:#FBFCF4; border-left:5px solid var(--lima);
+  padding:3.5mm 5mm; margin:0 0 5mm; font-size:9.6pt; break-inside:avoid;
+}
+.nota--ojo{background:#FFF6F5; border-left-color:var(--rojo)}
+.nota__t{font-family:var(--display); font-weight:700; display:block; margin-bottom:1mm}
+
+/* ---------- Columnas ---------- */
+.dos{display:flex; gap:6mm; margin-bottom:6mm}
+.dos > *{flex:1; margin-bottom:0}
+
+/* ---------- Índice ---------- */
+.indice{list-style:none; padding:0; margin:6mm 0 0; counter-reset:ix}
+.indice li{
+  counter-increment:ix; display:flex; align-items:baseline; gap:3mm;
+  padding:2.6mm 0; border-bottom:1px solid var(--niebla);
+}
+.indice li::before{
+  content:counter(ix,decimal-leading-zero);
+  font-family:var(--mono); font-size:9.5pt; font-weight:600; color:var(--ceniza);
+  flex:0 0 10mm;
+}
+.indice b{font-family:var(--display); font-weight:700; font-size:11.5pt; flex:0 0 68mm; letter-spacing:-.01em}
+.indice span{flex:1; font-size:9.6pt; color:var(--humo)}
+
+/* ---------- Cierre ---------- */
+.cierre{
+  background:var(--negro); color:var(--blanco);
+  padding:12mm; margin-top:8mm; break-inside:avoid;
+}
+.cierre h3{color:var(--lima); margin-top:0; font-size:19pt}
+.cierre a{color:var(--lima)}
+</style>
+</head>
+<body>
+
+<!-- ================= PORTADA ================= -->
+<div class="portada">
+  <div class="portada__marca">Codea Desarrollos</div>
+
+  <div class="portada__centro">
+    <span class="portada__kicker">Documentación funcional · v1</span>
+    <h1>MODO&nbsp;YA<br><em>cómo funciona</em></h1>
+    <p class="portada__bajada">
+      El recorrido completo de la plataforma de delivery y cadetería de Malargüe:
+      cómo entra un pedido, cómo se cobra, qué pasa con la plata de cada uno y
+      cómo se devuelve cuando algo sale mal.
+    </p>
+  </div>
+
+  <div class="portada__pie">
+    <div>
+      <b>Preparado para Carolina</b>
+      MODO YA · Malargüe, Mendoza
+    </div>
+    <div class="portada__sello">10 · 11 · 2026</div>
+  </div>
+</div>
+
+<!-- ================= ÍNDICE ================= -->
+<section>
+  <h2>Qué vas a encontrar acá</h2>
+  <p class="entradilla">
+    Este documento explica la plataforma como funciona hoy, no como nos gustaría
+    que funcione. Donde algo todavía está pendiente, lo dice.
+  </p>
+
+  <ol class="indice">
+    <li><b>La plataforma</b><span>Qué resuelve MODO YA y quiénes la usan</span></li>
+    <li><b>Las cuatro miradas</b><span>Cliente, local, rider y administración</span></li>
+    <li><b>El pedido, paso a paso</b><span>Del carrito a la puerta, con los estados reales</span></li>
+    <li><b>El cobro</b><span>Cómo se cobra la tarjeta y por qué nunca pasa por nosotros</span></li>
+    <li><b>Los tres finales de un cobro</b><span>Aprobado, rechazado y en revisión</span></li>
+    <li><b>Los avisos de Mercado Pago</b><span>El webhook y los dos relojes que lo cubren</span></li>
+    <li><b>Las devoluciones</b><span>Los cuatro casos y qué pasa en cada uno</span></li>
+    <li><b>Quién se queda con qué</b><span>Comisiones, envío, mensualidad y liquidaciones</span></li>
+    <li><b>MODO YA Plus</b><span>La suscripción del cliente y su renovación automática</span></li>
+    <li><b>Campañas y promociones</b><span>En qué se diferencian y quién las paga</span></li>
+    <li><b>Cadetería y mandados</b><span>Los dos envíos sin carrito de por medio</span></li>
+    <li><b>Lo que protege la plata</b><span>Reglas que impiden cobrar dos veces o cobrar de menos</span></li>
+    <li><b>Privacidad y seguridad</b><span>Quién ve qué, y qué no ve nadie</span></li>
+    <li><b>Estado al 10/11/2026</b><span>Qué está probado, qué falta y en qué orden</span></li>
+  </ol>
+</section>
+
+<!-- ================= 1 ================= -->
+<section>
+  <h2><span class="num">01</span>La plataforma</h2>
+  <p class="entradilla">
+    MODO YA no es una app, son dos: la de la gente y la del rider. Y no es un
+    negocio, son dos: el marketplace y la cadetería.
+  </p>
+
+  <h3>Dos productos que conviven</h3>
+  <div class="dos">
+    <div class="ficha">
+      <div class="ficha__titulo">Marketplace</div>
+      <p>El cliente abre la app, elige un local de Malargüe, arma el carrito y
+      paga con tarjeta. Cuando el local lo acepta nace el envío que lo lleva.</p>
+      <p><strong>Genera un pedido</strong>, y el pedido genera un envío.</p>
+    </div>
+    <div class="ficha">
+      <div class="ficha__titulo">Cadetería</div>
+      <p>El local ya tiene el pedido —entró por WhatsApp, por teléfono o en el
+      mostrador— y lo único que necesita es un rider para llevarlo.</p>
+      <p><strong>Genera un envío suelto</strong>, sin pedido ni catálogo.</p>
+    </div>
+  </div>
+
+  <p>Que estén modelados por separado es lo que permite que la cadetería
+  funcione sola, sin arrastrar el catálogo, y que el marketplace reutilice
+  entero el motor de asignación de riders que ya existía.</p>
+
+  <h3>Dos apps, no una</h3>
+  <table>
+    <tr><th style="width:36mm">App</th><th style="width:52mm">Quién la usa</th><th>Por qué está separada</th></tr>
+    <tr>
+      <td><strong>MODO YA</strong></td>
+      <td>Clientes, locales y administración</td>
+      <td>El rol de la cuenta decide qué pantallas ve cada uno. Un solo
+      instalador para los tres.</td>
+    </tr>
+    <tr>
+      <td><strong>MODO YA Rider</strong></td>
+      <td>Riders</td>
+      <td>Necesita ubicación en segundo plano, que es el permiso que más revisan
+      Apple y Google. Dentro de una app de clientes lo más probable es que
+      rechacen la publicación.</td>
+    </tr>
+  </table>
+
+  <h3>Cómo se crea cada cuenta</h3>
+  <table>
+    <tr><th style="width:36mm">Tipo</th><th>Cómo se da de alta</th></tr>
+    <tr><td><strong>Cliente</strong></td><td>Se registra solo desde la app.</td></tr>
+    <tr><td><strong>Local</strong></td><td>Lo da de alta la administración con el email real del local. Si no tiene, se le genera uno (<code>pizzeria.don.luis@modoya.app</code>) y una contraseña al azar que se muestra una sola vez.</td></tr>
+    <tr><td><strong>Rider</strong></td><td>Igual que el local: su email real o <code>rider.juan.perez@modoya.app</code>.</td></tr>
+    <tr><td><strong>Administración</strong></td><td>Se crea a mano, una sola vez.</td></tr>
+  </table>
+
+  <div class="ficha ficha--negra">
+    <div class="ficha__titulo">El rol no lo elige el usuario</div>
+    <p>El rol sale únicamente de metadatos que escribe el servidor. Si saliera de
+    lo que manda la app al registrarse, cualquiera podría pedir ser
+    administrador y quedarse con el panel. Un registro común no trae rol y cae
+    en <code>cliente</code>, siempre.</p>
+  </div>
+</section>
+
+<!-- ================= 2 ================= -->
+<section>
+  <h2><span class="num">02</span>Las cuatro miradas</h2>
+  <p class="entradilla">
+    La misma plataforma se ve distinta según quién entre. Esto es lo que cada
+    uno puede hacer.
+  </p>
+
+  <div class="ficha">
+    <div class="ficha__titulo">El cliente</div>
+    <ul>
+      <li>Ve los locales de Malargüe por rubro, con las ofertas del día arriba.</li>
+      <li>Entra al menú con fotos y personaliza: tamaños, agregados, lo que el local haya definido.</li>
+      <li>Guarda direcciones con el pin en el mapa, y en cada entrega le llega al local y al rider <strong>solo la dirección de esa entrega</strong>, no la libreta entera.</li>
+      <li>Paga con tarjeta dentro de la app, con la posibilidad de dejarla guardada.</li>
+      <li>Sigue el pedido en vivo y tiene un <strong>código de entrega</strong> que le dicta al rider en la puerta.</li>
+      <li>Puede sumarse a MODO YA Plus y dejar de pagar envío en los locales adheridos.</li>
+      <li>Puede pedir un mandado: "retirá esto de acá y llevalo allá", sin local de por medio.</li>
+    </ul>
+  </div>
+
+  <div class="ficha">
+    <div class="ficha__titulo">El local</div>
+    <ul>
+      <li>Ve los pedidos entrar <strong>en vivo</strong> y los acepta, prepara y marca listos.</li>
+      <li>Arma su menú con fotos, secciones y opciones, y lo edita cuando quiere.</li>
+      <li>Carga promociones: todo el menú, las secciones que elija o productos sueltos, con fecha de fin y días particulares ("martes de pizza").</li>
+      <li>Pone plata en campañas: publicidad (aparecer primero) o cubrirle el envío a los clientes con Plus.</li>
+      <li>Define horarios, incluso turnos que cruzan la medianoche, y puede pausar la recepción a mano.</li>
+      <li>Pide un rider para los pedidos que le entraron por fuera de la app (cadetería), con el mismo seguimiento.</li>
+      <li>Marca a su cadete de confianza para que los envíos se le ofrezcan primero a él.</li>
+    </ul>
+  </div>
+
+  <div class="ficha">
+    <div class="ficha__titulo">El rider</div>
+    <ul>
+      <li>Se conecta compartiendo ubicación: sin el permiso "Permitir todo el tiempo" no puede conectarse.</li>
+      <li>Recibe ofertas con cuenta regresiva y las acepta o las deja pasar.</li>
+      <li>Ve el recorrido de retiro y entrega, y confirma la entrega con el código que le dicta el cliente.</li>
+      <li>Ve cuánto tiene que cobrar en la puerta cuando el envío es en efectivo (solo mandados y cadetería).</li>
+      <li>Ve sus ganancias y su liquidación, con el detalle.</li>
+    </ul>
+    <p><strong>El rider nunca ve el pedido.</strong> Qué productos pidió el cliente
+    y cuánto pagó no le hace falta para entregar, así que no se le muestra.</p>
+  </div>
+
+  <div class="ficha">
+    <div class="ficha__titulo">La administración</div>
+    <ul>
+      <li>Resumen con mapa en vivo y aviso del pedido que el local no está aceptando.</li>
+      <li>Alta de locales y riders, aprobación, suspensión y "nueva contraseña".</li>
+      <li>Pedidos y envíos en curso, con la ficha al costado.</li>
+      <li><strong>Liquidaciones</strong> por local y por rider, con los avisos de Mercado Pago.</li>
+      <li>Tarifas y reglas: ganancia del rider, comisión, porcentajes, radio de búsqueda, segundos para aceptar.</li>
+      <li>Promociones de todos los locales, carteles, notificaciones y reclamos.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================= 3 ================= -->
+<section>
+  <h2><span class="num">03</span>El pedido, paso a paso</h2>
+  <p class="entradilla">
+    Este es el camino completo de un pedido del marketplace, con los estados
+    reales que guarda el sistema. Es el mismo recorrido que prueba el test de
+    integración de punta a punta.
+  </p>
+
+  <ol class="pasos">
+    <li>
+      <span class="pasos__t">El cliente arma el carrito</span>
+      Elige el local, los productos y las opciones. El pedido existe en estado
+      <code>carrito</code>: todavía lo está armando y no lo ve nadie más.
+      <strong>Los precios los calcula el servidor</strong>, incluidas las
+      promociones vigentes: la app no puede inventarse un precio.
+    </li>
+    <li>
+      <span class="pasos__t">Elige dirección y ve el total</span>
+      El envío se cotiza con el tarifario vigente de Malargüe. Si el cliente
+      tiene Plus y el local está adherido, el envío le sale $0 — y el carrito le
+      muestra cuánto se habría ahorrado si todavía no lo tiene.
+    </li>
+    <li>
+      <span class="pasos__t">Confirma y el pedido nace esperando el pago</span>
+      El pedido pasa a <code>pendiente_pago</code>. Acá se congelan dos cosas que
+      ya no cambian: <strong>la cotización del envío</strong> y
+      <strong>los porcentajes de comisión</strong>. Si media hora después se
+      cambia una tarifa, este pedido sigue con la que tenía.
+    </li>
+    <li>
+      <span class="pasos__t">Paga con tarjeta</span>
+      Es el único medio de pago de la app. El detalle completo está en el
+      capítulo 4. Si la tarjeta rebota, el pedido <strong>no se cancela</strong>:
+      queda ahí para que pruebe con otra.
+    </li>
+    <li>
+      <span class="pasos__t">Recién con el pago aprobado le llega al local</span>
+      El pedido pasa a <code>pagado</code> y aparece en la pantalla del local, en
+      vivo. Hasta acá el local no se enteró de nada: si la tarjeta rebotaba, la
+      cocina no llegó a empezar.
+    </li>
+    <li>
+      <span class="pasos__t">El local acepta</span>
+      Pasa a <code>aceptado</code> y después a <code>en_preparacion</code>.
+      <strong>Tiene 15 minutos para contestar.</strong> Si no acepta ni rechaza,
+      el sistema lo da por rechazado, le devuelve todo al cliente y le carga al
+      local la misma penalidad que si hubiera apretado "Rechazar": no contestar
+      nunca sale más barato que rechazar.
+    </li>
+    <li>
+      <span class="pasos__t">Marca "listo" y recién ahí se busca rider</span>
+      Pasa a <code>listo</code> y nace el envío. Se busca cadete al final y no al
+      aceptar, porque no tiene sentido tener a alguien esperando en la puerta
+      mientras se prepara la comida.
+    </li>
+    <li>
+      <span class="pasos__t">La oferta sale a los riders cercanos</span>
+      Con cuenta regresiva y uno por vez. Si el local marcó un rider propio, se
+      le ofrece primero a él —y a ese no se le aplica el filtro de radio: si el
+      local lo eligió a propósito, que esté a cuatro cuadras o a tres kilómetros
+      lo decide el local. Si no contesta, sigue con el resto.
+    </li>
+    <li>
+      <span class="pasos__t">El rider acepta, llega al local y retira</span>
+      El envío pasa por <code>asignado</code>, <code>en_local</code> y
+      <code>retirado</code>. Cuando marca retirado, <strong>el pedido pasa solo a
+      <code>en_camino</code></strong>: el estado del envío arrastra al del pedido,
+      así el cliente ve algo coherente sin que nadie lo sincronice a mano.
+    </li>
+    <li>
+      <span class="pasos__t">Entrega con el código</span>
+      El cliente le dicta el código que ve en su pantalla. El rider lo carga,
+      el envío queda <code>entregado</code> y el pedido también.
+    </li>
+    <li>
+      <span class="pasos__t">Entra en la liquidación</span>
+      Ese pedido ya puede liquidarse: al local lo que vendió menos lo que
+      corresponde, al rider su ganancia. El capítulo 8 lo detalla.
+    </li>
+  </ol>
+
+  <h3>La cadena de estados, de un vistazo</h3>
+  <p><strong>Pedido:</strong></p>
+  <div class="cadena">
+    <span class="estado">carrito</span><span class="flecha">→</span>
+    <span class="estado">pendiente_pago</span><span class="flecha">→</span>
+    <span class="estado estado--ok">pagado</span><span class="flecha">→</span>
+    <span class="estado">aceptado</span><span class="flecha">→</span>
+    <span class="estado">en_preparacion</span><span class="flecha">→</span>
+    <span class="estado">listo</span><span class="flecha">→</span>
+    <span class="estado">en_camino</span><span class="flecha">→</span>
+    <span class="estado estado--fin">entregado</span>
+  </div>
+  <p>Y los dos finales que no son el feliz:
+    <span class="estado estado--mal">rechazado</span>
+    (el local no lo tomó) y
+    <span class="estado estado--mal">cancelado</span>.
+  </p>
+
+  <p><strong>Envío:</strong></p>
+  <div class="cadena">
+    <span class="estado">borrador</span><span class="flecha">→</span>
+    <span class="estado">cotizado</span><span class="flecha">→</span>
+    <span class="estado">buscando_repartidor</span><span class="flecha">→</span>
+    <span class="estado">asignado</span><span class="flecha">→</span>
+    <span class="estado">en_local</span><span class="flecha">→</span>
+    <span class="estado">retirado</span><span class="flecha">→</span>
+    <span class="estado">en_camino</span><span class="flecha">→</span>
+    <span class="estado estado--fin">entregado</span>
+  </div>
+  <p>Más <span class="estado estado--mal">sin_repartidor</span> y
+  <span class="estado estado--mal">cancelado</span>.</p>
+
+  <div class="nota">
+    <span class="nota__t">El rider que ya aceptó no cancela: se baja</span>
+    Si se baja, el envío vuelve a <code>buscando_repartidor</code> y sale a
+    ofrecerse de nuevo en el acto. El pedido sigue su curso y nadie pierde plata,
+    solo se demora. <strong>Solo puede bajarse antes de retirar</strong>: con la
+    comida encima ya no es un problema de asignación y lo resuelve una persona.
+    Cada bajada queda registrada con el motivo, y la administración decide si se
+    la cobra o no — no es lo mismo bajarse porque sí que porque lo chocaron.
+  </div>
+</section>
+
+<!-- ================= 4 ================= -->
+<section>
+  <h2><span class="num">04</span>El cobro</h2>
+  <p class="entradilla">
+    En la app <strong>solo se paga con tarjeta</strong>. Efectivo y transferencia
+    se cortaron, y no solo en la pantalla: se valida al crear el pedido, porque
+    una app vieja ya instalada sigue ofreciéndolos.
+  </p>
+
+  <h3>Los datos de la tarjeta no pasan por MODO YA</h3>
+  <p>Este es el punto más importante de todo el capítulo, y es lo que hace que
+  el sistema no tenga que cumplir con las certificaciones de quien guarda
+  tarjetas:</p>
+
+  <ol class="pasos">
+    <li>
+      <span class="pasos__t">La app le manda la tarjeta directo a Mercado Pago</span>
+      Con la <strong>clave pública</strong>, que es pública por diseño: solo sirve
+      para tokenizar del lado del cliente, no puede cobrar ni devolver nada.
+    </li>
+    <li>
+      <span class="pasos__t">Mercado Pago devuelve un token de un solo uso</span>
+      Un texto que representa esa tarjeta <em>para ese intento</em>. No sirve
+      para cobrar dos veces ni para nada más.
+    </li>
+    <li>
+      <span class="pasos__t">La app manda el token a nuestro servidor</span>
+      A la función <code>pagar-pedido</code>, que es el único lugar de todo el
+      sistema que tiene el <strong>access token</strong> de Mercado Pago. Ese
+      secreto no vive dentro de ninguna app que se instala: una app instalada se
+      puede abrir y leer.
+    </li>
+    <li>
+      <span class="pasos__t">Nuestro servidor cobra y responde en el momento</span>
+      Es el mismo esquema que usan las apps grandes de delivery.
+    </li>
+  </ol>
+
+  <div class="ficha ficha--lima">
+    <div class="ficha__titulo">De la tarjeta guardada queda solo la referencia</div>
+    <p>Si el cliente la deja guardada, de su lado del sistema no queda el número:
+    queda una referencia de Mercado Pago y el texto <strong>"Visa ••••4218"</strong>,
+    para poder mostrárselo sin volver a preguntar.</p>
+  </div>
+
+  <h3>Qué API se usa y por qué importa</h3>
+  <p>Se cobra con la <strong>API de Orders</strong> (<code>POST /v1/orders</code>),
+  no con la vieja de Payments: Mercado Pago dejó Payments en mantenimiento —solo
+  correcciones de seguridad— y Orders es la que sostiene de ahora en más.</p>
+
+  <div class="ficha">
+    <div class="ficha__titulo">Dos diferencias que se notan al leer cualquier registro</div>
+    <div class="dato"><div class="dato__k">Los importes son texto</div><div class="dato__v">Viajan como <code>"13550.00"</code>, con dos decimales, no como número. Adentro del sistema seguimos con pesos enteros y se formatea al salir.</div></div>
+    <div class="dato"><div class="dato__k">Un cobro, dos identificadores</div><div class="dato__v">La <strong>orden</strong> (<code>ORD01…</code>) y adentro el <strong>pago</strong> (<code>PAY01…</code>). Se guardan los dos: los avisos de Mercado Pago llegan con el de la orden, y los reclamos se hacen con el del pago.</div></div>
+  </div>
+
+  <h3>Modo simulado</h3>
+  <p>El sistema simula el cobro —aprueba sin mover un peso— en dos situaciones:</p>
+  <ul>
+    <li>Cuando el servidor <strong>no tiene credenciales cargadas</strong>.</li>
+    <li>Cuando <strong>la app manda un token simulado</strong>, aunque el servidor sí tenga credenciales.</li>
+  </ul>
+
+  <div class="nota">
+    <span class="nota__t">Lo segundo importa más de lo que parece</span>
+    Una versión de la app compilada sin clave pública (hasta la 1.14) arma un
+    token simulado. Si el servidor intentara cobrar eso contra Mercado Pago
+    fallaría, y el cliente se quedaría sin poder pagar por una actualización que
+    él no hizo. Por eso el modo simulado <strong>se decide por llamada</strong>, no
+    solo por la configuración del servidor. Dicho al revés: esas versiones viejas
+    instaladas <strong>no cobran plata real</strong>. De la 1.15.0 en adelante sí.
+  </div>
+
+  <h3>Dónde vive cada credencial</h3>
+  <table>
+    <tr><th style="width:52mm">Credencial</th><th style="width:40mm">Dónde está</th><th>Qué puede hacer</th></tr>
+    <tr><td><strong>Clave pública</strong></td><td>Dentro de la app</td><td>Solo tokenizar tarjetas del lado del cliente. No puede cobrar ni devolver. Es pública por diseño.</td></tr>
+    <tr><td><strong>Access token</strong></td><td>Secreto del servidor</td><td>Cobrar y devolver. Nunca sale del servidor.</td></tr>
+    <tr><td><strong>Clave del webhook</strong></td><td>Secreto del servidor</td><td>Verificar que un aviso de Mercado Pago es auténtico.</td></tr>
+  </table>
+
+  <div class="ficha ficha--negra">
+    <div class="ficha__titulo">Los secretos no se pueden volver a leer</div>
+    <p>Una vez cargados, la API los devuelve hasheados: no hay forma de
+    recuperarlos desde el servidor. Si hace falta uno, se saca de nuevo del panel
+    de Mercado Pago.</p>
+    <p><strong>Y nunca se piden ni se aceptan credenciales pegadas en un chat ni
+    en un mail.</strong> Si una aparece ahí, lo correcto es renovarla, no usarla.</p>
+  </div>
+</section>
+
+<!-- ================= 5 ================= -->
+<section>
+  <h2><span class="num">05</span>Los tres finales de un cobro</h2>
+  <p class="entradilla">
+    Mercado Pago no contesta sí o no: contesta tres cosas. El sistema trata cada
+    una distinto, y confundirlas es lo que hace que un cliente pague dos veces o
+    que un pedido quede colgado.
+  </p>
+
+  <div class="ficha">
+    <div class="ficha__titulo">① Aprobado</div>
+    <p>El pago queda acreditado, el pedido pasa a <code>pagado</code> y le llega
+    al local en el acto. Para este caso no hace falta nada más: la respuesta
+    llegó en el momento.</p>
+  </div>
+
+  <div class="ficha ficha--alerta">
+    <div class="ficha__titulo">② Rechazado</div>
+    <p>El banco dijo que no: sin fondos, código de seguridad mal, la tarjeta pide
+    autorización. <strong>El pedido no se cancela</strong>: queda esperando para
+    que el cliente pruebe con otra tarjeta.</p>
+    <p>El motivo se le traduce a algo que se entienda, en vez de mostrarle el
+    código de Mercado Pago. Si el cliente abandona, el pedido se cierra solo
+    <strong>a la media hora</strong>.</p>
+    <p class="mono" style="background:none;padding:0;font-size:9pt;color:#555">
+      Ojo técnico: una tarjeta rechazada vuelve con un código HTTP de error (402),
+      no con un 200 — pero con la orden entera adentro. Eso no es una falla
+      nuestra, es un "no" del banco, y hay que contárselo al cliente como tal.</p>
+  </div>
+
+  <div class="ficha">
+    <div class="ficha__titulo">③ En revisión</div>
+    <p>Mercado Pago todavía no sabe: revisión manual, verificación con el banco,
+    3D Secure. Puede resolverse en segundos o en diez minutos.</p>
+    <p>Mientras está en revisión pasan dos cosas: <strong>no se deja cobrar el
+    mismo pedido otra vez</strong>, y el pedido tiene <strong>un día</strong> para
+    resolverse en vez de media hora.</p>
+  </div>
+
+  <h3>Probar sin plata real</h3>
+  <p>Con credenciales de prueba, el resultado del cobro lo decide
+  <strong>el nombre del titular</strong>, no el número de tarjeta. Como el
+  formulario exige nombre y apellido y Mercado Pago solo mira la primera palabra,
+  se escriben así:</p>
+
+  <table>
+    <tr><th style="width:34mm">Titular</th><th>Qué pasa</th></tr>
+    <tr><td class="num">APRO PEREZ</td><td>Aprueba.</td></tr>
+    <tr><td class="num">FUND PEREZ</td><td>Rebota por fondos insuficientes.</td></tr>
+    <tr><td class="num">CONT PEREZ</td><td>Queda en revisión.</td></tr>
+    <tr><td class="num">SECU PEREZ</td><td>Código de seguridad inválido.</td></tr>
+    <tr><td class="num">CALL PEREZ</td><td>Pide autorizar con el banco.</td></tr>
+  </table>
+
+  <div class="nota nota--ojo">
+    <span class="nota__t">Lo que no se puede probar sin producción</span>
+    La API de tarjetas guardadas de Mercado Pago <strong>rechaza las credenciales
+    de una cuenta de prueba</strong>. El cobro anda igual, pero guardar la tarjeta
+    —y por lo tanto la renovación automática de Plus— solo se puede ejercitar con
+    las credenciales reales. Esto ya costó una tarde: queda escrito para que no
+    cueste otra.
+  </div>
+
+  <h3>Guardar la tarjeta nunca frena el cobro</h3>
+  <p>Si Mercado Pago no deja registrar al cliente para guardarle la tarjeta, el
+  cobro sale igual y la tarjeta no queda guardada. La decisión es deliberada:
+  <strong>quedarse sin la comodidad de la próxima vez es molesto; no poder pagar
+  es perder la venta</strong>.</p>
+</section>
+
+<!-- ================= 6 ================= -->
+<section>
+  <h2><span class="num">06</span>Los avisos de Mercado Pago</h2>
+  <p class="entradilla">
+    El cobro con tarjeta responde en el momento, así que para el caso feliz
+    alcanza. Los avisos tapan lo que pasa <strong>después</strong>.
+  </p>
+
+  <h3>Qué tapan</h3>
+  <ul>
+    <li>Un pago que quedó en revisión y <strong>se aprueba diez minutos más tarde</strong>. Sin el aviso, el pedido se cerraría solo sin enterarse de que entró la plata.</li>
+    <li>Una <strong>devolución o un contracargo hechos desde el panel de Mercado Pago</strong>, por fuera de la app, que dejarían la liquidación de ese local mal.</li>
+    <li><strong>Renovaciones de Plus</strong> que Mercado Pago resuelva en diferido.</li>
+  </ul>
+
+  <h3>Cómo está armado, y por qué</h3>
+  <ol class="pasos">
+    <li>
+      <span class="pasos__t">Llega el aviso y se guarda tal cual. Nada más.</span>
+      Mercado Pago exige una respuesta en <strong>menos de 22 segundos</strong>, y
+      si no llega reintenta cada 15 minutos. Preguntarle por la orden desde ahí
+      mismo arriesga el tiempo, y pasarse de tiempo es un aviso repetido.
+      Guardar primero también deja reprocesar algo que ya llegó, en vez de
+      haberlo perdido.
+    </li>
+    <li>
+      <span class="pasos__t">Se verifica la firma</span>
+      El aviso viene firmado. Se recalcula la firma con la clave secreta y se
+      compara. <strong>Solo se procesan los avisos con firma válida</strong>: si no,
+      cualquiera que conozca la dirección podría mandarnos un pago por bueno.
+    </li>
+    <li>
+      <span class="pasos__t">Un reloj los procesa, cada minuto</span>
+      Agarra los avisos sin resolver y le pregunta a Mercado Pago cómo terminó
+      esa orden <strong>con el access token</strong>, sin creerle al contenido del
+      aviso —que la firma no cubre—.
+    </li>
+    <li>
+      <span class="pasos__t">Se decide qué hacer</span>
+      Si el pedido sigue esperando el pago, se acredita y se manda al local. Si
+      el pedido ya se canceló, se marca la devolución. Lo que se hizo con cada
+      aviso queda anotado, y la administración lo ve en su pantalla de avisos.
+    </li>
+  </ol>
+
+  <div class="ficha ficha--lima">
+    <div class="ficha__titulo">Y para no depender de que el aviso llegue</div>
+    <p>El mismo reloj le pregunta a Mercado Pago, por su cuenta,
+    <strong>cada 10 minutos durante una semana</strong>, por cada pago que haya
+    quedado en revisión con una orden real. Si el aviso nunca llega, igual nos
+    enteramos.</p>
+  </div>
+
+  <div class="nota">
+    <span class="nota__t">Reglas de Mercado Pago que condicionaron el diseño</span>
+    <ul style="margin-top:2mm;margin-bottom:0">
+      <li>Hay que contestar en menos de <strong>22 segundos</strong>, o reintenta cada 15 minutos.</li>
+      <li>Un reintento trae el mismo identificador de pedido, así que <strong>el mismo aviso no se guarda dos veces</strong>.</li>
+      <li>La firma es un HMAC-SHA256 de un texto armado con el id, el identificador del pedido y la marca de tiempo.</li>
+    </ul>
+  </div>
+
+  <p><strong>El webhook funciona en producción.</strong> El 13/10/2026 llegaron
+  tres avisos reales con firma válida.</p>
+</section>
+
+<!-- ================= 7 ================= -->
+<section>
+  <h2><span class="num">07</span>Las devoluciones</h2>
+  <p class="entradilla">
+    Un pedido cobrado puede terminar mal de cuatro maneras distintas, y cada una
+    tiene su circuito. En todas, <strong>el cliente recibe el 100%</strong>.
+  </p>
+
+  <h3>Caso 1 · El local rechaza un pedido ya cobrado</h3>
+  <div class="ficha ficha--alerta">
+    <div class="dato"><div class="dato__k">Al cliente</div><div class="dato__v"><strong>Se le devuelve todo</strong>: productos y envío. El que falló fue el local, el cliente no hizo nada mal y el envío ni siquiera se hizo.</div></div>
+    <div class="dato"><div class="dato__k">Al local</div><div class="dato__v">Se le cobra una <strong>penalidad</strong>: un porcentaje de lo que hubiera cobrado por ese pedido (<strong>50% por defecto</strong>, configurable en Tarifas), calculado <strong>sobre los productos y no sobre el envío</strong>.</div></div>
+    <div class="dato"><div class="dato__k">Dónde aparece</div><div class="dato__v">La penalidad entra como un cargo con el número de pedido pegado, así aparece sola en la liquidación del local y en la que mira la administración — y tres semanas después se puede explicar de dónde salió.</div></div>
+  </div>
+
+  <h3>Caso 2 · El local no contesta</h3>
+  <p>Un pedido pagado espera a que el local lo acepte o lo rechace. Si no hace
+  ninguna de las dos —cerró la app, se quedó sin internet—, a los
+  <strong>15 minutos</strong> se da por rechazado: al cliente se le devuelve el
+  100% y el local carga <strong>la misma penalidad</strong> que si hubiera
+  apretado "Rechazar".</p>
+
+  <div class="nota">
+    <span class="nota__t">Por qué la misma penalidad</span>
+    Para que no responder nunca salga más barato que rechazar. Si fue un corte de
+    luz, la administración borra el cargo antes de cerrar la liquidación. Y el
+    cliente lo ve venir: mientras espera, la app le dice que a los 15 minutos se
+    le devuelve todo.
+  </div>
+
+  <h3>Caso 3 · Se cancela el envío con el pedido vivo</h3>
+  <p>Si el envío se cancela de verdad —no una bajada del rider, que vuelve a la
+  búsqueda— se cancela también el pedido. <strong>Se devuelve el 100% igual, pero
+  sin penalidad al local</strong>: acá el local no rechazó nada.</p>
+
+  <h3>Caso 4 · El cliente abandona antes de pagar</h3>
+  <p>No hay nada que devolver: nunca se cobró. El pedido se cierra solo a la
+  media hora (o al día, si el pago había quedado en revisión) y
+  <strong>no genera penalidad ni deja nada pendiente</strong>.</p>
+
+  <h3>Cómo se ejecuta la devolución</h3>
+  <p>La devolución contra Mercado Pago <strong>no la hace la base de datos</strong>:
+  hace falta el access token, que vive solo en el servidor. El rechazo deja la
+  devolución <strong>marcada como pendiente</strong>, y un reloj que corre
+  <strong>cada minuto</strong> la ejecuta: una devolución total, con una clave que
+  impide que un reintento devuelva dos veces.</p>
+
+  <div class="ficha ficha--negra">
+    <div class="ficha__titulo">Por qué va por reloj y no colgada del rechazo</div>
+    <p>Si Mercado Pago no contesta —sin red, servicio caído—, el rechazo igual
+    tiene que quedar registrado y la devolución tiene que reintentarse sola.
+    Colgada del rechazo, un fallo dejaría al cliente sin su plata
+    <strong>y sin que nadie se entere</strong>.</p>
+    <p>Después de un día deja de reintentarse y lo mira una persona: puede que
+    haya que resolverlo por afuera.</p>
+  </div>
+
+  <div class="nota">
+    <span class="nota__t">Los pagos simulados también se cierran</span>
+    Un pago simulado —sin credenciales, o de una app vieja— no tiene nada que
+    devolver en Mercado Pago. Se cierra igual del lado nuestro, para que no quede
+    reintentándose para siempre.
+  </div>
+</section>
+
+<!-- ================= 8 ================= -->
+<section>
+  <h2><span class="num">08</span>Quién se queda con qué</h2>
+  <p class="entradilla">
+    La plata la cobra MODO YA (la tarjeta en la app) o la junta el rider (el
+    efectivo de los mandados). Después hay que repartirla.
+  </p>
+
+  <h3>La cuenta del local</h3>
+  <div class="ficha">
+    <div class="dato"><div class="dato__k" style="font-weight:700">Lo que vendió en productos</div><div class="dato__v">El subtotal real de los pedidos entregados, con las promociones ya aplicadas.</div></div>
+    <div class="dato"><div class="dato__k">− Comisión por pedido</div><div class="dato__v">Un porcentaje de los productos (<strong>arranca en 10%</strong>).</div></div>
+    <div class="dato"><div class="dato__k">− Costo del cobro</div><div class="dato__v">Lo que cobra Mercado Pago por las tarjetas (<strong>arranca en 8%</strong>). El cobro lo hace MODO YA, así que esa comisión sale de nuestra cuenta y se le traslada.</div></div>
+    <div class="dato"><div class="dato__k">− Mensualidad</div><div class="dato__v">La suscripción del local a la plataforma.</div></div>
+    <div class="dato"><div class="dato__k">− Campañas</div><div class="dato__v">Publicidad y envíos cubiertos por Plus: es gasto del local, no de MODO YA.</div></div>
+    <div class="dato"><div class="dato__k">− Ajustes</div><div class="dato__v">Penalidades por rechazar o no contestar, y cualquier corrección que cargue la administración.</div></div>
+    <div class="dato"><div class="dato__k" style="font-weight:700">El envío no entra</div><div class="dato__v">Esa plata es de MODO YA, de ahí sale la ganancia del rider.</div></div>
+  </div>
+
+  <h3>La cuenta del rider</h3>
+  <div class="ficha">
+    <div class="dato"><div class="dato__k" style="font-weight:700">La ganancia de los envíos</div><div class="dato__v">De los que efectivamente entregó.</div></div>
+    <div class="dato"><div class="dato__k">− El efectivo sin rendir</div><div class="dato__v">Lo que cobró en la puerta en los mandados y todavía no entregó.</div></div>
+    <div class="dato"><div class="dato__k">− Cargos</div><div class="dato__v">Bajadas, faltantes, lo que cargue la administración.</div></div>
+  </div>
+
+  <div class="ficha ficha--negra">
+    <div class="ficha__titulo">La liquidación es la única vía de cobro que funciona</div>
+    <p>Una tarjeta guardada no se puede retener: el rider puede desconocer el
+    cargo o darla de baja. Lo que sí se puede es <strong>descontar de lo que se le
+    va a pagar</strong>, que es lo que hacen todas las plataformas.</p>
+    <p>Un cargo puede ser <strong>negativo</strong>, y así se devuelve algo cobrado
+    de más sin borrar el registro. El total puede dar negativo: ahí el rider debe,
+    y queda asentado en vez de perderse.</p>
+  </div>
+
+  <h3>Los porcentajes se congelan en cada pedido</h3>
+  <p>Al crearse, cada pedido se queda con los porcentajes vigentes en ese
+  momento, igual que el envío se queda con su precio. <strong>Subir la comisión no
+  le cambia la cuenta a un pedido que ya existía.</strong> Si cambia el subtotal
+  —porque se corrigió algo—, se recalculan los montos con el porcentaje que ese
+  pedido ya tenía.</p>
+
+  <h3>Qué entra y qué no</h3>
+  <ul>
+    <li>Entran los pedidos <strong>entregados</strong>. Un pedido rechazado se
+    devolvió entero y no deja comisión.</li>
+    <li>En la hoja aparecen <strong>agrupados</strong>, no pedido por pedido:
+    "10% de $20.000 en 3 pedidos".</li>
+    <li>Cerrar una liquidación <strong>marca esos pedidos y envíos</strong>, para
+    que no se paguen dos veces.</li>
+  </ul>
+
+  <h3>Cada uno ve la suya</h3>
+  <p>El local y el rider ven <strong>su propia liquidación con todo el detalle</strong>:
+  el resumen, los cargos del período y los renglones de las liquidaciones ya
+  cerradas. Un rider pidiendo el detalle de otro recibe cero filas — y no por una
+  pantalla que se lo esconde, sino porque la base no se lo devuelve.</p>
+
+  <h3>El tarifario es versionado, no editable</h3>
+  <p>Cambiar una tarifa <strong>cierra la fila vigente y crea una nueva</strong>.
+  Así un envío de hace tres meses sigue mostrando lo que realmente se cobró, y
+  las liquidaciones cerradas no se mueven solas.</p>
+</section>
+
+<!-- ================= 9 ================= -->
+<section>
+  <h2><span class="num">09</span>MODO YA Plus</h2>
+  <p class="entradilla">
+    El cliente paga una mensualidad y durante 30 días no paga envío en los
+    locales adheridos. El rider cobra igual: la diferencia la pone el local, de
+    su campaña.
+  </p>
+
+  <h3>Cómo se contrata</h3>
+  <p>Con la misma pantalla de tarjeta que un pedido. El precio sale del tarifario
+  (<strong>$2.500</strong> al momento de escribir esto) y se cambia desde Tarifas
+  y reglas, sin tocar código.</p>
+
+  <p>El carrito ya sabe todo lo que hace falta para venderlo bien: cuánto cuesta
+  el envío de verdad, si el local está adherido, si el cliente tiene Plus y
+  <strong>cuánto se ahorraría si se suscribe ahora</strong>.</p>
+
+  <h3>Cómo se renueva</h3>
+  <ol class="pasos">
+    <li>
+      <span class="pasos__t">Todos los días, a las 4:10 de la mañana</span>
+      Se arma la lista: la última suscripción de cada cliente que ya se venció,
+      que tenga la renovación activa y una tarjeta guardada.
+    </li>
+    <li>
+      <span class="pasos__t">Se le cobra con la tarjeta guardada</span>
+      Cobrar una tarjeta guardada sin pedir el código de seguridad es lo que
+      Mercado Pago llama <strong>pago recurrente</strong>, y hay que tenerlo
+      habilitado en la cuenta.
+    </li>
+    <li>
+      <span class="pasos__t">Se suma un mes, no 30 días</span>
+      Al que se suscribió un 25 se le cobra todos los 25. Con 30 días, el día de
+      cobro se le iría corriendo mes a mes.
+    </li>
+    <li>
+      <span class="pasos__t">Si la tarjeta rebota, se insiste dos veces más</span>
+      <strong>Al tercer intento se deja de insistir.</strong> El cliente renueva a
+      mano y ve el porqué en su pantalla de Plus.
+    </li>
+  </ol>
+
+  <div class="ficha ficha--lima">
+    <div class="ficha__titulo">La renovación está prendida desde el día uno</div>
+    <p>El cliente no tiene que activar nada. Lo único que tiene es
+    <strong>la baja</strong>, que le deja los días que ya pagó y no le vuelve a
+    cobrar. Si se arrepiente y la reactiva, se le perdonan los rechazos
+    anteriores y vuelve a arrancar limpio.</p>
+  </div>
+
+  <div class="nota nota--ojo">
+    <span class="nota__t">Esto depende de Mercado Pago, no de nosotros</span>
+    Los <strong>cobros recurrentes</strong> hay que pedírselos a Mercado Pago para
+    la cuenta. Sin eso habilitado, Plus no se renueva solo: rebota tres veces y el
+    cliente renueva a mano. El sistema ya lo contempla y no se rompe, pero
+    conviene saberlo antes de salir a vender la suscripción.
+  </div>
+</section>
+
+<!-- ================= 10 ================= -->
+<section>
+  <h2><span class="num">10</span>Campañas y promociones</h2>
+  <p class="entradilla">
+    Se parecen pero son cosas distintas: en una el local le paga a MODO YA, en la
+    otra se baja su propio precio.
+  </p>
+
+  <h3>Campañas · el local pone plata</h3>
+  <p>El local carga un fondo y elige para qué lo usa:</p>
+
+  <div class="dos">
+    <div class="ficha">
+      <div class="ficha__titulo">Publicidad</div>
+      <p>Aparece primero en la lista de locales. <strong>Se cobra por día</strong>,
+      una sola vez por día, automáticamente.</p>
+    </div>
+    <div class="ficha">
+      <div class="ficha__titulo">MODO YA Plus</div>
+      <p>El local le regala el envío a los clientes con Plus.
+      <strong>El rider cobra igual</strong>: la diferencia sale del fondo.</p>
+    </div>
+  </div>
+
+  <p>Cuando el fondo se termina, <strong>la campaña se cierra sola</strong>: nadie
+  paga de más ni hay que acordarse de apagarla. El panel muestra el rendimiento:
+  ingresos, pedidos, costo y retorno por peso invertido.</p>
+
+  <h3>Promociones · el local baja su precio</h3>
+  <p>Acá <strong>no se le paga nada a MODO YA</strong>. El descuento sale del
+  precio del local, y como la liquidación se arma con lo que realmente se vendió,
+  se descuenta solo.</p>
+
+  <table>
+    <tr><th style="width:48mm">Regla</th><th>Qué significa</th></tr>
+    <tr><td>Alcance</td><td>Todo el menú, las secciones que elija o productos sueltos.</td></tr>
+    <tr><td>Vigencia</td><td>Con fecha de fin opcional y, si quiere, solo ciertos días ("martes de pizza").</td></tr>
+    <tr><td>Si se pisan dos</td><td>Gana <strong>la que más descuenta</strong>.</td></tr>
+    <tr><td>Sobre qué aplica</td><td>Sobre el producto, <strong>no sobre los agregados</strong>: la muzzarella con 20% sigue cobrando el extra de jamón completo.</td></tr>
+    <tr><td>Quién calcula</td><td>La base, dos veces: para mostrar el precio y otra vez <strong>antes de cobrar</strong>. Una app vieja o modificada no puede inventarse un precio.</td></tr>
+    <tr><td>Qué queda registrado</td><td>El renglón del pedido guarda el precio de lista y con qué promoción se hizo. Un pedido de hace un mes sigue pudiendo explicarse.</td></tr>
+  </table>
+</section>
+
+<!-- ================= 11 ================= -->
+<section>
+  <h2><span class="num">11</span>Cadetería y mandados</h2>
+  <p class="entradilla">
+    Los dos envíos que existen sin un carrito de por medio. Son los únicos lugares
+    donde todavía hay efectivo.
+  </p>
+
+  <h3>Cadetería · el local pide un rider</h3>
+  <p>El pedido ya le entró al local por WhatsApp, por teléfono o en el mostrador.
+  Lo único que necesita es alguien que lo lleve. Genera un envío sin pedido
+  asociado, con el mismo motor de asignación, la misma cotización del servidor y
+  el mismo seguimiento.</p>
+
+  <p>El precio lo pone <strong>siempre el servidor</strong>: la función recibe
+  direcciones, nunca importes, y no hay forma de que la app se fije su propia
+  tarifa.</p>
+
+  <h3>Mandados · el cliente pide un rider</h3>
+  <p>"Retirame esto de acá y llevalo allá", sin local de por medio. Lo que hay que
+  retirar se escribe en una referencia, que es justo lo que el rider necesita leer
+  al llegar al punto de retiro.</p>
+
+  <div class="ficha ficha--negra">
+    <div class="ficha__titulo">El rider no adelanta plata</div>
+    <p>Solo retira y entrega algo que <strong>ya está pago o listo</strong>. Que
+    ponga plata de su bolsillo abre otro problema —topes, qué pasa si el cliente
+    no aparece, quién responde— y se dejó afuera a propósito.</p>
+  </div>
+
+  <p>El mandado <strong>se le paga al rider en efectivo, al entregar</strong>: es
+  el mismo cobro en mano que el rider ya sabe hacer, sin pasarela de por medio.
+  Ese efectivo después se descuenta de su liquidación hasta que lo rinde.</p>
+
+  <div class="nota">
+    <span class="nota__t">Una diferencia técnica que se nota en la práctica</span>
+    El mandado <strong>crea el envío y arranca la búsqueda en una sola operación</strong>.
+    El envío del local lo hace en dos pasos, y si el segundo falla puede quedar uno
+    trabado en "cotizado". Está registrado como pendiente a corregir.
+  </div>
+
+  <h3>El rider propio del local</h3>
+  <p>Un local con un cadete de confianza lo marca, y sus envíos
+  <strong>se le ofrecen primero a él</strong>. Es lo único que cambia:</p>
+  <ul>
+    <li><strong>La plata queda igual.</strong> MODO YA cobra su comisión y le liquida al rider como a cualquier otro. No hay dos formas de cobrar el mismo servicio ni un caso aparte en la liquidación.</li>
+    <li><strong>Es preferencia, no exclusividad.</strong> Si no contesta a tiempo, se sigue con el resto: un envío no puede quedar trabado porque el cadete de confianza dejó el celular en la mochila.</li>
+    <li><strong>No pasa por el filtro de distancia.</strong> El radio existe para no ofrecerle un envío a alguien que está lejos y va a tardar; si el local lo eligió a propósito, eso lo decide el local.</li>
+  </ul>
+
+  <p>Si el cadete todavía no tiene cuenta, el local la pide desde la app con
+  nombre, teléfono, vehículo y una foto por cada documento exigido para ese
+  vehículo. Las fotos van a un depósito privado, porque el rider todavía no
+  existe como usuario.</p>
+</section>
+
+<!-- ================= 12 ================= -->
+<section>
+  <h2><span class="num">12</span>Lo que protege la plata</h2>
+  <p class="entradilla">
+    Un sistema de pagos no se juzga por el caso feliz. Estas son las reglas que
+    existen justamente para los otros.
+  </p>
+
+  <div class="ficha">
+    <div class="ficha__titulo">No se puede cobrar dos veces el mismo pedido</div>
+    <p>Dos toques seguidos en "Pagar" generaban dos intentos, y Mercado Pago
+    cobraba las dos veces. Ahora <strong>quién puede cobrar y con qué clave lo
+    decide la base</strong>, no la app. La clave no puede salir del token de la
+    tarjeta, porque la app pide un token nuevo en cada intento: dos toques daban
+    dos claves distintas.</p>
+  </div>
+
+  <div class="ficha">
+    <div class="ficha__titulo">No se puede cobrar de menos</div>
+    <p>El precio de los productos, el descuento de las promociones y la
+    cotización del envío <strong>los calcula siempre el servidor</strong>. La app
+    manda direcciones y qué quiere comprar; nunca importes. Una app vieja o
+    modificada no puede fijarse su propio precio.</p>
+  </div>
+
+  <div class="ficha">
+    <div class="ficha__titulo">Nadie puede cambiarse el rol ni autoaprobarse</div>
+    <p>Las reglas de acceso deciden <strong>qué filas</strong> puede tocar cada
+    uno, no qué columnas. Con solo eso, "cada uno edita su perfil" dejaba hacer
+    "ponete rol de administrador". Hoy cada usuario solo puede modificar las
+    columnas que de verdad son suyas, y todo lo que cambia estado, aprobación o
+    privilegios pasa por funciones que verifican el rol por dentro.</p>
+  </div>
+
+  <div class="ficha">
+    <div class="ficha__titulo">Los importes son números enteros</div>
+    <p>Pesos enteros, sin centavos. Se evitan por completo los errores de
+    redondeo que arrastran los números con coma.</p>
+  </div>
+
+  <div class="ficha">
+    <div class="ficha__titulo">El día es el de Malargüe, no el del servidor</div>
+    <p>El servidor corre tres horas adelante. De 21:00 a medianoche, preguntarle
+    "qué día es" devuelve el día siguiente. Cualquier fecha que signifique
+    <strong>"qué día es para el negocio"</strong> sale de una función propia. Antes
+    de eso, una promo creada de noche no regía hasta el otro día, y la cena del
+    último día de un período se liquidaba en el siguiente.</p>
+  </div>
+
+  <div class="ficha ficha--lima">
+    <div class="ficha__titulo">Todo esto está probado, no supuesto</div>
+    <p>Hay pruebas automáticas que recorren cada circuito: permisos, pedidos,
+    reembolsos, liquidaciones, campañas, promociones, renovación de Plus, cargos
+    del rider, mandados, notificaciones. Y una prueba de punta a punta que recorre
+    el flujo entero contra la base real: la administración crea un local y un
+    rider, el local arma su menú, el cliente pide, se confirma el pago, el local
+    prepara, el rider retira y entrega con el código.</p>
+    <p><strong>Las pruebas de permisos se corren cambiando de usuario a propósito.</strong>
+    Corridas como administrador pasarían siempre, aunque la regla estuviera mal.</p>
+  </div>
+</section>
+
+<!-- ================= 13 ================= -->
+<section>
+  <h2><span class="num">13</span>Privacidad y seguridad</h2>
+  <p class="entradilla">
+    Quién ve qué, en tres capas. Están verificadas por pruebas automáticas, no
+    solo escondidas en la pantalla.
+  </p>
+
+  <ol class="pasos">
+    <li>
+      <span class="pasos__t">Antes de aceptar, el rider no ve al cliente</span>
+      La oferta que recibe <strong>no incluye</strong> el nombre, el teléfono ni
+      las indicaciones del cliente. Esos datos aparecen recién cuando acepta el
+      envío.
+    </li>
+    <li>
+      <span class="pasos__t">El rider nunca ve el pedido</span>
+      Qué productos pidió el cliente y cuánto pagó no le hace falta para
+      entregar. No se le devuelve ni una fila.
+    </li>
+    <li>
+      <span class="pasos__t">La libreta de direcciones es del cliente</span>
+      Ni el local ni el rider la ven. A ellos les llega copiada
+      <strong>solo la dirección de esa entrega</strong>.
+    </li>
+  </ol>
+
+  <h3>Otras decisiones</h3>
+  <table>
+    <tr><th style="width:52mm">Qué</th><th>Cómo</th></tr>
+    <tr><td>Fotos del catálogo</td><td>Públicas, servidas por CDN. Cada local <strong>solo puede escribir dentro de su propia carpeta</strong>.</td></tr>
+    <tr><td>Documentos del rider</td><td>Depósito privado: los ve el rider dueño y la administración, nadie más.</td></tr>
+    <tr><td>Ubicación del rider</td><td>Se guarda <strong>una sola posición</strong>, que se sobrescribe. Guardar cada ping de GPS infla la base sin dar nada; el seguimiento en vivo va por otro canal.</td></tr>
+    <tr><td>El origen del envío</td><td>Se copia, no se referencia. Si un local se muda, los envíos viejos tienen que seguir diciendo desde dónde salieron.</td></tr>
+    <tr><td>Notificaciones</td><td>Una fila por persona, no un mensaje para todos: cada uno ve solo lo suyo y se sabe quién la abrió.</td></tr>
+  </table>
+
+  <h3>Los avisos que salen solos</h3>
+  <div class="ficha">
+    <div class="dato"><div class="dato__k" style="font-weight:700">Carrito abandonado</div><div class="dato__v">El cliente armó el pedido, eligió tarjeta y se fue. Como el pedido se cancela a los 30 minutos, el aviso sale <strong>a los 10</strong>, para que todavía llegue a pagarlo, y lleva derecho a la pantalla de pago de <em>ese</em> pedido. No se repite por el mismo pedido.</div></div>
+    <div class="dato"><div class="dato__k" style="font-weight:700">Cliente dormido</div><div class="dato__v">Hace N días que no pide. Acá el riesgo no es llegar tarde sino cansarlo, así que no se le vuelve a escribir hasta pasado un período configurable.</div></div>
+  </div>
+
+  <p>El nombre de la persona se reemplaza <strong>al leer el mensaje, no al
+  mandarlo</strong>: si después corrige cómo se llama, el mensaje que todavía no
+  abrió ya la trata bien.</p>
+</section>
+
+<!-- ================= 14 ================= -->
+<section>
+  <h2><span class="num">14</span>Estado al 10/11/2026</h2>
+  <p class="entradilla">
+    Las credenciales de producción están cargadas y la app publicada ya puede
+    cobrar de verdad. <strong>Todavía no hubo un cobro real aprobado</strong>: los
+    tres intentos del 13/10 rebotaron.
+  </p>
+
+  <h3>Qué está hecho y probado</h3>
+  <table>
+    <tr><th style="width:68mm">Pieza</th><th>Estado</th></tr>
+    <tr><td>Cobro de un pedido con tarjeta</td><td>Probado completo: aprobado, rechazado y en revisión.</td></tr>
+    <tr><td>Alta de MODO YA Plus</td><td>Probado, con la protección contra el doble cobro.</td></tr>
+    <tr><td>Renovación mensual de Plus</td><td>Escrita y probada del lado de la base. El cobro en sí no se pudo probar sin producción.</td></tr>
+    <tr><td>Tarjetas guardadas</td><td>Escrito. <strong>No se puede probar sin credenciales reales.</strong></td></tr>
+    <tr><td>Avisos de Mercado Pago (webhook)</td><td><strong>Funciona en producción</strong>: el 13/10 llegaron tres avisos reales con firma válida.</td></tr>
+    <tr><td>Devoluciones y penalidades</td><td>Escritas y probadas del lado de la base, las cuatro situaciones.</td></tr>
+    <tr><td>Liquidaciones</td><td>Probadas de punta a punta, incluido que cada uno vea solo la suya.</td></tr>
+    <tr><td>Procesador de avisos</td><td>Escrito y probado. <strong>Falta publicarlo en el servidor.</strong></td></tr>
+  </table>
+
+  <h3>Qué falta, en orden</h3>
+  <ol class="pasos">
+    <li>
+      <span class="pasos__t">Publicar las dos funciones de pago</span>
+      La que cobra está publicada en una versión del 28/09, anterior a la
+      protección contra el doble cobro. Y el procesador de avisos
+      <strong>no existe todavía en el servidor</strong>: el reloj que lo llama cada
+      minuto está dando error. Es lo primero.
+    </li>
+    <li>
+      <span class="pasos__t">Un cobro real chico, con su devolución</span>
+      Para validar las dos puntas con plata de verdad. Hay una guía escrita paso
+      a paso para hacerlo.
+    </li>
+    <li>
+      <span class="pasos__t">Pedirle a Mercado Pago los cobros recurrentes</span>
+      Sin eso, Plus no se renueva solo.
+    </li>
+  </ol>
+
+  <h3>Fuera de los pagos</h3>
+  <ul>
+    <li><strong>Mapas:</strong> hoy las baldosas y la ruta salen de servidores públicos que no admiten uso productivo. El proveedor definitivo ya se elige sin tocar código.</li>
+    <li><strong>Tiendas:</strong> la publicación en Google Play y App Store tiene sus propios pasos, documentados aparte.</li>
+    <li><strong>Notificaciones al celular:</strong> funcionan en Android. iOS necesita cuenta de desarrollador de Apple y certificados.</li>
+  </ul>
+
+  <div class="ficha ficha--negra">
+    <div class="ficha__titulo">Una cosa que conviene tener resuelta antes de crecer</div>
+    <p>Hoy MODO YA cobra todo y le liquida al local cada período. Mercado Pago
+    tiene una modalidad —el <strong>split de pagos</strong>— en la que la plata de
+    cada venta le entra directo al local y MODO YA se queda con su parte en el
+    mismo cobro. El local vería su plata al instante, sin esperar la liquidación.</p>
+    <p>Está analizado y escrito qué haría falta. <strong>No está hecho</strong>, y
+    tiene una contra concreta: las penalidades que hoy se descuentan de la
+    liquidación habría que cobrarlas de otra manera, porque el local ya cobró.</p>
+  </div>
+
+  <div class="cierre">
+    <h3>Cualquier duda sobre este documento</h3>
+    <p>Está escrito a partir del sistema tal como está hoy. Si algo de acá no
+    coincide con lo que ves en la app, decímelo: o cambió algo o hay algo que
+    corregir, y en los dos casos quiero saberlo.</p>
+    <p style="margin-bottom:0"><strong style="font-family:var(--display);font-size:13pt">Codea Desarrollos</strong><br>
+    <span style="color:#B9B9B2">Desarrollo y mantenimiento de MODO YA</span></p>
+  </div>
+</section>
+
+</body>
+</html>
