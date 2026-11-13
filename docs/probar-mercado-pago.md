@@ -35,13 +35,24 @@ YA):
 - En **Actividad**, buscá los tres intentos del 13/10 (alrededor de las 14:40):
   el detalle dice por qué rebotaron.
 
+**Las cuentas para la prueba.** No hay cuentas fijas con contraseña: los
+scripts de test (`preparar_prueba_app.ps1`) las crean con claves al azar y las
+dejan solo en `env/test.json`, en la compu donde se corrieron. Para el cobro
+real se usan tres cuentas, y todas se borran al final (sección 5):
+
+| Cuenta | Cómo se consigue |
+|---|---|
+| Administración | La tuya de siempre |
+| Local "Prueba" | La creás vos desde Administración → Locales → "Nuevo local", sin email. La app te muestra el usuario y la contraseña generados: anotalos |
+| Cliente | Te registrás en la app con **tu** email real (no `@modoya.test`: Mercado Pago necesita un email de verdad del que paga, y no puede ser el de Carolina) |
+
 **Un local de prueba.** Desde la app, como administración, dá de alta un local
 "Prueba" con horario de 00:00 a 23:59 y un producto de $100. El total va a ser
 $100 más el envío (hoy $3.550).
 
 ## 2. El cobro
 
-1. Instalá la `v1.15.0` (o la que salga después) en un celular. Las versiones
+1. Instalá la `v1.16.0` (o la que salga después) en un celular. Las versiones
    anteriores a la 1.15 **no cobran**: simulan el pago.
 2. Registrate como cliente con tu email.
 3. Guardá una dirección **dentro de Malargüe**. Desde 0071 la app rechaza un pin
@@ -58,9 +69,15 @@ Lo que tiene que pasar:
 | Mercado Pago → Actividad | El cobro aprobado |
 | MODO YA → Administración → Liquidaciones → Avisos de Mercado Pago | Un aviso `order.processed`, firma verificada, con la nota "ya estaba resuelto" |
 
-## 3. La devolución
+## 3. La devolución (o no)
 
-Entrá como el local "Prueba" y **rechazá el pedido**. En menos de un minuto el
+**Si querés que la plata le quede a Carolina**, saltá este paso: no rechaces el
+pedido. El cobro aprobado ya está en su cuenta; cuándo lo puede usar depende
+del plazo de acreditación que tenga elegido en Mercado Pago. Para cerrar el
+pedido, el local lo acepta y lo marca listo como cualquier otro.
+
+**Si querés recuperar la plata**, entrá como el local "Prueba" y **rechazá el
+pedido**. En menos de un minuto el
 cron `reembolsar-pedidos` le devuelve el 100% al cliente.
 
 | Dónde | Qué ves |
@@ -82,6 +99,22 @@ y el pago queda como devuelto (si devolvés una parte, queda anotada la parte).
 La **renovación automática** de Plus no se puede probar todavía: necesita que
 Mercado Pago habilite los cobros recurrentes (Card on File MIT) para la cuenta.
 Hay que pedírselo.
+
+## 5. Después: borrar lo de prueba
+
+Los datos de prueba viven en la misma base que los reales, así que primero se
+mira qué hay y recién después se borra. Esta consulta solo lee:
+
+```powershell
+powershell -NoProfile -Command "& './supabase/scripts/sql.ps1' -Archivo 'supabase/tests/inventario_de_datos.sql'"
+```
+
+Lista cada cuenta, local y rider con su movimiento, y los pagos separados en
+simulados y reales. Con eso se marca qué es de prueba (el local "Prueba", tu
+cliente, los `@modoya.test` y lo que haya quedado de antes) y se arma el
+borrado de exactamente eso. Antes de borrar, una copia de la base: el plan
+gratis de Supabase no hace copias solo. Las fotos de productos se borran desde
+Storage en el panel, porque por SQL no se puede.
 
 ## Si algo falla
 
