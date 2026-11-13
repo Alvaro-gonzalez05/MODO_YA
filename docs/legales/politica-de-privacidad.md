@@ -14,7 +14,8 @@
 ## 1. Quién trata tus datos
 
 - **Responsable:** [COMPLETAR: razón social o nombre completo]
-- **CUIT:** [COMPLETAR]
+- **CUIT o CUIL:** [COMPLETAR] *(si no está registrada en AFIP, va el CUIL; la
+  norma pide identificar al responsable, no que sea una empresa)*
 - **Domicilio:** [COMPLETAR]
 - **Contacto para temas de privacidad:** [COMPLETAR: email]
 

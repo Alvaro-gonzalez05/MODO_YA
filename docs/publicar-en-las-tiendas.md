@@ -22,10 +22,27 @@ instalar la app nueva una vez.
 ## Google Play
 
 1. **Cuenta de desarrollador**: [play.google.com/console/signup](https://play.google.com/console/signup),
-   USD 25 una sola vez. Conviene crearla como **organización** (pide número
-   D-U-N-S, que es gratis pero tarda unos días): a las cuentas personales
-   nuevas Google les exige una prueba cerrada con 12 testers durante 14 días
-   antes de dejarlas publicar.
+   USD 25 una sola vez. Hay dos caminos y el costo de cada uno es distinto:
+   - **A nombre del negocio (organización)**: pide número **D-U-N-S**, que es
+     gratis pero tarda unos días y necesita una entidad registrada. Google
+     **no da excepciones**: sin D-U-N-S no habilita la cuenta de organización
+     (la única salvedad son organismos de gobierno). A cambio, se publica
+     derecho, sin prueba previa.
+   - **A nombre de una persona (personal)**: nombre legal, domicilio, teléfono
+     y un documento de identidad. El costo es que a las cuentas personales
+     creadas después del 13/11/2023 Google les exige una **prueba cerrada con
+     12 testers durante 14 días corridos** antes de habilitar producción.
+
+   **El CUIT no es requisito de Google en ninguno de los dos casos.** Los datos
+   impositivos aparecen en el perfil de pagos solo si la app cobra con la
+   facturación de Google, y MODO YA cobra por fuera, con Mercado Pago. Para la
+   cuenta personal alcanza el DNI.
+
+   **No conviene usar el CUIT ni la identidad de un familiar.** La cuenta, las
+   dos apps, los términos y la responsabilidad quedan a nombre de esa persona
+   para siempre, y la cuenta de Mercado Pago que cobra es de Carolina: los dos
+   nombres tienen que ser el mismo o queda una inconsistencia que miran tanto
+   Google como AFIP.
 2. **Firma**: la clave de los APK (`D:\dev\claves\modoya\`, secretos de GitHub)
    sirve como clave de subida. Al crear la app, aceptar **Play App Signing**.
 3. **Formato**: Play pide **AAB**, no APK. Agregar al workflow de release
