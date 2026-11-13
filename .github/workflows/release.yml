@@ -107,6 +107,25 @@ jobs:
           --dart-define-from-file=../../${{ env.CONFIG }}
           --dart-define=MY_VERSION=${{ env.VERSION }}
 
+      # Google Play no acepta APK: pide un Android App Bundle y el reparto por
+      # arquitectura lo hace la tienda. El APK se sigue armando porque es lo
+      # que se instala a mano mientras la app no esté publicada.
+      - name: Compilar MODO YA para Google Play
+        working-directory: apps/modo_ya
+        run: >
+          flutter build appbundle --release
+          --build-name=${{ env.VERSION }} --build-number=${{ env.BUILD }}
+          --dart-define-from-file=../../${{ env.CONFIG }}
+          --dart-define=MY_VERSION=${{ env.VERSION }}
+
+      - name: Compilar MODO YA Rider para Google Play
+        working-directory: apps/repartidor
+        run: >
+          flutter build appbundle --release
+          --build-name=${{ env.VERSION }} --build-number=${{ env.BUILD }}
+          --dart-define-from-file=../../${{ env.CONFIG }}
+          --dart-define=MY_VERSION=${{ env.VERSION }}
+
       - name: Renombrar para que se entienda cuál bajar
         run: |
           mkdir -p salida
@@ -116,12 +135,14 @@ jobs:
           mv $a/app-armeabi-v7a-release.apk salida/MODO_YA-Android-32bits.apk
           mv $r/app-arm64-v8a-release.apk   salida/MODO_YA-Rider-Android.apk
           mv $r/app-armeabi-v7a-release.apk salida/MODO_YA-Rider-Android-32bits.apk
+          mv apps/modo_ya/build/app/outputs/bundle/release/app-release.aab   salida/MODO_YA-GooglePlay.aab
+          mv apps/repartidor/build/app/outputs/bundle/release/app-release.aab salida/MODO_YA-Rider-GooglePlay.aab
           ls -la salida
 
       - uses: actions/upload-artifact@v4
         with:
           name: android
-          path: salida/*.apk
+          path: salida/*
 
   windows:
     name: Windows (instalador)
