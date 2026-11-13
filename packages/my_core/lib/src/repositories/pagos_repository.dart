@@ -148,6 +148,39 @@ class PagosRepository {
     return cuerpo['id'] as String;
   }
 
+  /// El medio de pago exacto según Mercado Pago, por los primeros seis dígitos:
+  /// `(id: 'debvisa', tipo: 'debit_card')`.
+  ///
+  /// Por qué no alcanza con `MyMarcaTarjeta.deNumero` (my_ui): el primer dígito dice
+  /// la marca pero no si es crédito, débito o prepaga, y Mercado Pago rechaza
+  /// el cobro si el tipo no coincide con la tarjeta. Pasó con el primer cobro
+  /// real, con una Visa de débito.
+  ///
+  /// Si Mercado Pago no contesta se devuelve null y se cobra igual con la
+  /// marca: el servidor prueba crédito, débito y prepaga (`mediosAProbar`).
+  Future<({String id, String tipo})?> _medioDePago(String numero) async {
+    final limpio = numero.replaceAll(RegExp(r'\D'), '');
+    if (simulado || limpio.length < 6) return null;
+    try {
+      final r = await http
+          .get(Uri.parse(
+            'https://api.mercadopago.com/v1/payment_methods/search'
+            '?public_key=${Entorno.mpPublicKey}&bins=${limpio.substring(0, 6)}'
+            '&marketplace=NONE&status=active',
+          ))
+          .timeout(const Duration(seconds: 8));
+      if (r.statusCode >= 300) return null;
+      final resultados = (jsonDecode(r.body) as Map<String, dynamic>)['results'] as List?;
+      final m = resultados?.firstOrNull as Map?;
+      final id = m?['id'];
+      final tipo = m?['payment_type_id'];
+      if (id is! String || tipo is! String) return null;
+      return (id: id, tipo: tipo);
+    } catch (_) {
+      return null;
+    }
+  }
+
   String _errorDeTokenizacion(Map<String, dynamic> cuerpo) {
     final causa = (cuerpo['cause'] as List?)?.firstOrNull as Map?;
     return switch (causa?['code']?.toString()) {
@@ -178,12 +211,14 @@ class PagosRepository {
     final token = await _tokenizar(
       numero: numero, titular: titular, mes: mes, anio: anio, codigo: codigo, documento: documento,
     );
+    final medio = await _medioDePago(numero);
     final limpio = numero.replaceAll(RegExp(r'\D'), '');
     return _cobrar({
       'pedido_id': pedidoId,
       'token': token,
       'cuotas': cuotas,
-      'metodo_pago_id': marca,
+      'metodo_pago_id': medio?.id ?? marca,
+      if (medio != null) 'tipo_medio': medio.tipo,
       'guardar': guardar,
       'marca': marca,
       'ultimos4': limpio.length >= 4 ? limpio.substring(limpio.length - 4) : limpio,
@@ -301,12 +336,14 @@ class PagosRepository {
     final token = await _tokenizar(
       numero: numero, titular: titular, mes: mes, anio: anio, codigo: codigo, documento: documento,
     );
+    final medio = await _medioDePago(numero);
     // La tarjeta queda guardada siempre: suscribirse es autorizar el cobro de
     // todos los meses, y sin tarjeta guardada la renovación no se puede cobrar.
     return _cobrar({
       'accion': 'plus',
       'token': token,
-      'metodo_pago_id': marca,
+      'metodo_pago_id': medio?.id ?? marca,
+      if (medio != null) 'tipo_medio': medio.tipo,
       'titular': titular,
       'marca': marca,
       'ultimos4': _ultimos4(numero),

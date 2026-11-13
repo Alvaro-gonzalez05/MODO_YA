@@ -61,8 +61,11 @@ interface Cuerpo {
   /** Tarjeta guardada con la que paga (si no es una nueva). */
   card_id?: string;
   cuotas?: number;
-  /** "visa", "master"... lo dice Mercado Pago al tokenizar. */
+  /** "visa", "debvisa", "master"... (el `payment_method_id` de Mercado Pago). */
   metodo_pago_id?: string;
+  /** credit_card, debit_card o prepaid_card. Lo manda la app desde la v1.17;
+   *  las anteriores no, y ahi se prueban las combinaciones (mediosAProbar). */
+  tipo_medio?: string;
   guardar?: boolean;
   /** Para mostrar "Visa ••••4218" sin volver a preguntarle a Mercado Pago. */
   marca?: string;
@@ -156,6 +159,70 @@ async function crearOrden(cuerpo: unknown, idempotencia: string) {
         : 'rechazado' as const,
     detalleMp,
   };
+}
+
+/** Como llama Mercado Pago al medio de pago: el id ("debvisa") y el tipo
+ *  ("debit_card") tienen que coincidir con la tarjeta del token, o Mercado
+ *  Pago rechaza el pedido sin crear la orden. */
+type Medio = { id: string; type: 'credit_card' | 'debit_card' | 'prepaid_card' };
+
+const IDS_DE_DEBITO = new Set(['debvisa', 'debmaster', 'maestro', 'debcabal']);
+
+/** Las combinaciones a probar, en orden, para lo que manda la app.
+ *
+ * Hasta la v1.16 la app adivinaba la marca por el primer digito y mandaba
+ * siempre "visa" o "master": una Visa de debito iba como `visa`/`credit_card`
+ * y Mercado Pago la rechazaba sin crear la orden (13/11, primer cobro real con
+ * una tarjeta de debito). Como esas versiones siguen instaladas, si no viene el
+ * tipo se prueba credito, despues debito y despues prepaga de la misma marca.
+ * La app nueva pregunta el medio exacto por los primeros digitos y lo manda en
+ * `tipo_medio`: ahi se usa ese y nada mas.
+ */
+function mediosAProbar(id: string | undefined, tipo: string | undefined): Medio[] {
+  const marca = (id ?? '').trim();
+  if (tipo === 'credit_card' || tipo === 'debit_card' || tipo === 'prepaid_card') {
+    return [{ id: marca, type: tipo }];
+  }
+  // Las tarjetas guardadas traen el id que dio Mercado Pago al guardarlas.
+  if (IDS_DE_DEBITO.has(marca)) return [{ id: marca, type: 'debit_card' }];
+
+  const debito: Record<string, string[]> = {
+    visa: ['debvisa'],
+    master: ['debmaster', 'maestro'],
+    cabal: ['debcabal'],
+  };
+  const lista: Medio[] = [{ id: marca, type: 'credit_card' }];
+  for (const d of debito[marca] ?? []) lista.push({ id: d, type: 'debit_card' });
+  if (marca in debito) lista.push({ id: marca, type: 'prepaid_card' });
+  return lista;
+}
+
+/** `crearOrden` probando cada medio posible hasta que Mercado Pago acepte uno.
+ *
+ * Solo se pasa al siguiente con `SinOrden`: ahi Mercado Pago no creo nada y es
+ * seguro que no cobro. Un rechazo del banco (orden creada) o un 5xx cortan en
+ * el acto, igual que antes.
+ *
+ * El primer intento usa la clave de siempre y los siguientes le suman un
+ * sufijo fijo: si el pedido se reintenta con la misma clave, cada combinacion
+ * vuelve a caer en su respuesta guardada y no se crea una orden de mas.
+ */
+async function crearOrdenProbandoMedios(
+  armar: (medio: Medio) => unknown,
+  clave: string,
+  medios: Medio[],
+) {
+  let ultimo: unknown = new SinOrden('Sin medio de pago');
+  for (const [i, medio] of medios.entries()) {
+    try {
+      return await crearOrden(armar(medio), i === 0 ? clave : `${clave}-m${i}`);
+    } catch (e) {
+      if (!(e instanceof SinOrden)) throw e;
+      console.error('mercado pago no acepto el medio', medio.id, medio.type, e.message);
+      ultimo = e;
+    }
+  }
+  throw ultimo;
 }
 
 /** El cliente como "customer" de Mercado Pago, que es lo que permite guardar
@@ -524,7 +591,7 @@ Deno.serve(async (req) => {
 
       let r: Awaited<ReturnType<typeof crearOrden>>;
       try {
-        r = await crearOrden({
+        r = await crearOrdenProbandoMedios((medio) => ({
           type: 'online',
           processing_mode: 'automatic',
           total_amount: importe(monto),
@@ -534,15 +601,15 @@ Deno.serve(async (req) => {
             payments: [{
               amount: importe(monto),
               payment_method: {
-                id: c.metodo_pago_id,
-                type: 'credit_card',
+                id: medio.id,
+                type: medio.type,
                 token: c.token,
                 installments: 1,
                 statement_descriptor: 'MODO YA PLUS',
               },
             }],
           },
-        }, tp.clave as string);
+        }), tp.clave as string, mediosAProbar(c.metodo_pago_id, c.tipo_medio));
       } catch (e) {
         return await cobroSinOrden(e, async (texto) => {
           await servicio.rpc('plus_alta_resultado', {
@@ -663,7 +730,8 @@ Deno.serve(async (req) => {
 
     let r: Awaited<ReturnType<typeof crearOrden>>;
     try {
-      r = await crearOrden({
+      const medios = mediosAProbar(c.metodo_pago_id, c.tipo_medio);
+      r = await crearOrdenProbandoMedios((medio) => ({
         type: 'online',
         processing_mode: 'automatic',
         total_amount: importe(pedido.total),
@@ -674,15 +742,17 @@ Deno.serve(async (req) => {
           payments: [{
             amount: importe(pedido.total),
             payment_method: {
-              id: c.metodo_pago_id,
-              type: 'credit_card',
+              id: medio.id,
+              type: medio.type,
               token: c.token,
-              installments: cuotas,
+              // El debito y la prepaga van en un pago: Mercado Pago rechaza
+              // cuotas en esos tipos.
+              installments: medio.type === 'credit_card' ? cuotas : 1,
               statement_descriptor: 'MODO YA',
             },
           }],
         },
-      }, claveDelCobro);
+      }), claveDelCobro, medios);
     } catch (e) {
       return await cobroSinOrden(e, async (texto) => {
         await servicio.rpc('confirmar_pago_online', {
