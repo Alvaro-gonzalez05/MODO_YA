@@ -38,6 +38,24 @@ Future<String?> plataformaActual() async {
   return null;
 }
 
+/// Donde se baja el instalador.
+///
+/// En Android no sirve `Directory.systemTemp`: es `code_cache`, y el
+/// FileProvider que le pasa el APK al instalador del sistema solo comparte
+/// `cache`. Con la temporal de Dart la actualización fallaba con "Failed to
+/// find configured root" (de la 1.15 a la 1.16, en las dos apps).
+Future<String> _carpetaDescargas() async {
+  if (Platform.isAndroid) {
+    try {
+      final carpeta = await _canal.invokeMethod<String>('carpetaDescargas');
+      if (carpeta != null && carpeta.isNotEmpty) return carpeta;
+    } catch (_) {
+      // El lado nativo igual copia el APK a cache antes de abrirlo.
+    }
+  }
+  return Directory.systemTemp.path;
+}
+
 /// Baja el instalador y lo abre.
 ///
 /// - Windows: lo ejecuta en silencio y cierra la app; el instalador reemplaza
@@ -45,7 +63,7 @@ Future<String?> plataformaActual() async {
 /// - Android: abre el instalador del sistema, que pide confirmación.
 Future<void> instalarVersion(String url, String version, void Function(double? progreso) alProgresar) async {
   final extension = Platform.isWindows ? 'exe' : 'apk';
-  final destino = File('${Directory.systemTemp.path}${Platform.pathSeparator}MODO_YA-$version.$extension');
+  final destino = File('${await _carpetaDescargas()}${Platform.pathSeparator}MODO_YA-$version.$extension');
 
   final cliente = HttpClient();
   try {
