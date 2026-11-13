@@ -6,8 +6,9 @@
 -- Todo va en una sola consulta (union all) porque la Management API, que es
 -- la que usa sql.ps1, devuelve solo el resultado de la ultima sentencia.
 --
--- Los pagos simulados se reconocen por la referencia: pagar-pedido les pone
--- "simulado-…" cuando no se llamo a Mercado Pago.
+-- Los pagos simulados se reconocen por mp_payment_id: pagar-pedido les pone
+-- "simulado-…" cuando no se llamo a Mercado Pago. Un rechazo sin orden
+-- (Mercado Pago no llego a crearla) queda sin id.
 
 select * from (
   -- Cada cuenta, con su rol y cuando entro por ultima vez.
@@ -42,8 +43,8 @@ select * from (
   union all
   -- Los pagos agrupados: lo que importa es si hubo plata de verdad.
   select 4, 'pagos',
-         case when coalesce(referencia_externa, '') like 'simulado-%' then 'simulado'
-              when referencia_externa is null then 'sin pasarela'
+         case when coalesce(mp_payment_id, mp_order_id, '') like 'simulado-%' then 'simulado'
+              when coalesce(mp_payment_id, mp_order_id) is null then 'sin id de mercado pago'
               else 'mercado pago' end,
          metodo::text || ' / ' || estado::text,
          null,
