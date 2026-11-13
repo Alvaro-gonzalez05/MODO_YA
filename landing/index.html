@@ -778,6 +778,13 @@ html.prelaunch .if-live{display:none !important}
   font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px}
 html.prelaunch .store{opacity:.92}
 .download .soon-chip{margin-bottom:14px}
+.direct{margin-top:22px}
+.direct > b{display:block;font-size:15px;margin-bottom:10px}
+.direct__btns{display:flex;flex-wrap:wrap;gap:10px}
+.direct__btns .btn{flex:1 1 160px;max-width:240px}
+@media (max-width:560px){.direct__btns .btn{max-width:none}}
+.rider-app{display:inline-flex;align-items:center;gap:8px;margin-top:18px;color:var(--amarillo);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.rider-app .i{width:18px;height:18px}
 .final .soon-note{margin-top:10px;color:var(--amarillo);font-weight:700;font-size:clamp(15px,3.6vw,18px)}
 
 /* Entradas al hacer scroll (parten visibles: solo se suavizan) */
@@ -882,11 +889,11 @@ document.addEventListener("error", e => {
       <li><a href="#servicios">Servicios</a></li>
       <li><a href="#para-locales">Para locales</a></li>
       <li><a href="#riders">Riders</a></li>
-      <li><a href="#descargar"><span class="if-live">Descargar</span><span class="if-soon">Próximamente</span></a></li>
+      <li><a href="/descargar"><span class="if-live">Descargar</span><span class="if-soon">Descargar</span></a></li>
     </ul>
     <div class="nav__ctas">
       <a class="btn btn--ghost nav__local" href="#para-locales">Sumá tu local</a>
-      <a class="btn btn--primary" href="#descargar"><span class="if-live">Descargar</span><span class="if-soon">Próximamente</span></a>
+      <a class="btn btn--primary" href="/descargar"><span class="if-live">Descargar</span><span class="if-soon">Descargar</span></a>
     </div>
     <button class="nav__burger" id="burger" aria-label="Abrir menú" aria-expanded="false">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M8 12h12M4 17h16"/></svg>
@@ -911,7 +918,7 @@ document.addEventListener("error", e => {
         <h1><span class="w" style="--i:0">El</span> <span class="w" style="--i:1">mejor</span> <span class="w" style="--i:2">sabor,</span> <span class="w" style="--i:3">en</span> <span class="w" style="--i:4">tu</span> <span class="w" style="--i:5">casa.</span> <span class="w ya" style="--i:6"><span class="speed" aria-hidden="true"><i></i><i></i><i></i></span>YA.</span></h1>
         <p class="hero__sub">Pedí comida, hacé mandados y mandá lo que necesites en Malargüe. Rápido, simple y local.</p>
         <div class="hero__ctas">
-          <a class="btn btn--primary btn--lg" href="#descargar"><span class="if-live">Descargar la app</span><span class="if-soon">Próximamente</span></a>
+          <a class="btn btn--primary btn--lg" href="/descargar"><span class="if-live">Descargar la app</span><span class="if-soon">Descargar la app</span></a>
           <a class="btn btn--ghost btn--lg" href="#para-locales">Soy un local</a>
         </div>
         <a class="hero__rider" href="#riders"><svg class="i" aria-hidden="true"><use href="#i-moto"/></svg>¿Tenés moto? Sumate como rider</a>
@@ -972,7 +979,7 @@ document.addEventListener("error", e => {
               <span class="serv__ic"><svg class="i" aria-hidden="true"><use href="#i-food"/></svg></span>
               <span class="serv__txt"><b>Pedí comida</b><p>Hamburguesas, pizzas, lomos, empanadas y helado de los locales de Malargüe.</p><span class="serv__go">Ver locales <svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></span></span>
             </a>
-            <a class="serv" href="#descargar">
+            <a class="serv" href="/descargar">
               <span class="serv__ic"><svg class="i" aria-hidden="true"><use href="#i-box"/></svg></span>
               <span class="serv__txt"><b>Hacé un mandado</b><p>¿Te olvidaste algo, tenés que mandar un paquete o buscar una compra? Un rider lo lleva por vos.</p><span class="serv__go">Pedilo en la app <svg class="i" aria-hidden="true"><use href="#i-arrow"/></svg></span></span>
             </a>
@@ -1033,7 +1040,7 @@ document.addEventListener("error", e => {
       <div class="nudge reveal">
         <img class="food nudge__food" src="img/burger-triple.webp" alt="">
         <div class="nudge__txt"><b>¿Se te antojó? Pedilo desde la app.</b><span>Menús completos y envío gratis con <span class="code">MODOYA</span>.</span></div>
-        <a class="btn btn--primary" href="#descargar"><span class="if-live">Descargar gratis</span><span class="if-soon">Próximamente</span></a>
+        <a class="btn btn--primary" href="/descargar"><span class="if-live">Descargar gratis</span><span class="if-soon">Descargar la app</span></a>
       </div>
     </div>
   </section>
@@ -1067,7 +1074,7 @@ document.addEventListener("error", e => {
       <div class="nudge reveal">
         <img class="food nudge__food" src="img/pizza-plato.webp" alt="">
         <div class="nudge__txt"><b>El paso cero: bajate la app.</b><span>Te registrás en un minuto y pedís hoy.</span></div>
-        <a class="btn btn--primary" href="#descargar"><span class="if-live">Descargar y pedir</span><span class="if-soon">Próximamente</span></a>
+        <a class="btn btn--primary" href="/descargar"><span class="if-live">Descargar y pedir</span><span class="if-soon">Descargar la app</span></a>
       </div>
     </div>
   </section>
@@ -1185,7 +1192,7 @@ document.addEventListener("error", e => {
           <h3>¡Listo!</h3>
           <p>Te vamos a contactar por WhatsApp muy pronto. <span class="if-live">Mientras tanto, bajate la app y mirá cómo la ven tus clientes.</span><span class="if-soon">Te avisamos apenas la app esté disponible.</span></p>
           <div class="btns">
-            <a class="btn btn--primary" href="#descargar"><span class="if-live">Descargar la app</span><span class="if-soon">Próximamente</span></a>
+            <a class="btn btn--primary" href="/descargar"><span class="if-live">Descargar la app</span><span class="if-soon">Descargar la app</span></a>
             <button class="btn btn--dark" type="button" id="resetForm">Inscribir otro local</button>
           </div>
         </div>
@@ -1205,6 +1212,7 @@ document.addEventListener("error", e => {
           <span class="rider-earn__ic"><svg class="i" aria-hidden="true"><use href="#i-moto"/></svg></span>
           <div><b>Moto, bici o auto</b><span>Necesitás DNI, licencia y seguro vigentes (si usás moto o auto).</span></div>
         </div>
+        <a class="rider-app" href="/descargar#riders"><svg class="i" aria-hidden="true"><use href="#i-phone"/></svg>Bajate la app MODO YA Rider</a>
       </div>
 
       <div class="form-card reveal" id="riderCard">
@@ -1277,7 +1285,7 @@ document.addEventListener("error", e => {
           <h3>¡Ya estás en la lista!</h3>
           <p>Te escribimos por WhatsApp cuando arranquemos a validar riders en Malargüe.</p>
           <div class="btns">
-            <a class="btn btn--primary" href="#descargar"><span class="if-live">Descargar la app</span><span class="if-soon">Próximamente</span></a>
+            <a class="btn btn--primary" href="/descargar#riders">Bajar la app de riders</a>
             <button class="btn btn--dark" type="button" id="riderReset">Inscribir a otra persona</button>
           </div>
         </div>
@@ -1309,6 +1317,14 @@ document.addEventListener("error", e => {
             <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#FFFFFF" d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8 1.5 0 1.9.8 3.2.8 1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8-.1 0-2.5-1-2.5-3.9zM14 5.5c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.6 2.8-1.4z"/></svg>
             <span class="soon-tag if-soon">Pronto</span><span><small>Descargalo en</small><b>App Store</b></span>
           </a>
+        </div>
+        <!-- Mientras las tiendas revisan las apps, se instalan desde /descargar (APK de GitHub Releases) -->
+        <div class="direct">
+          <b>Mientras tanto, en Android ya podés instalarla:</b>
+          <div class="direct__btns">
+            <a class="btn btn--dark" href="/descargar#clientes">App para pedir</a>
+            <a class="btn btn--dark" href="/descargar#riders">App para riders</a>
+          </div>
         </div>
         <div class="qr">
           <!-- [QR] Placeholder decorativo: reemplazar por el QR real -->
@@ -1347,7 +1363,7 @@ document.addEventListener("error", e => {
       <p>Hecho en Malargüe, para Malargüe.</p>
       <p class="soon-note if-soon">La app se lanza muy pronto. Sumate y enterate primero.</p>
       <div class="hero__ctas">
-        <a class="btn btn--primary btn--lg" href="#descargar"><span class="if-live">Descargar la app</span><span class="if-soon">Próximamente</span></a>
+        <a class="btn btn--primary btn--lg" href="/descargar"><span class="if-live">Descargar la app</span><span class="if-soon">Descargar la app</span></a>
         <a class="btn btn--ghost btn--lg" href="#para-locales">Sumá tu local</a>
         <a class="btn btn--ghost btn--lg" href="#riders">Quiero ser rider</a>
       </div>
@@ -1379,7 +1395,7 @@ document.addEventListener("error", e => {
         <li><a href="#como-funciona">Cómo funciona</a></li>
         <li><a href="#para-locales">Para locales</a></li>
         <li><a href="#riders">Sumate como rider</a></li>
-        <li><a href="#descargar"><span class="if-live">Descargar la app</span><span class="if-soon">Próximamente</span></a></li>
+        <li><a href="/descargar"><span class="if-live">Descargar la app</span><span class="if-soon">Descargar la app</span></a></li>
       </ul>
     </div>
     <div>
@@ -1396,6 +1412,7 @@ document.addEventListener("error", e => {
         <li><a href="/terminos">Términos y Condiciones</a></li>
         <li><a href="/privacidad">Política de Privacidad</a></li>
         <li><a href="/eliminar-cuenta">Eliminar mi cuenta</a></li>
+        <li><a href="/descargar">Descargar las apps</a></li>
       </ul>
     </div>
     <div class="copy">© 2026 Modo Ya · Malargüe, Mendoza</div>
@@ -1406,7 +1423,7 @@ document.addEventListener("error", e => {
 <div class="dl-bar" id="dlBar" role="region" aria-label="Descargar la app">
   <img class="food dl-bar__food" src="img/burger-doble.webp" alt="">
   <div class="dl-bar__txt"><b class="if-live">Pedí más rápido desde la app</b><b class="if-soon">Modo Ya llega muy pronto</b><span class="if-live">Gratis · Cupón <span class="code">MODOYA</span></span><span class="if-soon">Pre-inscribite y enterate primero</span></div>
-  <a class="btn btn--primary" href="#descargar"><span class="if-live">Descargar</span><span class="if-soon">Próximamente</span></a>
+  <a class="btn btn--primary" href="/descargar"><span class="if-live">Descargar</span><span class="if-soon">Descargar</span></a>
   <button class="dl-bar__x" id="dlBarX" type="button" aria-label="Cerrar barra de descarga">×</button>
 </div>
 

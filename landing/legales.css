@@ -119,6 +119,28 @@ td:first-child{font-weight:600;width:42%}
 .atencion{margin-top:28px;padding:18px 20px 6px;border-radius:12px;background:var(--amarillo-palido);border:1px solid #F0D777}
 .atencion h2{margin:0 0 10px !important;font-size:20px !important}
 
+/* ---------- Descargar ---------- */
+.apps{display:grid;gap:16px}
+@media (min-width:721px){.apps{grid-template-columns:1fr 1fr}}
+.app{border-radius:14px;padding:22px 20px 18px;background:var(--amarillo);color:var(--negro);scroll-margin-top:80px}
+.app--rider{background:var(--negro);color:var(--blanco)}
+.app h2{margin:6px 0 6px !important;font-size:28px !important}
+.app p{margin:0 0 18px}
+.app--rider p{color:rgba(255,255,255,.78)}
+.app__tag{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.7}
+/* .hoja a pinta los links con el color del texto: sin el .hoja delante, el botón queda negro sobre negro */
+.hoja .btn--app{width:100%;padding:15px 20px;color:var(--blanco);text-decoration:none}
+.hoja .btn--app:hover{background:var(--negro)}
+.btn--app svg{width:22px;height:22px;flex:none}
+.hoja .app--rider .btn--app,.hoja .app--rider .btn--app:hover{background:var(--amarillo);color:var(--negro);border-color:var(--amarillo)}
+.app__mas{list-style:none;margin:14px 0 0 !important;padding:0 !important;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14.5px}
+.app__mas li{margin:0}
+.hoja .app a:not(.btn){color:inherit;text-decoration-color:currentColor;text-decoration-thickness:1px}
+.hoja .app a:not(.btn):hover{background:none;opacity:.75}
+.pasos{margin:0 0 18px;padding-left:22px}
+.pasos li{margin-bottom:8px}
+.pasos li::marker{font-weight:800;color:#B38E00}
+
 /* ---------- Pie ---------- */
 .otras{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0}
 .otras a{display:inline-block;padding:9px 16px;border-radius:99px;border:1.5px solid var(--gris-borde);background:var(--blanco);font-size:14.5px;font-weight:600;text-decoration:none}

@@ -3,5 +3,6 @@
   <url><loc>https://www.modoya.app/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc>https://www.modoya.app/terminos</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://www.modoya.app/privacidad</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://www.modoya.app/descargar</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://www.modoya.app/eliminar-cuenta</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>
