@@ -197,6 +197,23 @@ function mediosAProbar(id: string | undefined, tipo: string | undefined): Medio[
   return lista;
 }
 
+/** El pagador de la orden. Con `customer_id` **no** va el email: la API de
+ * Orders rechaza la combinacion ("properties combination 'customer_id' and
+ * 'email' not allowed") sin crear la orden. En sandbox no se veia porque ahi
+ * Mercado Pago no deja crear customers y siempre se mandaba solo el email; en
+ * produccion rebotaba todo pago que guardaba la tarjeta (13/11). */
+function pagador(customerId: string | null, email: string | undefined) {
+  return customerId ? { customer_id: customerId } : { email };
+}
+
+/** Las cuotas solo las acepta el credito. El debito va en un pago, y en la
+ * prepaga el campo ni existe: Mercado Pago rechaza la orden si viene
+ * ("additionalProperties 'installments' not allowed"). */
+function cuotasPara(medio: Medio, cuotas: number) {
+  if (medio.type === 'prepaid_card') return {};
+  return { installments: medio.type === 'credit_card' ? cuotas : 1 };
+}
+
 /** `crearOrden` probando cada medio posible hasta que Mercado Pago acepte uno.
  *
  * Solo se pasa al siguiente con `SinOrden`: ahi Mercado Pago no creo nada y es
@@ -596,7 +613,7 @@ Deno.serve(async (req) => {
           processing_mode: 'automatic',
           total_amount: importe(monto),
           external_reference: `plus-${cliente.id}`,
-          payer: customerId ? { email: user.email, customer_id: customerId } : { email: user.email },
+          payer: pagador(customerId, user.email),
           transactions: {
             payments: [{
               amount: importe(monto),
@@ -604,7 +621,7 @@ Deno.serve(async (req) => {
                 id: medio.id,
                 type: medio.type,
                 token: c.token,
-                installments: 1,
+                ...cuotasPara(medio, 1),
                 statement_descriptor: 'MODO YA PLUS',
               },
             }],
@@ -737,7 +754,7 @@ Deno.serve(async (req) => {
         total_amount: importe(pedido.total),
         external_reference: pedido.id,
         description: `MODO YA pedido ${pedido.codigo}`,
-        payer: customerId ? { email: user.email, customer_id: customerId } : { email: user.email },
+        payer: pagador(customerId, user.email),
         transactions: {
           payments: [{
             amount: importe(pedido.total),
@@ -745,9 +762,7 @@ Deno.serve(async (req) => {
               id: medio.id,
               type: medio.type,
               token: c.token,
-              // El debito y la prepaga van en un pago: Mercado Pago rechaza
-              // cuotas en esos tipos.
-              installments: medio.type === 'credit_card' ? cuotas : 1,
+              ...cuotasPara(medio, cuotas),
               statement_descriptor: 'MODO YA',
             },
           }],
