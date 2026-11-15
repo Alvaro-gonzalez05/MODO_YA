@@ -1,13 +1,15 @@
 # Términos y Condiciones de MODO YA
 
-**Última actualización:** [COMPLETAR: fecha de publicación]
+**Última actualización:** 15 de noviembre de 2026
 
-> **Este es un borrador técnico, no un documento legal terminado.** Lo escribió
-> el equipo de desarrollo describiendo con precisión cómo funciona el sistema,
-> para que un abogado trabaje sobre algo concreto y no sobre una plantilla.
-> **No lo publiques sin revisión profesional.** Los puntos marcados
-> `[COMPLETAR]` necesitan datos que solo tiene la empresa, y la sección 9
-> (relación con los repartidores) es la que más urgente necesita un abogado.
+> **Publicado sin revisión legal.** Lo escribió el equipo de desarrollo
+> describiendo con precisión cómo funciona el sistema, para que un abogado
+> trabaje sobre algo concreto y no sobre una plantilla. Está en línea porque
+> Google Play exige que exista, pero **sigue necesitando revisión
+> profesional**. La **sección 9** (relación con los repartidores) quedó con una
+> nota provisoria: el vínculo contractual, la facturación, los seguros y la
+> cobertura ante siniestros los tiene que redactar un abogado. Es lo más
+> urgente de todo el documento.
 
 ---
 
@@ -16,10 +18,10 @@
 MODO YA es una plataforma de pedidos y mensajería que opera en Malargüe,
 provincia de Mendoza, República Argentina.
 
-- **Titular:** [COMPLETAR: razón social o nombre completo]
-- **CUIT:** [COMPLETAR]
-- **Domicilio:** [COMPLETAR]
-- **Contacto:** [COMPLETAR: email y teléfono de atención]
+- **Titular:** Cristina Carolina Gamallo
+- **CUIL:** 27-35876052-5
+- **Domicilio:** Luis Tejedor 616, B° G. Bastías, Malargüe (5613), Mendoza, Argentina
+- **Contacto:** gamallocaro@hotmail.com — WhatsApp +54 9 260 468 3817
 
 En adelante, "MODO YA", "la plataforma" o "nosotros".
 
@@ -117,9 +119,13 @@ que pagaste, productos y envío.
 **Si cancelás un pedido que ya pagaste**, antes de que el comercio lo acepte,
 se te devuelve el 100%.
 
-**Una vez que el comercio aceptó el pedido y empezó a prepararlo**, la
-cancelación depende del comercio. [COMPLETAR: política de cancelación tardía —
-decisión pendiente de la empresa.]
+**Una vez que el comercio aceptó el pedido y empezó a prepararlo**, ya no
+podés cancelarlo desde la aplicación: la comida se está preparando y el comercio
+ya puso el trabajo y los ingredientes. Si hubo un problema, escribinos y lo
+resolvemos caso por caso.
+
+**Si el repartidor ya retiró el pedido**, deja de ser una cancelación y pasa a
+ser un **reclamo**: se abre desde la aplicación.
 
 **Si el repartidor no puede completar la entrega**, el envío vuelve a ofrecerse
 a otro repartidor y el pedido sigue su curso. Si finalmente no se entrega, se
@@ -170,8 +176,12 @@ vigente se informa en la app y puede cambiar con aviso previo.
 - Si en un período el efectivo que juntó en la puerta más sus descuentos superan
   lo que ganó, el saldo es a favor de MODO YA y debe rendirlo.
 
-[COMPLETAR: definición de la relación contractual, requisitos de facturación,
-seguros exigidos y cobertura ante siniestros.]
+Esta sección describe **cómo funciona la plataforma**; no define el vínculo
+legal entre MODO YA y el repartidor. Las condiciones contractuales, los
+requisitos de facturación, los seguros exigidos y la cobertura ante siniestros
+**todavía no están definidos**: los tiene que redactar un abogado. Cuando lo
+estén se publican, con su fecha, y se les avisa a los repartidores antes de que
+rijan.
 
 ## 10. Reclamos
 
@@ -223,7 +233,7 @@ después de esa fecha implica aceptar la versión nueva.
 ## 15. Cuenta y eliminación
 
 Podés eliminar tu cuenta en cualquier momento, desde la app o desde
-[COMPLETAR: URL de la página de eliminación]. Qué se borra y qué se conserva
+https://modoya.app/eliminar-cuenta. Qué se borra y qué se conserva
 está explicado en la Política de Privacidad.
 
 ## 16. Ley aplicable y jurisdicción

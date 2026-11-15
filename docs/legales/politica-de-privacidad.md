@@ -1,6 +1,6 @@
 # Política de Privacidad de MODO YA
 
-**Última actualización:** [COMPLETAR: fecha de publicación]
+**Última actualización:** 15 de noviembre de 2026
 
 > **Borrador técnico, no un documento legal terminado.** Describe con exactitud
 > qué datos guarda el sistema hoy, verificado contra la base de datos real.
@@ -13,11 +13,11 @@
 
 ## 1. Quién trata tus datos
 
-- **Responsable:** [COMPLETAR: razón social o nombre completo]
-- **CUIT o CUIL:** [COMPLETAR] *(si no está registrada en AFIP, va el CUIL; la
-  norma pide identificar al responsable, no que sea una empresa)*
-- **Domicilio:** [COMPLETAR]
-- **Contacto para temas de privacidad:** [COMPLETAR: email]
+- **Responsable:** Cristina Carolina Gamallo
+- **CUIL:** 27-35876052-5 *(no tiene CUIT: no está inscripta en AFIP. La norma pide
+  identificar al responsable, no que sea una empresa.)*
+- **Domicilio:** Luis Tejedor 616, B° G. Bastías, Malargüe (5613), Mendoza, Argentina
+- **Contacto para temas de privacidad:** gamallocaro@hotmail.com
 
 ## 2. Qué datos recolectamos
 
@@ -123,8 +123,11 @@ No vendemos tus datos. No los cedemos con fines publicitarios de terceros.
 Podemos entregarlos a una autoridad judicial o administrativa competente cuando
 una norma nos obligue.
 
-[COMPLETAR: confirmar si alguno de estos proveedores aloja datos fuera de la
-Argentina y, si corresponde, declarar la transferencia internacional.]
+**Transferencia internacional.** Supabase y Google Firebase almacenan y
+procesan los datos en servidores ubicados **fuera de la Argentina**. Mercado
+Pago opera en el país. Esa transferencia es necesaria para prestar el servicio y
+se realiza conforme al artículo 12 de la Ley 25.326, con el consentimiento del
+titular al aceptar esta política.
 
 ## 7. Cuánto tiempo los guardamos
 
@@ -136,7 +139,8 @@ Argentina y, si corresponde, declarar la transferencia internacional.]
   teléfono.
 - **Documentación de repartidores:** mientras esté vinculado a la plataforma y
   el plazo legal posterior que corresponda.
-- **Registros técnicos:** [COMPLETAR: plazo].
+- **Registros técnicos:** hasta **12 meses**, salvo que un reclamo o una
+  investigación de seguridad en curso obliguen a conservarlos más tiempo.
 
 ## 8. Tus derechos
 
@@ -147,7 +151,7 @@ Según la Ley 25.326 de Protección de Datos Personales, podés:
 - **Actualizarlos.**
 - **Pedir que se supriman**, con los límites del punto 7.
 
-Para ejercerlos escribí a [COMPLETAR: email]. Tenemos diez días corridos para
+Para ejercerlos escribí a gamallocaro@hotmail.com. Tenemos diez días corridos para
 responder un pedido de acceso y cinco días hábiles para uno de rectificación o
 supresión.
 
@@ -162,7 +166,7 @@ redacción vigente con el abogado.)*
 ## 9. Cómo eliminar tu cuenta
 
 Podés eliminarla desde la app, en "Mi cuenta", o desde
-[COMPLETAR: URL de la página de eliminación], sin necesidad de escribirnos.
+https://modoya.app/eliminar-cuenta, sin necesidad de escribirnos.
 
 **Qué se elimina:** tu nombre, tu teléfono, tu correo, tus direcciones, tus
 tarjetas guardadas, tu suscripción y el identificador de tu dispositivo.

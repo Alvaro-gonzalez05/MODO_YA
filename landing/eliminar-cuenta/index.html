@@ -22,8 +22,8 @@
      No toca la base: el formulario arma un correo desde la casilla del
      usuario y la administración ejecuta la baja desde el panel.
 
-     [CORREO] Antes de publicar, buscá "COMPLETAR" en este archivo y poné
-     el correo de contacto real (está en el href y en el texto visible).
+     El correo de contacto aparece dos veces: en el action del formulario y
+     en el enlace visible de abajo. Si cambia, hay que cambiarlo en los dos.
      NO cambiar la dirección /eliminar-cuenta: Google la tiene registrada.
      ===================================================================== -->
 <body>
@@ -74,7 +74,7 @@
       <h2 id="formulario">Pedir la eliminación</h2>
       <p>Te vamos a pedir que confirmes desde ese mismo correo, para asegurarnos de que la cuenta es tuya.</p>
 
-      <form class="form" id="form" action="mailto:COMPLETAR-CORREO-DE-CONTACTO?subject=Eliminar%20mi%20cuenta%20de%20MODO%20YA" method="post" enctype="text/plain" novalidate>
+      <form class="form" id="form" action="mailto:gamallocaro@hotmail.com?subject=Eliminar%20mi%20cuenta%20de%20MODO%20YA" method="post" enctype="text/plain" novalidate>
         <label>Correo electrónico con el que te registraste
           <input type="email" name="correo" id="correo" autocomplete="email" inputmode="email" required placeholder="nombre@ejemplo.com">
         </label>
@@ -90,7 +90,7 @@
       </div>
 
       <p style="margin-top:18px">También podés escribirnos a
-        <a class="correo" id="correoContacto" href="mailto:COMPLETAR-CORREO-DE-CONTACTO?subject=Eliminar%20mi%20cuenta%20de%20MODO%20YA"><mark class="pendiente">[COMPLETAR: correo de contacto]</mark></a>
+        <a class="correo" id="correoContacto" href="mailto:gamallocaro@hotmail.com?subject=Eliminar%20mi%20cuenta%20de%20MODO%20YA">gamallocaro@hotmail.com</a>
         desde la casilla con la que te registraste.</p>
       <p>Procesamos los pedidos dentro de los <b>5 días hábiles</b>.</p>
 
