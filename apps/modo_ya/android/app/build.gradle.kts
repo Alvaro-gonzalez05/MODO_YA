@@ -42,6 +42,17 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // La version de Google Play no puede llevar REQUEST_INSTALL_PACKAGES:
+        // Play no permite que una app se actualice sola por fuera de la tienda.
+        // El APK que se baja de modoya.app si lo necesita. En vez de mantener
+        // dos manifiestos, el manifiesto declara el permiso con este
+        // placeholder: con MY_TIENDA=true vale INTERNET, que ya esta declarado
+        // y el merger deduplica, asi que REQUEST_INSTALL_PACKAGES no entra.
+        // MY_TIENDA lo pone el workflow solo en los pasos que arman el .aab.
+        manifestPlaceholders["permisoInstalador"] =
+            if (System.getenv("MY_TIENDA") == "true") "android.permission.INTERNET"
+            else "android.permission.REQUEST_INSTALL_PACKAGES"
     }
 
     signingConfigs {

@@ -112,19 +112,33 @@ jobs:
       # que se instala a mano mientras la app no esté publicada.
       - name: Compilar MODO YA para Google Play
         working-directory: apps/modo_ya
+        # MY_TIENDA hace dos cosas: le saca al manifiesto de Android el
+        # permiso REQUEST_INSTALL_PACKAGES (ver android/app/build.gradle.kts)
+        # y apaga el aviso de "hay una version nueva". Las dos porque Play
+        # no permite que una app se actualice sola por fuera de la tienda.
+        env:
+          MY_TIENDA: "true"
         run: >
           flutter build appbundle --release
           --build-name=${{ env.VERSION }} --build-number=${{ env.BUILD }}
           --dart-define-from-file=../../${{ env.CONFIG }}
           --dart-define=MY_VERSION=${{ env.VERSION }}
+          --dart-define=MY_TIENDA=true
 
       - name: Compilar MODO YA Rider para Google Play
         working-directory: apps/repartidor
+        # MY_TIENDA hace dos cosas: le saca al manifiesto de Android el
+        # permiso REQUEST_INSTALL_PACKAGES (ver android/app/build.gradle.kts)
+        # y apaga el aviso de "hay una version nueva". Las dos porque Play
+        # no permite que una app se actualice sola por fuera de la tienda.
+        env:
+          MY_TIENDA: "true"
         run: >
           flutter build appbundle --release
           --build-name=${{ env.VERSION }} --build-number=${{ env.BUILD }}
           --dart-define-from-file=../../${{ env.CONFIG }}
           --dart-define=MY_VERSION=${{ env.VERSION }}
+          --dart-define=MY_TIENDA=true
 
       - name: Renombrar para que se entienda cuál bajar
         run: |

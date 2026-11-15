@@ -24,6 +24,13 @@ abstract final class Entorno {
     defaultValue: 'https://github.com/Alvaro-gonzalez05/MODO_YA/releases/latest/download/ultima.json',
   );
 
+  /// `true` en los paquetes que se suben a Google Play. Ahi actualiza la
+  /// tienda, y Play no permite que la app se actualice sola por su cuenta:
+  /// con esto el aviso de "hay una version nueva" no aparece. Lo pone el
+  /// workflow de release solo en los pasos que arman el .aab, junto con la
+  /// variable MY_TIENDA que le saca el permiso al manifiesto de Android.
+  static const esTienda = bool.fromEnvironment('MY_TIENDA');
+
   /// Clave publica de Mercado Pago (no es secreta: va en la app). Vacia =
   /// pagos simulados, para poder probar la pantalla sin cuenta.
   static const mpPublicKey = String.fromEnvironment('MY_MP_PUBLIC_KEY');

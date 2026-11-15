@@ -11,8 +11,19 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Instalar la version nueva que baja la propia app (siempre con confirmacion). -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Instalar la version nueva que baja la propia app (siempre con
+         confirmacion). Google Play no permite que una app se actualice sola
+         por fuera de la tienda, asi que el .aab no puede llevar este permiso
+         y el APK de modoya.app si.
+
+         El nombre sale de un placeholder (ver android/app/build.gradle.kts):
+         compilando con MY_TIENDA=true vale "android.permission.INTERNET",
+         que ya esta declarado arriba y el merger deduplica, asi que el
+         permiso de instalar directamente no aparece. Parece un rodeo, pero
+         es la forma de tener un solo manifiesto: tools:node="${...}" no
+         sirve, el merger lo lee antes de sustituir los placeholders y
+         revienta con "No enum constant NodeOperationType". -->
+    <uses-permission android:name="${permisoInstalador}" />
     <application
         android:label="MODO YA Rider"
         android:name="${applicationName}"

@@ -58,10 +58,20 @@ instalar la app nueva una vez.
    conectado", el permiso "Permitir todo el tiempo" y la notificación fija.
 7. Subir primero a **prueba interna**, después a producción.
 
-Además, **las dos apps** declaran `REQUEST_INSTALL_PACKAGES` (la
-autoactualización desde GitHub). Play no permite usarlo para que una app se
-actualice sola: en la versión de la tienda hay que sacar ese permiso y el aviso
-de actualización, y dejar que actualice Play.
+La autoactualización **ya está resuelta**. Play no permite que una app se
+actualice sola por fuera de la tienda, pero el APK que se baja de
+`modoya.app/descargar` sí lo necesita. Las dos cosas salen del mismo código:
+el workflow compila los `.aab` con `MY_TIENDA=true`, y esa variable
+
+- le saca al manifiesto el permiso `REQUEST_INSTALL_PACKAGES` (el nombre del
+  permiso sale de un placeholder que en modo tienda vale `INTERNET`, que ya
+  estaba declarado y el merger deduplica), y
+- apaga el aviso de "hay una versión nueva" por `Entorno.esTienda`.
+
+No se puede hacer con `tools:node="${...}"`: el merger lee ese atributo antes
+de sustituir los placeholders y falla con `No enum constant
+NodeOperationType`. Comprobado en CI sobre el manifiesto fusionado de las dos
+apps, en los dos modos.
 
 ## App Store
 

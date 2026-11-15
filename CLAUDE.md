@@ -123,6 +123,12 @@ archivo la disparó: `>> Compilando modo_ya (cambió …)`.
   error de compilación y no lo es.
 - `grep` sobre strings con acentos contra JS minificado da falsos negativos.
   Buscar siempre subcadenas sin acentos.
+- **Android no compila en esta máquina.** Gradle muere con `Unable to
+  establish loopback connection`: Java 17 en Windows usa sockets de dominio
+  Unix para su pipe interno y acá `connect0` devuelve "Invalid argument".
+  Aparte, el `java` del PATH es un JRE 1.8 de 32 bits roto (el bueno está en
+  `D:\dev\jdk17`, que es lo que apunta `JAVA_HOME`). Lo de Android se
+  verifica en GitHub Actions, que es donde se arma de verdad.
 
 ## Publicar una versión
 

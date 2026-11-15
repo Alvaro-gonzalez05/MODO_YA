@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:my_core/my_core.dart';
 
 import '../tokens.dart';
 import '../typography.dart';
@@ -55,7 +56,9 @@ class _MyAvisoActualizacionState extends State<MyAvisoActualizacion> {
   @override
   void initState() {
     super.initState();
-    if (kIsWeb || widget.versionActual.isEmpty) return;
+    // En la version de Google Play actualiza la tienda: buscar la version
+    // nueva por nuestra cuenta ahi esta prohibido por las politicas de Play.
+    if (kIsWeb || Entorno.esTienda || widget.versionActual.isEmpty) return;
     // Unos segundos de gracia: primero que cargue la app.
     _inicial = Timer(const Duration(seconds: 4), _buscar);
     _temporizador = Timer.periodic(const Duration(hours: 6), (_) => _buscar());
