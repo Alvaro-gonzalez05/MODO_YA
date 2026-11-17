@@ -9,7 +9,6 @@ import 'package:my_ui/my_ui.dart';
 class DatosTarjeta {
   const DatosTarjeta({
     required this.marca,
-    required this.cuotas,
     this.guardada,
     this.numero = '',
     this.titular = '',
@@ -31,7 +30,10 @@ class DatosTarjeta {
   final String documento;
   final bool guardar;
   final String marca;
-  final int cuotas;
+
+  /// Siempre un pago. En MODO YA no se ofrecen cuotas, pero Mercado Pago
+  /// pide el dato igual, asi que va fijo en 1.
+  final int cuotas = 1;
 }
 
 /// Formulario de tarjeta con la tarjeta dibujada arriba: se completa mientras
@@ -44,7 +46,6 @@ class FormularioTarjeta extends ConsumerStatefulWidget {
     super.key,
     required this.etiquetaBoton,
     required this.onPagar,
-    this.cuotas = false,
     this.debajoDelTotal,
   });
 
@@ -53,9 +54,6 @@ class FormularioTarjeta extends ConsumerStatefulWidget {
 
   /// Devuelve el mensaje de error, o null si salió bien.
   final Future<String?> Function(DatosTarjeta) onPagar;
-
-  /// Mostrar el selector de cuotas (un pedido sí, la suscripción no).
-  final bool cuotas;
 
   /// Para meter el resumen del total entre el formulario y el botón.
   final Widget? debajoDelTotal;
@@ -75,7 +73,6 @@ class _FormularioTarjetaState extends ConsumerState<FormularioTarjeta> {
 
   TarjetaGuardada? _guardada;
   var _guardarTarjeta = true;
-  var _cuotas = 1;
   var _procesando = false;
   String? _error;
 
@@ -122,7 +119,7 @@ class _FormularioTarjetaState extends ConsumerState<FormularioTarjeta> {
     });
     final error = await widget.onPagar(
       _guardada != null
-          ? DatosTarjeta(guardada: _guardada, codigo: _codigo.text, marca: _guardada!.marca, cuotas: _cuotas)
+          ? DatosTarjeta(guardada: _guardada, codigo: _codigo.text, marca: _guardada!.marca)
           : DatosTarjeta(
               numero: _numero.text,
               titular: _titular.text.trim(),
@@ -132,7 +129,6 @@ class _FormularioTarjetaState extends ConsumerState<FormularioTarjeta> {
               documento: _documento.text.trim(),
               guardar: _guardarTarjeta,
               marca: _marca.wire,
-              cuotas: _cuotas,
             ),
     );
     if (!mounted) return;
@@ -190,23 +186,6 @@ class _FormularioTarjetaState extends ConsumerState<FormularioTarjeta> {
           const SizedBox(height: MySpacing.md),
         ],
         if (_guardada == null) _formulario() else _soloCodigo(),
-        if (widget.cuotas) ...[
-          const SizedBox(height: MySpacing.xs),
-          Row(
-            children: [
-              Expanded(child: Text('Cuotas', style: MyType.labelLg)),
-              DropdownButton<int>(
-                value: _cuotas,
-                underline: const SizedBox.shrink(),
-                items: [
-                  for (final c in [1, 3, 6, 12])
-                    DropdownMenuItem(value: c, child: Text(c == 1 ? '1 pago' : '$c cuotas', style: MyType.bodyMd)),
-                ],
-                onChanged: (v) => setState(() => _cuotas = v ?? 1),
-              ),
-            ],
-          ),
-        ],
         if (widget.debajoDelTotal != null) ...[
           const SizedBox(height: MySpacing.sm),
           widget.debajoDelTotal!,

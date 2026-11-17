@@ -128,7 +128,6 @@ class PagoPage extends ConsumerWidget {
               }
               return FormularioTarjeta(
                 etiquetaBoton: 'Pagar ${Formato.pesos(pedido.total)}',
-                cuotas: true,
                 debajoDelTotal: _Resumen(pedido: pedido),
                 onPagar: (d) => _pagar(context, ref, pedido, d),
               );

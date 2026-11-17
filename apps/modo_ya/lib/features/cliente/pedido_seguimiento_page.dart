@@ -162,6 +162,15 @@ class _ContenidoState extends ConsumerState<_Contenido> {
         s?.minutosEstimados ??
         pedido.minutosEstimados;
 
+    // La franja se ancla al momento del pago y no a "ahora": si se
+    // recalculara en cada rebuild se corre sola y nunca diria que hay
+    // demora. "En hora" compara el estimado vivo contra esa franja.
+    final base = pedido.pagadoEn ?? pedido.creadoEn;
+    final prometidos = pedido.minutosEstimados;
+    final desde = prometidos == null ? null : base.add(Duration(minutes: prometidos));
+    final hasta = desde?.add(const Duration(minutes: 10));
+    final enHora = hasta == null || !DateTime.now().add(Duration(minutes: minutos ?? 0)).isAfter(hasta);
+
     final (titulo, bajada) = switch (e) {
       EstadoPedido.pendientePago => ('Falta pagarlo', 'Terminá el pago y el local lo empieza a preparar.'),
       EstadoPedido.pagado => (
@@ -238,7 +247,11 @@ class _ContenidoState extends ConsumerState<_Contenido> {
           ],
         ),
         const SizedBox(height: MySpacing.sm),
-        if (!e.esFinal && minutos != null)
+        if (!e.esFinal && desde != null && hasta != null) ...[
+          MyBadge(enHora ? 'En hora' : 'Demorado', tone: enHora ? MyBadgeTone.success : MyBadgeTone.danger),
+          const SizedBox(height: MySpacing.xxs),
+          Text('${_hhmm(desde)} - ${_hhmm(hasta)}', style: MyType.displayLg),
+        ] else if (!e.esFinal && minutos != null)
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -253,6 +266,28 @@ class _ContenidoState extends ConsumerState<_Contenido> {
 
         if (!e.esFinal || e == EstadoPedido.entregado) ...[
           _Pasos(estado: e),
+          const SizedBox(height: MySpacing.lg),
+        ],
+
+        // El ahorro de Plus se muestra en el pedido y no solo en la pantalla
+        // de la suscripcion: es donde se ve para que sirvio.
+        if (pedido.envioLoPoneElLocal) ...[
+          MyCard(
+            color: MyColors.claroSuperficieAlt,
+            shadows: const [],
+            child: Row(
+              children: [
+                Icon(Symbols.savings, size: 20, color: MyColors.primary),
+                const SizedBox(width: MySpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Ahorraste ${Formato.pesos(pedido.envioCubierto)} en el envio con MODO YA Plus.',
+                    style: MyType.bodyMd,
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: MySpacing.lg),
         ],
 
@@ -458,3 +493,5 @@ class _Pasos extends StatelessWidget {
   }
 }
 
+/// La hora en 24 h, que es como se lee una franja de entrega.
+String _hhmm(DateTime d) => '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';

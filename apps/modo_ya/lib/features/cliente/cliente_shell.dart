@@ -35,7 +35,16 @@ class ClienteShell extends ConsumerWidget {
 
     final sesion = ref.watch(sesionProvider);
     final direccion = ref.watch(direccionActualProvider);
-    final activos = ref.watch(pedidosDelClienteProvider).value?.where((p) => !p.estado.esFinal).length ?? 0;
+    final pedidos = ref.watch(pedidosDelClienteProvider).value ?? const <Pedido>[];
+    final enCurso = pedidos.where((p) => !p.estado.esFinal && p.estado != EstadoPedido.carrito).toList();
+    final activos = enCurso.length;
+
+    // La barra lleva al seguimiento, asi que en el seguimiento sobra. Si hay
+    // mas de uno en curso mostramos el ultimo: es el que la persona acaba de
+    // hacer y del que esta pendiente.
+    final ruta = GoRouterState.of(context).uri.path;
+    final enSeguimiento = RegExp(r'^/cliente/pedidos/.+').hasMatch(ruta);
+    final aMostrar = enCurso.isEmpty || enSeguimiento ? null : enCurso.last;
 
     return MyAppShell(
       seccion: 'Delivery',
@@ -66,7 +75,85 @@ class ClienteShell extends ConsumerWidget {
       // En el celular la campanita va en la cabecera del inicio; en la PC esa
       // cabecera no existe y sin esto no habria manera de ver las novedades.
       accionBarra: const MiCampanita(),
-      body: navigationShell,
+      // El pedido en curso no se pierde de vista al navegar: la barra queda
+      // fija abajo y lleva al seguimiento de un toque. Va dentro de una
+      // columna y no apilada, para que nunca tape el final del contenido.
+      body: aMostrar == null
+          ? navigationShell
+          : Column(
+              children: [
+                Expanded(child: navigationShell),
+                _BarraPedidoEnCurso(pedido: aMostrar),
+              ],
+            ),
+    );
+  }
+}
+
+/// Barra fija con el pedido que esta en curso, al pie de todas las pantallas
+/// del cliente. Es el mismo gesto que hacen Uber Eats o PedidosYa: mientras
+/// hay algo en camino, siempre hay un acceso a mano para ver por donde va.
+class _BarraPedidoEnCurso extends StatelessWidget {
+  const _BarraPedidoEnCurso({required this.pedido});
+
+  final Pedido pedido;
+
+  @override
+  Widget build(BuildContext context) {
+    // Textos cortos a proposito: en la barra entra un renglon. El detalle
+    // completo esta en la pantalla de seguimiento, que es a donde lleva.
+    final (rotulo, icono) = switch (pedido.estado) {
+      EstadoPedido.pendientePago => ('Falta pagarlo', Symbols.credit_card),
+      EstadoPedido.pagado => ('Esperando al local', Symbols.hourglass_top),
+      EstadoPedido.aceptado => ('Pedido aceptado', Symbols.check_circle),
+      EstadoPedido.enPreparacion => ('En preparacion', Symbols.skillet),
+      EstadoPedido.listo => ('Buscando rider', Symbols.search),
+      EstadoPedido.enCamino => ('En camino', Symbols.sports_motorsports),
+      _ => ('En curso', Symbols.receipt_long),
+    };
+    final minutos = pedido.minutosEstimados;
+
+    return Material(
+      color: MyColors.primary,
+      child: InkWell(
+        onTap: () => context.go('/cliente/pedidos/${pedido.id}'),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: MySpacing.md, vertical: MySpacing.sm),
+            child: Row(
+              children: [
+                Icon(icono, size: 22, color: MyColors.onPrimary),
+                const SizedBox(width: MySpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        rotulo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: MyType.labelLg.copyWith(color: MyColors.onPrimary),
+                      ),
+                      Text(
+                        minutos == null
+                            ? pedido.comercioNombre
+                            : '${pedido.comercioNombre} · ~$minutos min',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: MyType.bodySm.copyWith(color: MyColors.onPrimary.withValues(alpha: 0.85)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: MySpacing.sm),
+                Icon(Symbols.chevron_right, size: 22, color: MyColors.onPrimary),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
