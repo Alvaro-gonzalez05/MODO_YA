@@ -24,6 +24,16 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
   final _password = TextEditingController();
   final _repetir = TextEditingController();
 
+  /// Lo ultimo que salio mal, arriba del boton. El aviso flotante se iba solo
+  /// a los tres segundos y aparecia en el borde de arriba de la pantalla:
+  /// quien tocaba "Crear cuenta" al pie del formulario no llegaba a verlo y
+  /// quedaba convencido de que el boton no hacia nada.
+  String? _error;
+
+  /// Hasta el primer intento no se marca nada en rojo: molesta que el campo se
+  /// queje mientras todavia se esta escribiendo.
+  var _autovalidar = AutovalidateMode.disabled;
+
   @override
   void dispose() {
     for (final c in [_nombre, _telefono, _email, _password, _repetir]) {
@@ -33,7 +43,15 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
   }
 
   Future<void> _registrar() async {
-    if (!_form.currentState!.validate()) return;
+    setState(() => _autovalidar = AutovalidateMode.onUserInteraction);
+    final form = _form.currentState;
+    if (form == null || !form.validate()) {
+      // Los campos ya se marcan en rojo, pero el que tocó el botón mira el
+      // botón: sin esta línea parece que no pasó nada.
+      setState(() => _error = 'Revisá los datos marcados en rojo y volvé a intentar.');
+      return;
+    }
+    setState(() => _error = null);
     try {
       final entro = await ref.read(authRepositoryProvider).registrarCliente(
             nombre: _nombre.text,
@@ -57,7 +75,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
       );
       if (mounted) context.go('/entrar');
     } catch (e) {
-      if (mounted) mostrarError(context, e);
+      if (mounted) setState(() => _error = '$e');
     }
   }
 
@@ -72,6 +90,7 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
       ),
       body: Form(
         key: _form,
+        autovalidateMode: _autovalidar,
         child: AutofillGroup(
           child: FormularioCentrado(
             children: [
@@ -123,6 +142,26 @@ class _RegistroPageState extends ConsumerState<RegistroPage> {
                       ocultar: true,
                       validar: (t) => t != _password.text ? 'No coincide' : null,
                     ),
+                    if (_error != null) ...[
+                      MyCard(
+                        color: MyColors.errorContainer,
+                        shadows: const [],
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Symbols.error, color: MyColors.error),
+                            const SizedBox(width: MySpacing.sm),
+                            Expanded(
+                              child: Text(
+                                _error!,
+                                style: MyType.bodyMd.copyWith(color: MyColors.onErrorContainer),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: MySpacing.md),
+                    ],
                     const SizedBox(height: MySpacing.xs),
                     MyBotonAccion(label: 'Crear cuenta', onPressed: _registrar),
                   ],

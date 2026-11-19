@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -53,8 +54,8 @@ ErrorModoYa traducirError(Object e) {
   }
 
   if (e is AuthException) {
-    final c = e.code ?? '';
-    final m = e.message.toLowerCase();
+    final (c, texto) = _detalleDeAuth(e);
+    final m = texto.toLowerCase();
     final mensaje = switch (c) {
       'invalid_credentials' => 'Email o contraseña incorrectos.',
       'email_not_confirmed' => 'Tenés que confirmar tu email antes de entrar.',
@@ -64,8 +65,15 @@ ErrorModoYa traducirError(Object e) {
         'No pudimos mandar el mail de confirmación. Probalo de nuevo más tarde.',
       'email_address_invalid' => 'Ese email no es válido.',
       'signup_disabled' => 'El registro de cuentas está deshabilitado.',
+      // El servidor no pudo mandar el mail: casi siempre la casilla no existe
+      // (un dominio inventado para probar) y el correo rebota al salir.
+      _ when m.contains('sending confirmation email') || m.contains('error sending') =>
+        'No pudimos mandarte el mail de confirmación a ese email. '
+            'Fijate que esté bien escrito y probá de nuevo.',
       _ when m.contains('invalid login') => 'Email o contraseña incorrectos.',
-      _ => 'No pudimos iniciar sesión (${e.message}).',
+      // Decía "no pudimos iniciar sesión" también al registrarse o al cambiar
+      // la contraseña, que no es lo que el usuario estaba haciendo.
+      _ => 'No pudimos completar la operación ($texto).',
     };
     return ErrorModoYa(mensaje, codigo: c);
   }
@@ -90,6 +98,30 @@ ErrorModoYa traducirError(Object e) {
   }
 
   return ErrorModoYa('Algo salió mal: $e');
+}
+
+/// Codigo y mensaje de un error de Auth, ya desenvuelto.
+///
+/// Ante un 5xx gotrue no mira el cuerpo: tira `AuthRetryableFetchException`
+/// con el JSON crudo del servidor como mensaje y sin codigo. Sin esto, el
+/// usuario leia `{"code":"unexpected_failure","message":"..."}` en pantalla y
+/// ningun caso del switch podia reconocer el error.
+(String, String) _detalleDeAuth(AuthException e) {
+  final codigo = e.code ?? '';
+  final texto = e.message;
+  if (codigo.isNotEmpty || !texto.trimLeft().startsWith('{')) return (codigo, texto);
+  try {
+    final cuerpo = jsonDecode(texto);
+    if (cuerpo is Map) {
+      return (
+        '${cuerpo['code'] ?? cuerpo['error_code'] ?? ''}',
+        '${cuerpo['msg'] ?? cuerpo['message'] ?? cuerpo['error_description'] ?? texto}',
+      );
+    }
+  } catch (_) {
+    // No era JSON: queda el texto tal cual.
+  }
+  return (codigo, texto);
 }
 
 /// Ejecuta una llamada al backend traduciendo el error.
