@@ -83,7 +83,7 @@ class ClienteShell extends ConsumerWidget {
           : Column(
               children: [
                 Expanded(child: navigationShell),
-                _BarraPedidoEnCurso(pedido: aMostrar),
+                _BarraPedidoEnCurso(pedido: aMostrar, conDock: enRaiz),
               ],
             ),
     );
@@ -94,9 +94,14 @@ class ClienteShell extends ConsumerWidget {
 /// del cliente. Es el mismo gesto que hacen Uber Eats o PedidosYa: mientras
 /// hay algo en camino, siempre hay un acceso a mano para ver por donde va.
 class _BarraPedidoEnCurso extends StatelessWidget {
-  const _BarraPedidoEnCurso({required this.pedido});
+  const _BarraPedidoEnCurso({required this.pedido, required this.conDock});
 
   final Pedido pedido;
+
+  /// En el celular el dock es una pildora que **flota encima** del contenido
+  /// (MyAppShell lo arma con un Stack, no con un bottomNavigationBar). Sin
+  /// dejarle su lugar, la barra queda abajo de todo y el dock la tapa.
+  final bool conDock;
 
   @override
   Widget build(BuildContext context) {
@@ -113,43 +118,50 @@ class _BarraPedidoEnCurso extends StatelessWidget {
     };
     final minutos = pedido.minutosEstimados;
 
-    return Material(
-      color: MyColors.primary,
-      child: InkWell(
-        onTap: () => context.go('/cliente/pedidos/${pedido.id}'),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: MySpacing.md, vertical: MySpacing.sm),
-            child: Row(
-              children: [
-                Icon(icono, size: 22, color: MyColors.onPrimary),
-                const SizedBox(width: MySpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        rotulo,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: MyType.labelLg.copyWith(color: MyColors.onPrimary),
-                      ),
-                      Text(
-                        minutos == null
-                            ? pedido.comercioNombre
-                            : '${pedido.comercioNombre} · ~$minutos min',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: MyType.bodySm.copyWith(color: MyColors.onPrimary.withValues(alpha: 0.85)),
-                      ),
-                    ],
+    // 68 es el alto del dock y dockOffset lo que lo separa del borde.
+    const altoDelDock = 68.0 + MySpacing.dockOffset;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: conDock ? altoDelDock : 0),
+      child: Material(
+        color: MyColors.primary,
+        child: InkWell(
+          onTap: () => context.go('/cliente/pedidos/${pedido.id}'),
+          child: SafeArea(
+            top: false,
+            bottom: !conDock,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: MySpacing.md, vertical: MySpacing.sm),
+              child: Row(
+                children: [
+                  Icon(icono, size: 22, color: MyColors.onPrimary),
+                  const SizedBox(width: MySpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          rotulo,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: MyType.labelLg.copyWith(color: MyColors.onPrimary),
+                        ),
+                        Text(
+                          minutos == null
+                              ? pedido.comercioNombre
+                              : '${pedido.comercioNombre} · ~$minutos min',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: MyType.bodySm.copyWith(color: MyColors.onPrimary.withValues(alpha: 0.85)),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: MySpacing.sm),
-                Icon(Symbols.chevron_right, size: 22, color: MyColors.onPrimary),
-              ],
+                  const SizedBox(width: MySpacing.sm),
+                  Icon(Symbols.chevron_right, size: 22, color: MyColors.onPrimary),
+                ],
+              ),
             ),
           ),
         ),
