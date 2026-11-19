@@ -5,6 +5,7 @@ import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
 import 'cambiar_password.dart';
+import 'escritorio/escritorio.dart';
 
 /// Acciones del menú del usuario, iguales para los tres tipos de cuenta.
 List<MyAccionUsuario> accionesDeUsuario(BuildContext context, WidgetRef ref) => [
@@ -13,6 +14,15 @@ List<MyAccionUsuario> accionesDeUsuario(BuildContext context, WidgetRef ref) => 
         label: 'Cambiar contraseña',
         onTap: () => mostrarCambiarPassword(context, ref),
       ),
+      // En la compu la X solo minimiza (para que sigan sonando los pedidos):
+      // esta es la forma de cerrarla de verdad, sin depender del aviso de
+      // Windows.
+      if (Escritorio.puedeCerrarDelTodo)
+        MyAccionUsuario(
+          icon: Symbols.close,
+          label: 'Cerrar MODO YA',
+          onTap: Escritorio.cerrarDelTodo,
+        ),
       MyAccionUsuario(
         icon: Symbols.logout,
         label: 'Cerrar sesión',

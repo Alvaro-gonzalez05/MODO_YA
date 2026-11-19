@@ -1,6 +1,10 @@
 package com.modoya.modo_ya_repartidor
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Intent
+import android.media.AudioAttributes
+import android.net.Uri
 import android.os.Build
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
@@ -25,8 +29,40 @@ class MainActivity : FlutterActivity() {
         return copia
     }
 
+    /**
+     * Los canales de las notificaciones que manda enviar-push (campo canal de
+     * la tabla avisos). El canal es lo que decide el sonido desde Android 8.
+     *
+     * Ojo: Android no deja cambiar el sonido de un canal ya creado. Para
+     * cambiarlo hay que crear uno con otro id (y cambiarlo en enviar-push).
+     */
+    private fun crearCanales() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val nm = getSystemService(NotificationManager::class.java) ?: return
+        val audio = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        fun sonido(archivo: String) = Uri.parse("android.resource://$packageName/raw/$archivo")
+        fun crear(id: String, nombre: String, descripcion: String, sonido: Uri?) {
+            val canal = NotificationChannel(id, nombre, NotificationManager.IMPORTANCE_HIGH)
+            canal.description = descripcion
+            canal.enableVibration(true)
+            // null = el sonido de notificación del celular.
+            if (sonido != null) canal.setSound(sonido, audio)
+            nm.createNotificationChannel(canal)
+        }
+        crear(
+            "ofertas", "Ofertas de envío",
+            "Cuando te ofrecen un envío. Dura lo que dura la oferta.",
+            sonido("oferta_envio"),
+        )
+        crear("estado", "Tus envíos", "Pedido listo para retirar, envío cancelado.", null)
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        crearCanales()
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "modoya/actualizaciones")
             .setMethodCallHandler { call, result ->
                 when (call.method) {

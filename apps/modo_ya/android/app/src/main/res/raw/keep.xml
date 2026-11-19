@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Los sonidos los pide el canal por nombre (MainActivity) y FCM por texto
+     (enviar-push): sin esto el achicador de recursos los borraría del APK. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@raw/pedido_entrante" />

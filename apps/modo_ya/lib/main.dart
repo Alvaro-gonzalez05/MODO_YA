@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import 'comun/escritorio/escritorio.dart';
 import 'router.dart';
 
 Future<void> main() async {
@@ -37,6 +38,7 @@ Future<void> main() async {
   // Firebase, para las notificaciones con la app cerrada. Es opcional: si
   // falla, la app arranca igual y los avisos se ven en la campanita.
   await MyPush.iniciar();
+  await Escritorio.iniciar();
 
   try {
     await Backend.inicializar();
@@ -54,6 +56,16 @@ Future<void> main() async {
 /// Los riders tienen su propia app (apps/repartidor): necesitan ubicacion en
 /// segundo plano, un permiso que las tiendas revisan mucho y que no tiene
 /// sentido pedirle a un cliente.
+/// En la compu, la X minimiza para quien tiene que oír los pedidos (el local y
+/// la administración) y cierra para el cliente. Atado a la sesión: cambia al
+/// entrar y al salir.
+final _segundoPlanoProvider = Provider<void>((ref) {
+  ref.listen(sesionActualProvider, (_, sesion) {
+    final rol = sesion.value?.rol;
+    Escritorio.quedarEnSegundoPlano(rol == RolUsuario.comercio || rol == RolUsuario.admin);
+  }, fireImmediately: true);
+});
+
 /// La pantalla que pidió abrir una notificación tocada antes de que cargara la
 /// sesión.
 String? _rutaPendiente;
@@ -65,6 +77,7 @@ class AppModoYa extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Anota el celular para las notificaciones mientras haya sesión.
     ref.watch(pushProvider);
+    ref.watch(_segundoPlanoProvider);
 
     final router = ref.watch(routerProvider);
 
@@ -75,7 +88,13 @@ class AppModoYa extends ConsumerWidget {
       final datos = valor.value;
       if (datos == null) return;
       final pedido = datos['pedido_id'];
-      final ruta = pedido != null && pedido.isNotEmpty
+      // Los avisos del pedido (0080) traen la pantalla armada en `ruta`: el
+      // pedido nuevo del local, el seguimiento del cliente. No traen
+      // `pedido_id` a propósito, porque eso abre el pago.
+      final directa = datos['ruta'];
+      final ruta = directa != null && directa.startsWith('/')
+          ? directa
+          : pedido != null && pedido.isNotEmpty
           ? '/cliente/pagar/$pedido'
           : switch (datos['destino']) {
               'inicio' => '/cliente',

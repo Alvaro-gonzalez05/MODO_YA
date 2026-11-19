@@ -58,6 +58,11 @@ dependencies:
   # `image` (que arrastra `pdf`) usa ZLibDecoder.decodeLazy, que recién existe
   # en archive 4.5: sin esto el build web se cae al compilar el PNG decoder.
   archive: ^4.5.2
+  # Solo Windows: la X minimiza en vez de cerrar (el local tiene que seguir
+  # oyendo los pedidos) y los avisos del sistema con la ventana minimizada.
+  # 0.5.x y no 0.6: la 0.6 pide Flutter 3.47 justo y la 0.7 uno más nuevo.
+  window_manager: ^0.5.2
+  local_notifier: ^0.1.6
 
 dev_dependencies:
   flutter_test:

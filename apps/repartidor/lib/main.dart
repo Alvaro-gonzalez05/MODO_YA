@@ -51,6 +51,9 @@ Future<void> main() async {
 /// Va separada de la app MODO YA a proposito: necesita ubicacion (y mas
 /// adelante, ubicacion en segundo plano), el permiso que mas revisan Apple y
 /// Google. Dentro de una app de clientes lo mas probable es que la rechacen.
+/// La pantalla que pidió abrir un aviso tocado antes de que cargara la sesión.
+String? _rutaPendiente;
+
 class AppRepartidor extends ConsumerWidget {
   const AppRepartidor({super.key});
 
@@ -60,13 +63,34 @@ class AppRepartidor extends ConsumerWidget {
     // lo que la administración les manda a los riders no les llega por push.
     ref.watch(pushProvider);
 
+    // Tocar un aviso abre lo que dice `ruta` (0080): la oferta en el inicio, el
+    // servicio del pedido listo. Mismo mecanismo que la app MODO YA: con la
+    // app cerrada del todo el toque llega antes de saber quién es, y el router
+    // en /cargando lo pisaría con su redirección; se guarda hasta que cargue.
+    final router = ref.watch(routerProvider);
+    ref.listen(pushDestinoProvider, (_, valor) {
+      final ruta = valor.value?['ruta'];
+      if (ruta == null || !ruta.startsWith('/')) return;
+      if (ref.read(sesionActualProvider).value == null) {
+        _rutaPendiente = ruta;
+      } else {
+        router.go(ruta);
+      }
+    });
+    ref.listen(sesionActualProvider, (_, sesion) {
+      final ruta = _rutaPendiente;
+      if (ruta == null || sesion.value == null) return;
+      _rutaPendiente = null;
+      Future.microtask(() => router.go(ruta));
+    });
+
     return MaterialApp.router(
       title: 'MODO YA Rider',
       debugShowCheckedModeBanner: false,
       theme: MyTheme.claro,
       darkTheme: MyTheme.oscuro,
       themeMode: ref.watch(temaProvider),
-      routerConfig: ref.watch(routerProvider),
+      routerConfig: router,
       // Aviso de version nueva, encima de todas las pantallas.
       builder: (context, child) => MyAvisoActualizacion(
         app: 'rider',

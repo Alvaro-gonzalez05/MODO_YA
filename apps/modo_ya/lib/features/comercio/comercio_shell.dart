@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:my_core/my_core.dart';
 import 'package:my_ui/my_ui.dart';
 
+import '../../comun/escritorio/escritorio.dart';
 import '../../comun/menu_usuario.dart';
 import '../../comun/notificaciones.dart';
 import 'widgets/pedido.dart';
@@ -33,6 +34,12 @@ class ComercioShell extends ConsumerWidget {
       if (previos == null) return;
       final recienLlegados = nuevos.where((p) => !previos.contains(p.id)).toList();
       if (recienLlegados.isEmpty) return;
+      // Con la ventana minimizada en la compu, además del timbre, el aviso de
+      // Windows: el cartel de adentro no lo ve nadie.
+      Escritorio.avisar(
+        'Pedido nuevo ${recienLlegados.first.codigo}',
+        '${Formato.pesos(recienLlegados.first.total)}. Tenés 15 minutos para aceptarlo.',
+      );
       mostrarAviso(
         context,
         'Nuevo pedido ${recienLlegados.first.codigo} · ${Formato.pesos(recienLlegados.first.total)}',

@@ -30,6 +30,16 @@ const POR_VUELTA = 200;
 
 type Cuenta = { client_email: string; private_key: string; project_id: string };
 
+/** Los canales de Android que crea la app (MainActivity). */
+type Canal = 'pedidos' | 'ofertas' | 'estado';
+
+/** Archivos de res/raw, sin la extension. */
+const SONIDOS: Record<Canal, string> = {
+  pedidos: 'pedido_entrante',
+  ofertas: 'oferta_envio',
+  estado: 'default',
+};
+
 // ---------------------------------------------------------------------------
 // Token de Google
 // ---------------------------------------------------------------------------
@@ -114,7 +124,9 @@ async function mandar(
   titulo: string,
   cuerpo: string,
   datos: Record<string, string>,
+  opciones: { canal?: Canal; segundos?: number } = {},
 ): Promise<'ok' | 'token_muerto' | 'error'> {
+  const canal = opciones.canal ?? 'estado';
   const r = await fetch(
     `https://fcm.googleapis.com/v1/projects/${proyecto}/messages:send`,
     {
@@ -130,7 +142,18 @@ async function mandar(
           // Los datos viajan aparte del texto: con la app abierta no se muestra
           // la notificacion del sistema y la app decide que hacer con esto.
           data: datos,
-          android: { priority: 'high', notification: { sound: 'default' } },
+          android: {
+            priority: 'high',
+            // Lo que vence (una oferta de 40 segundos) no se entrega tarde.
+            ...(opciones.segundos != null ? { ttl: `${Math.max(0, Math.floor(opciones.segundos))}s` } : {}),
+            notification: {
+              // El canal decide el sonido desde Android 8. Las apps hasta la
+              // 1.17 no lo tienen creado y Android usa el de siempre.
+              channel_id: canal,
+              // Android 7 o anterior no tiene canales: el sonido va acá.
+              sound: SONIDOS[canal],
+            },
+          },
         },
       }),
     },
@@ -150,7 +173,75 @@ async function mandar(
 // La vuelta
 // ---------------------------------------------------------------------------
 
-Deno.serve(async () => {
+// ---------------------------------------------------------------------------
+// Los avisos del pedido (0080)
+// ---------------------------------------------------------------------------
+//
+// Salen apenas pasa algo (la base llama con accion "avisos"), y el cron de
+// avisos_del_reloj() repite el llamado si alguno quedo sin salir. `tomar_avisos`
+// los reparte de a una vuelta: dos llamadas a la vez no mandan el mismo.
+
+// deno-lint-ignore no-explicit-any
+async function mandarAvisos(db: any, cuenta: Cuenta) {
+  const { data: avisos, error } = await db.rpc('tomar_avisos', { p_cuantos: POR_VUELTA });
+  if (error) throw error;
+  if (!avisos?.length) return { avisos: 0 };
+
+  const { data: tokens } = await db
+    .from('push_tokens')
+    .select('perfil_id, token')
+    .in('perfil_id', [...new Set(avisos.map((a: { perfil_id: string }) => a.perfil_id))]);
+
+  const porPerfil = new Map<string, string[]>();
+  for (const t of tokens ?? []) {
+    porPerfil.set(t.perfil_id, [...(porPerfil.get(t.perfil_id) ?? []), t.token]);
+  }
+
+  const muertos: string[] = [];
+  const listos: string[] = [];
+  const reintentar: string[] = [];
+
+  for (const a of avisos) {
+    const segundos = (new Date(a.vence_en).getTime() - Date.now()) / 1000;
+    const suyos = porPerfil.get(a.perfil_id) ?? [];
+    // Sin celular registrado, o ya vencido: no hay nada que mandar.
+    if (!suyos.length || segundos <= 0) {
+      listos.push(a.id);
+      continue;
+    }
+
+    let fallo = false;
+    let llego = false;
+    for (const token of suyos) {
+      const r = await mandar(cuenta.project_id, token, a.titulo, a.cuerpo, {
+        aviso_id: a.id,
+        tipo: a.tipo,
+        ruta: a.ruta ?? '',
+        // Para las versiones hasta la 1.17, que solo entienden `destino`.
+        destino: a.destino ?? 'ninguno',
+      }, { canal: a.canal, segundos });
+      if (r === 'token_muerto') muertos.push(token);
+      if (r === 'error') fallo = true;
+      if (r === 'ok') llego = true;
+    }
+    if (llego || !fallo) listos.push(a.id);
+    else reintentar.push(a.id);
+  }
+
+  if (listos.length) {
+    await db.from('avisos').update({ enviado_en: new Date().toISOString() }).in('id', listos);
+  }
+  // Suelto lo que fallo para que la proxima vuelta del reloj lo vuelva a tomar.
+  if (reintentar.length) {
+    await db.from('avisos').update({ tomado_en: null }).in('id', reintentar);
+  }
+  if (muertos.length) {
+    await db.from('push_tokens').delete().in('token', muertos);
+  }
+  return { avisos: listos.length, reintentar: reintentar.length, tokens_borrados: muertos.length };
+}
+
+Deno.serve(async (req) => {
   if (!CUENTA) {
     console.error('Falta FCM_SERVICE_ACCOUNT');
     return new Response('sin credenciales', { status: 200 });
@@ -161,6 +252,9 @@ Deno.serve(async () => {
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
+
+  const pedido = await req.json().catch(() => ({}));
+  if (pedido?.accion === 'avisos') return Response.json(await mandarAvisos(db, cuenta));
 
   // Lo que quedo sin empujar, de las ultimas horas. Una notificacion de
   // anteayer que no salio ya no sirve empujarla.
